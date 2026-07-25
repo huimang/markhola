@@ -86,16 +86,19 @@ This is another markdown reader and exporter software.Written by AI, free are th
 1. Support `[toc]`
 2. Enable to choose multiple markdown files while use "open file"
 3. Bug fix: Drag and drop open should render the same document view as "Open File" (not a single `<pre>` node).
+4. Theme selection persistence
+   - After the user selects a theme, the app should remember that theme on the next launch
+   - Add a small configuration persistence mechanism for current and future app preferences
+   - The selected theme item in the native menu should show a check mark
 
 ### v0.7.6
 1. Improve app shell theme support
    - Keep the current warm `default` theme
-   - Add a GitHub-style `github` theme
    - Add a clean `light` theme
    - Add a `dark` theme
 2. Add a `View` menu before `Help`
    - Add `View > Theme`
-   - Allow choosing `default`, `github`, `dark`, and `light`
+   - Allow choosing `default`, `dark`, and `light`
    - Apply the selected theme immediately in the running app
 3. Add a full-screen document view action in the `View` menu
    - Allow toggling fullscreen from the menu
@@ -113,6 +116,39 @@ This is another markdown reader and exporter software.Written by AI, free are th
 6. Move the footer status bar out of the WebView
    - Make the footer a native macOS window component
    - Keep the Markdown reading and editing area inside the WebView
+
+### v0.7.8
+1. Add document font-size controls under `View > Size`
+   - Add `Zoom In`, `Zoom Out`, and `Reset` submenu actions
+   - Keep the current document font sizes as the default `100%` setting
+   - Apply size changes to both readonly preview and writable editor content
+   - Remember the selected document size across app relaunches
+2. Refine the workspace below the native macOS menu
+   - Use a flatter document tab strip without a brand mark or file-type icons
+   - Use one logo-derived accent color under the active tab
+   - Define the shared Violet scale as MarkHola Violet `#6657E8`, Violet Mid `#ACA4F4`, and Violet Tint `#F2F0FF`
+   - Define the shared Green scale as MarkHola Green `#17B890`, Green Mid `#81D9C3`, and Green Tint `#EAF9F5`
+   - Use the shared brand palette for tabs, links, Outline, focus, hover, selection, and other app accent states
+   - Use the shared brand palette for fenced-code surfaces, line numbers, language badges, and syntax highlighting
+   - Use Green Tint as the Markdown table header background
+   - Keep `+` fixed at the far right as the new-document shortcut and remove the unused more button
+   - Show backward and forward tab navigation only when open tabs overflow
+   - Add an Outline toggle that opens the current document TOC on the right
+   - Remove the top document toolbar and consolidate read-only document information into the native bottom status bar in this order: path, Words, Lines, mode value, status value
+   - Move the Outline toggle to the View menu and show a checkmark while the right-side Outline panel is visible
+   - Keep line numbers in writable mode and omit a reading rail in readonly mode
+   - Show the MarkHola app icon to the left of the centered empty-workspace message when no document is open
+   - Number new blank-document titles sequentially as `Untitled-1`, `Untitled-2`, and so on
+   - Remove failed Mermaid render artifacts so error SVGs cannot escape the document content area
+
+### v0.8.0
+1. Replace the WebView document tab strip with native macOS window tabs
+   - Give each open Markdown document its own native window, WebView, footer, and document runtime
+   - Group document windows with the native macOS window tab system
+   - Support `Command + 1` through `Command + 9` for selecting tabs by their visible order
+   - Support moving a tab into a separate window and merging compatible windows back into one tab group
+   - Keep document titles, unsaved state, close confirmation, themes, font size, Outline, and footer information synchronized per window
+   - Preserve correct open, save, close, drag-and-drop, and application-exit behavior across multiple windows
 
 ### v1.0.0
 1. Two models: Readonly、writeonly.
