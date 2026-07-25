@@ -45,7 +45,9 @@ pub(super) fn create_blank_document(
     native_footer: &NativeFooter,
     workspace: &mut DocumentWorkspace,
 ) {
-    let document = ActiveDocument::new_blank_with_id(workspace.next_document_id());
+    let document_id = workspace.next_document_id();
+    let blank_number = workspace.next_blank_document_number();
+    let document = ActiveDocument::new_blank_with_id(document_id, blank_number);
     workspace.open_document(document);
     present_workspace(window, webview, native_footer, workspace, "New document created.", true);
 }

@@ -31,6 +31,17 @@ fn opens_multiple_documents_and_tracks_active_one() {
 }
 
 #[test]
+fn blank_document_numbers_increment_independently_from_document_ids() {
+    let mut workspace = DocumentWorkspace::new();
+
+    assert_eq!(workspace.next_blank_document_number(), 1);
+    assert_eq!(workspace.next_document_id(), 1);
+    assert_eq!(workspace.next_document_id(), 2);
+    assert_eq!(workspace.next_blank_document_number(), 2);
+    assert_eq!(workspace.next_blank_document_number(), 3);
+}
+
+#[test]
 fn reopening_same_path_activates_existing_document() {
     let mut workspace = DocumentWorkspace::new();
 

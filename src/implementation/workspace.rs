@@ -7,6 +7,7 @@ pub struct DocumentWorkspace {
     documents: Vec<ActiveDocument>,
     active_index: Option<usize>,
     next_document_id: u64,
+    next_blank_document_number: u64,
 }
 
 impl DocumentWorkspace {
@@ -15,6 +16,7 @@ impl DocumentWorkspace {
             documents: Vec::new(),
             active_index: None,
             next_document_id: 1,
+            next_blank_document_number: 1,
         }
     }
 
@@ -22,6 +24,12 @@ impl DocumentWorkspace {
         let id = self.next_document_id;
         self.next_document_id += 1;
         id
+    }
+
+    pub fn next_blank_document_number(&mut self) -> u64 {
+        let number = self.next_blank_document_number;
+        self.next_blank_document_number += 1;
+        number
     }
 
     pub fn active_document(&self) -> Option<&ActiveDocument> {

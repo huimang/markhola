@@ -46,20 +46,21 @@ impl ActiveDocument {
         }
     }
 
-    pub fn new_blank_with_id(id: u64) -> Self {
+    pub fn new_blank_with_id(id: u64, blank_number: u64) -> Self {
         let draft_path = std::env::current_dir()
             .unwrap_or_else(|_| std::env::temp_dir())
             .join(format!(".markhola-draft-{id}.md"));
         let base_url = file_io_base_url(&draft_path);
         let markdown = String::new();
+        let file_name = format!("Untitled-{blank_number}");
 
         Self {
             id,
             draft: true,
             file_path: draft_path.clone(),
             canonical_path: draft_path,
-            file_name: "Untitled".to_string(),
-            title: "Untitled".to_string(),
+            file_name: file_name.clone(),
+            title: file_name,
             saved_markdown: markdown.clone(),
             markdown,
             html: String::new(),
