@@ -150,6 +150,22 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Keep document titles, unsaved state, close confirmation, themes, font size, Outline, and footer information synchronized per window
    - Preserve correct open, save, close, drag-and-drop, and application-exit behavior across multiple windows
 
+### v0.8.1
+1. Add Typora-style inline Markdown reading and editing
+   - Keep Markdown source as the single source of truth while presenting formatted content in the WebView
+   - Allow users to click formatted headings, paragraphs, emphasis, links, lists, blockquotes, task items, and code blocks and edit them in place
+   - Reveal the relevant Markdown syntax markers when the caret or selection enters a formatted range, and hide them again when editing leaves that range
+   - Keep the inline editing experience shared across macOS and Windows WebView implementations
+2. Add localized source editing for complex rendered blocks
+   - Keep tables, images, mathematical expressions, Mermaid diagrams, and generated TOC content rendered during normal reading
+   - Switch only the selected complex block to its Markdown source representation for editing
+   - Re-render the affected block after editing finishes without rebuilding the entire document
+3. Add incremental document updates for the mixed reading and editing view
+   - Re-parse and update only the affected paragraph or block during normal typing
+   - Avoid replacing the complete preview DOM or re-rendering every Mermaid and MathJax block after each input
+   - Synchronize edits back to the Rust document model without sending and reprocessing the complete document on every keystroke when incremental changes are sufficient
+   - Preserve cursor position, selection, undo and redo, input method behavior, copy and paste, find and replace, saving, and dirty-state tracking
+
 ### v1.0.0
 1. Two models: Readonly、writeonly.
 2. Readonly:Default mode, you can open any markdown file.
