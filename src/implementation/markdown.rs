@@ -1,8 +1,11 @@
+#[path = "markdown/syntax_theme.rs"]
+mod syntax_theme;
+
 use std::sync::OnceLock;
 
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Theme, ThemeSet};
+use syntect::highlighting::Theme;
 use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use syntect::util::LinesWithEndings;
@@ -419,17 +422,12 @@ fn escape_html_attribute(value: &str) -> String {
 
 pub(crate) struct HighlightAssets {
     pub(crate) syntax_set: SyntaxSet,
-    theme_set: ThemeSet,
+    theme: Theme,
 }
 
 impl HighlightAssets {
     fn theme(&self) -> &Theme {
-        self.theme_set
-            .themes
-            .get("base16-ocean.dark")
-            .or_else(|| self.theme_set.themes.get("InspiredGitHub"))
-            .or_else(|| self.theme_set.themes.values().next())
-            .expect("syntect should provide at least one default theme")
+        &self.theme
     }
 }
 
@@ -438,6 +436,6 @@ pub(crate) fn highlight_assets() -> &'static HighlightAssets {
 
     HIGHLIGHT_ASSETS.get_or_init(|| HighlightAssets {
         syntax_set: SyntaxSet::load_defaults_newlines(),
-        theme_set: ThemeSet::load_defaults(),
+        theme: syntax_theme::markhola_theme(),
     })
 }

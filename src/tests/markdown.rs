@@ -25,6 +25,20 @@ fn renders_highlighted_code_blocks_with_line_numbers() {
     assert!(html.contains("class=\"code-block__line-number\">1</span>"));
     assert!(html.contains("class=\"code-block__line-number\">3</span>"));
     assert!(html.contains("style=\""));
+    assert!(html.contains("#aca4f4"));
+    assert!(html.contains("#81d9c3"));
+    assert!(!html.contains("#c0c5ce"));
+}
+
+#[test]
+fn branded_syntax_theme_covers_keywords_strings_constants_and_comments() {
+    let markdown = "```rust\npub fn palette() -> &'static str {\n    // MarkHola\n    let count = 42;\n    \"green\"\n}\n```";
+    let html = render_html(markdown);
+
+    assert!(html.contains("color:#aca4f4"));
+    assert!(html.contains("color:#81d9c3"));
+    assert!(html.contains("color:#eaf9f5"));
+    assert!(html.contains("font-style:italic"));
 }
 
 #[test]

@@ -1,7 +1,6 @@
 # Themes
 
 - `default/layout.css`: current default app shell layout theme
-- `github/layout.css`: GitHub-style app shell theme
 - `dark/layout.css`: dark reading shell theme
 - `light/layout.css`: bright neutral shell theme
 

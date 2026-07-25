@@ -17,7 +17,7 @@ This paragraph includes **bold text**, *italic text*, and a [link](https://examp
 fn palette(name: &str) -> &'static str {
     match name {
         "dark" => "night",
-        "github" => "paper",
+        "light" => "paper",
         _ => "default",
     }
 }
@@ -28,6 +28,5 @@ fn palette(name: &str) -> &'static str {
 | Theme | Intent |
 | --- | --- |
 | default | warm reading shell |
-| github | github-style surface |
 | dark | low-light reading |
 | light | bright neutral shell |
