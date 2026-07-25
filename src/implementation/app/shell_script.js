@@ -18,16 +18,22 @@
       const replaceOne = document.getElementById("replaceOne");
       const replaceAll = document.getElementById("replaceAll");
       const findClose = document.getElementById("findClose");
-      const documentTitle = document.getElementById("documentTitle");
-      const documentSubtitle = document.getElementById("documentSubtitle");
       const emptyState = document.getElementById("emptyState");
       const previewPane = document.getElementById("previewPane");
       const editorPane = document.getElementById("editorPane");
-      const previewHeader = document.getElementById("previewHeader");
+      const tabsShell = document.getElementById("tabsShell");
       const tabsBar = document.getElementById("tabsBar");
+      const tabNavigation = document.getElementById("tabNavigation");
+      const previousTabs = document.getElementById("previousTabs");
+      const nextTabs = document.getElementById("nextTabs");
+      const newDocumentTab = document.getElementById("newDocumentTab");
       const editorLineNumbers = document.getElementById("editorLineNumbers");
       const editor = document.getElementById("editor");
       const content = document.getElementById("content");
+      const workspace = document.querySelector(".workspace");
+      const outlinePanel = document.getElementById("outlinePanel");
+      const outlineClose = document.getElementById("outlineClose");
+      const outlineList = document.getElementById("outlineList");
       const documentBase = document.getElementById("document-base");
       const aboutOverlay = document.getElementById("aboutOverlay");
       const aboutClose = document.getElementById("aboutClose");
@@ -37,6 +43,17 @@
       const aboutGithub = document.getElementById("aboutGithub");
       const aboutCopy = document.getElementById("aboutCopy");
       const appThemeStyle = document.getElementById("appThemeStyle");
+      const applyDocumentSize = (percent) => {
+        const normalized = Math.min(200, Math.max(50, Number(percent) || 100));
+        const scale = normalized / 100;
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty("--document-font-size", `${17 * scale}px`);
+        rootStyle.setProperty("--document-h1-font-size", `${36.8 * scale}px`);
+        rootStyle.setProperty("--document-h2-font-size", `${27.52 * scale}px`);
+        rootStyle.setProperty("--document-h3-font-size", `${21.6 * scale}px`);
+        rootStyle.setProperty("--document-code-font-size", `${14 * scale}px`);
+        rootStyle.setProperty("--editor-font-size", `${15 * scale}px`);
+      };
       let mermaidInitialized = false;
       let mathJaxReadyPromise = null;
       let currentDocumentId = null;
@@ -46,6 +63,7 @@
       let readonlyMatches = [];
       let readonlyActiveIndex = -1;
       let writableMatches = [];
+      let outlineOpen = false;
       let writableActiveIndex = -1;
 
       const hideAbout = () => {
@@ -164,41 +182,42 @@
         document.execCommand(command);
       };
 
-      const attachHeaderForMode = (mode) => {
-        if (mode === "writable") {
-          if (editorPane.firstElementChild !== previewHeader) {
-            editorPane.insertBefore(previewHeader, editorPane.firstChild);
-          }
-          return;
-        }
-
-        if (previewPane.firstElementChild !== previewHeader) {
-          previewPane.insertBefore(previewHeader, previewPane.firstChild);
-        }
-      };
-
       const showPaneForMode = (mode) => {
-        attachHeaderForMode(mode);
         const hasDocument = mode === "readonly" || mode === "writable";
         emptyState.classList.toggle("hidden", hasDocument);
         previewPane.classList.toggle("hidden", mode !== "readonly");
         editorPane.classList.toggle("hidden", mode !== "writable");
+        if (mode !== "readonly") setOutlineOpen(false);
+      };
+
+      const updateTabNavigation = () => {
+        const overflowed = tabsBar.scrollWidth > tabsBar.clientWidth + 1;
+        tabNavigation.classList.toggle("hidden", !overflowed);
+        previousTabs.disabled = !overflowed || tabsBar.scrollLeft <= 1;
+        nextTabs.disabled =
+          !overflowed ||
+          tabsBar.scrollLeft + tabsBar.clientWidth >= tabsBar.scrollWidth - 1;
+      };
+
+      const revealActiveTab = () => {
+        const activeTab = tabsBar.querySelector(".document-tab.active");
+        activeTab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
       };
 
       const renderTabs = (tabs) => {
+        tabsShell.classList.toggle("hidden", !tabs.length);
         if (!tabs.length) {
-          tabsBar.classList.add("hidden");
           tabsBar.innerHTML = "";
+          requestAnimationFrame(updateTabNavigation);
           return;
         }
 
-        tabsBar.classList.remove("hidden");
         tabsBar.innerHTML = tabs
           .map((tab) => {
             const activeClass = tab.active ? " active" : "";
             const dirty = tab.dirty ? `<span class="document-tab__dirty" aria-hidden="true"></span>` : "";
             return `
-              <div class="document-tab${activeClass}" data-document-id="${tab.document_id}" title="${escapeHtml(tab.title)}">
+              <div class="document-tab${activeClass}" role="tab" tabindex="0" aria-selected="${tab.active}" data-document-id="${tab.document_id}" title="${escapeHtml(tab.title)}">
                 <span class="document-tab__name">${escapeHtml(tab.file_name)}</span>
                 ${dirty}
                 <button class="document-tab__close" type="button" data-close-document="${tab.document_id}" aria-label="Close ${escapeHtml(tab.file_name)}">&times;</button>
@@ -206,13 +225,46 @@
             `;
           })
           .join("");
+        requestAnimationFrame(() => {
+          updateTabNavigation();
+          revealActiveTab();
+        });
+      };
+
+      const setOutlineOpen = (open) => {
+        outlineOpen = open && currentDocumentMode === "readonly";
+        outlinePanel.classList.toggle("hidden", !outlineOpen);
+        workspace.classList.toggle("outline-open", outlineOpen);
+      };
+
+      const refreshOutline = () => {
+        outlineList.innerHTML = "";
+        if (currentDocumentMode !== "readonly") return;
+        const headings = Array.from(content.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+        if (!headings.length) {
+          const empty = document.createElement("p");
+          empty.className = "outline-empty";
+          empty.textContent = "No headings in this document.";
+          outlineList.appendChild(empty);
+          return;
+        }
+
+        for (const heading of headings) {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "outline-item";
+          item.dataset.level = heading.tagName.slice(1);
+          item.textContent = heading.textContent?.trim() || "Untitled heading";
+          item.addEventListener("click", () => {
+            heading.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+          outlineList.appendChild(item);
+        }
       };
 
       const resetWorkspaceChrome = (statusMessage) => {
         document.body.classList.add("workspace-empty");
         document.title = "MarkHola";
-        documentTitle.textContent = "Preview";
-        documentSubtitle.textContent = "Use File > Open, Command+O, or drag a Markdown file into the window.";
         documentBase.setAttribute("href", "");
         showPaneForMode(null);
         window.showStatus({ message: statusMessage || "Ready.", level: "info" });
@@ -229,8 +281,6 @@
 
         document.body.classList.remove("workspace-empty");
         document.title = `${active.file_name}${active.dirty ? " *" : ""} - MarkHola`;
-        documentTitle.textContent = active.title;
-        documentSubtitle.textContent = active.file_name;
         documentBase.setAttribute("href", active.base_url);
         showPaneForMode(active.mode);
         window.showStatus({ message: payload.status_message, level: active.dirty ? "warning" : "info" });
@@ -260,6 +310,10 @@
         mermaidInitialized = true;
       };
 
+      const removeMermaidRenderArtifact = (renderId) => {
+        document.getElementById(`d${renderId}`)?.remove();
+      };
+
       const renderMermaidDiagrams = async () => {
         ensureMermaidInitialized();
         if (!window.mermaid) return;
@@ -279,11 +333,9 @@
             statusNode.classList.remove("hidden");
           }
 
+          const renderId = `mermaid-diagram-${index}-${Date.now()}`;
           try {
-            const { svg } = await window.mermaid.render(
-              `mermaid-diagram-${index}-${Date.now()}`,
-              source
-            );
+            const { svg } = await window.mermaid.render(renderId, source);
             diagramNode.innerHTML = svg;
             statusNode?.classList.add("hidden");
           } catch (error) {
@@ -297,6 +349,8 @@
             }
             diagramNode.innerHTML =
               `<pre class="mermaid-block__error">${escapeHtml(message)}\n\n${escapeHtml(source)}</pre>`;
+          } finally {
+            removeMermaidRenderArtifact(renderId);
           }
         }
       };
@@ -792,6 +846,20 @@
       });
 
       editor.addEventListener("scroll", syncEditorScroll);
+      tabsBar.addEventListener("scroll", updateTabNavigation);
+      window.addEventListener("resize", updateTabNavigation);
+      previousTabs.addEventListener("click", () => {
+        tabsBar.scrollBy({ left: -360, behavior: "smooth" });
+      });
+      nextTabs.addEventListener("click", () => {
+        tabsBar.scrollBy({ left: 360, behavior: "smooth" });
+      });
+      newDocumentTab.addEventListener("click", () => {
+        window.ipc.postMessage(JSON.stringify({ kind: "new-document" }));
+      });
+      outlineClose.addEventListener("click", () => {
+        window.ipc.postMessage(JSON.stringify({ kind: "toggle-outline" }));
+      });
 
       findInput.addEventListener("input", () => {
         if (currentDocumentMode === "writable") {
@@ -816,6 +884,16 @@
         if (findPanelVisible && event.key === "Escape") {
           event.preventDefault();
           closeFindPanel();
+          return;
+        }
+
+        const focusedTab = event.target.closest?.("[data-document-id]");
+        if (focusedTab && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          const documentId = Number(focusedTab.getAttribute("data-document-id"));
+          if (Number.isFinite(documentId)) {
+            window.ipc.postMessage(JSON.stringify({ kind: "activate-document", documentId }));
+          }
           return;
         }
 
@@ -987,6 +1065,8 @@
           updateEditorLineNumbers();
           syncEditorScroll();
           closeFindPanel();
+          setOutlineOpen(false);
+          outlineList.innerHTML = "";
           return;
         }
 
@@ -1011,6 +1091,7 @@
         syncFindPanelMode();
 
         if (forceRefresh || documentChanged || active.mode === "readonly") {
+          refreshOutline();
           void finalizeReadonlyRender(nextDocumentId);
         } else if (findPanelVisible && active.mode === "writable") {
           refreshWritableFindResults(editor.selectionStart, true);
@@ -1039,7 +1120,17 @@
 
       window.openFindPanel = openFindPanel;
       window.applyAppTheme = applyAppTheme;
+      window.applyDocumentSize = applyDocumentSize;
+      window.setOutlinePanelOpen = (open) => {
+        if (currentDocumentMode !== "readonly") {
+          setOutlineOpen(false);
+          return;
+        }
+        refreshOutline();
+        setOutlineOpen(Boolean(open));
+      };
 
+      applyDocumentSize(__DOCUMENT_SIZE__);
       window.ipc.postMessage(JSON.stringify({ kind: "shell-ready" }));
     </script>
   </body>

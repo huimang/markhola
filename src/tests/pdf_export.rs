@@ -48,6 +48,8 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(html.contains("window.markholaPreparePdf"));
     assert!(html.contains("mermaid-block"));
     assert!(html.contains("math math-display"));
+    assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
+    assert!(html.contains("removeMermaidRenderArtifact(renderId)"));
     assert!(html.contains(&export_footer_text()));
     assert!(!html.contains("<div class=\"tabs-bar\""));
     assert!(!html.contains("<div class=\"editor-pane\""));

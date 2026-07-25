@@ -6,54 +6,66 @@
     <base id="document-base" href="" />
     <title>MarkHola</title>
     <style id="appThemeStyle">__APP_THEME__</style>
+    <style id="workspaceChromeStyle">__WORKSPACE_CHROME__</style>
   </head>
-  <body class="workspace-empty">
+      <body class="workspace-empty">
         <div class="app">
-          <div class="tabs-bar hidden" id="tabsBar"></div>
+          <div class="tabs-shell hidden" id="tabsShell">
+            <div class="tabs-bar" id="tabsBar" role="tablist" aria-label="Open documents"></div>
+            <div class="tab-navigation hidden" id="tabNavigation" aria-label="Move through open tabs">
+              <button id="previousTabs" type="button" aria-label="Move tabs backward">&lsaquo;</button>
+              <button id="nextTabs" type="button" aria-label="Move tabs forward">&rsaquo;</button>
+            </div>
+            <button class="new-document-tab" id="newDocumentTab" type="button" aria-label="New document">+</button>
+          </div>
           <section class="preview-shell">
+            <span id="status" class="shell-status" data-level="info" aria-live="polite">Ready.</span>
+            <div class="find-panel hidden" id="findPanel">
+              <div class="find-panel__group">
+                <input id="findInput" class="find-panel__input" type="text" placeholder="Find in document" aria-label="Find in document" />
+                <span id="findCount" class="find-panel__count">0 results</span>
+              </div>
+              <div class="find-panel__group find-panel__replace hidden" id="replaceGroup">
+                <input id="replaceInput" class="find-panel__input" type="text" placeholder="Replace with" aria-label="Replace with" />
+              </div>
+              <div class="find-panel__actions">
+                <button id="findPrevious" class="find-panel__button" type="button">Previous</button>
+                <button id="findNext" class="find-panel__button" type="button">Next</button>
+                <button id="replaceOne" class="find-panel__button hidden" type="button">Replace</button>
+                <button id="replaceAll" class="find-panel__button hidden" type="button">Replace All</button>
+                <button id="findClose" class="find-panel__button find-panel__button--ghost" type="button">Close</button>
+              </div>
+            </div>
             <div class="workspace">
               <div class="empty-state pane" id="emptyState">
                 <div class="empty-card">
-                  <h2>No document opened</h2>
-                  <p>Open, drag, or drop a Markdown file to preview or edit the current Markdown source.</p>
+                  <img class="empty-state__icon" src="__APP_ICON_DATA_URL__" alt="MarkHola" />
+                  <div class="empty-state__copy">
+                    <h2>No document opened</h2>
+                    <p>Open, drag, or drop a Markdown file to preview or edit the current Markdown source.</p>
+                  </div>
                 </div>
               </div>
               <div class="preview pane hidden" id="previewPane">
-                <div class="preview-header" id="previewHeader">
-                  <div class="preview-title">
-                    <strong id="documentTitle">Preview</strong>
-                    <span id="documentSubtitle">Use File > Open, Command+O, or drag a Markdown file into the window.</span>
-                  </div>
-                  <span id="status" class="status" data-level="info">Ready.</span>
-                  <div class="find-panel hidden" id="findPanel">
-                    <div class="find-panel__group">
-                      <input id="findInput" class="find-panel__input" type="text" placeholder="Find in document" aria-label="Find in document" />
-                      <span id="findCount" class="find-panel__count">0 results</span>
-                    </div>
-                    <div class="find-panel__group find-panel__replace hidden" id="replaceGroup">
-                      <input id="replaceInput" class="find-panel__input" type="text" placeholder="Replace with" aria-label="Replace with" />
-                    </div>
-                    <div class="find-panel__actions">
-                      <button id="findPrevious" class="find-panel__button" type="button">Previous</button>
-                      <button id="findNext" class="find-panel__button" type="button">Next</button>
-                      <button id="replaceOne" class="find-panel__button hidden" type="button">Replace</button>
-                      <button id="replaceAll" class="find-panel__button hidden" type="button">Replace All</button>
-                      <button id="findClose" class="find-panel__button find-panel__button--ghost" type="button">Close</button>
-                    </div>
-                  </div>
-                </div>
                 <article class="markdown-body" id="content"></article>
               </div>
               <div class="editor-pane pane hidden" id="editorPane">
                 <div class="editor-shell" id="editorShell">
-              <div id="editorLineNumbers" class="editor-line-numbers" aria-hidden="true">1</div>
-              <textarea id="editor" class="editor" spellcheck="false" aria-label="Markdown editor"></textarea>
+                  <div id="editorLineNumbers" class="editor-line-numbers" aria-hidden="true">1</div>
+                  <textarea id="editor" class="editor" spellcheck="false" aria-label="Markdown editor"></textarea>
+                </div>
+              </div>
+              <aside class="outline-panel hidden" id="outlinePanel" aria-label="Document outline">
+                <div class="outline-header">
+                  <strong>Outline</strong>
+                  <button id="outlineClose" type="button" aria-label="Close outline">&times;</button>
+                </div>
+                <nav class="outline-list" id="outlineList" aria-label="Document headings"></nav>
+              </aside>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-    </div>
+        </div>
 
     <div class="about-overlay hidden" id="aboutOverlay">
       <div class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">

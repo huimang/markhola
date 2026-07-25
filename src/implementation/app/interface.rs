@@ -1,6 +1,7 @@
 mod interface_clock;
 mod interface_constants;
 mod interface_dispatch;
+mod interface_document_size;
 mod interface_logging;
 mod interface_types;
 
@@ -14,6 +15,7 @@ pub(crate) use self::interface_constants::{
 pub(crate) use self::interface_dispatch::{
     dispatch_user_event, install_panic_hook, new_action_context,
 };
+pub(crate) use self::interface_document_size::DocumentSize;
 pub(crate) use self::interface_logging::log_event;
 #[allow(unused_imports)]
 pub(crate) use self::interface_logging::{append_log_line, debug_log, primary_debug_log_path};

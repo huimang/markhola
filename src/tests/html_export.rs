@@ -20,5 +20,7 @@ fn exported_html_contains_rendered_content_and_runtime_assets() {
     assert!(html.contains("Exported by MarkHola v"));
     assert!(html.contains("window.MathJax"));
     assert!(html.contains("window.mermaid"));
+    assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
+    assert!(html.contains("removeMermaidRenderArtifact(renderId)"));
     assert!(html.contains("overflow: auto;"));
 }

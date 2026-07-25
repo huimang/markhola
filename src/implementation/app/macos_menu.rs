@@ -11,4 +11,7 @@ mod menu_target;
 mod menu_view;
 
 pub use self::menu_install::install;
-pub use self::menu_state::{set_document_output_enabled, set_selected_theme};
+pub use self::menu_state::{
+    set_document_output_enabled, set_outline_available, set_selected_theme,
+    toggle_outline_selected,
+};

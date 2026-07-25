@@ -44,6 +44,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
     let suppress_blank_recovery = Arc::new(AtomicBool::new(true));
     let asset_access = new_registry();
     let selected_theme = theme_preferences::load_selected_theme();
+    let document_size = theme_preferences::load_document_size();
 
     let window = WindowBuilder::new()
         .with_title(WINDOW_TITLE)
@@ -56,6 +57,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         Arc::clone(&suppress_blank_recovery),
         Arc::clone(&asset_access),
         selected_theme,
+        document_size,
     )?;
     let native_footer = NativeFooter::install(&window, &webview, selected_theme);
 
@@ -70,6 +72,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         asset_access,
         native_footer,
         selected_theme,
+        document_size,
     );
     Ok((event_loop, runtime))
 }
@@ -80,6 +83,7 @@ fn build_webview(
     suppress_blank_recovery: Arc<AtomicBool>,
     asset_access: AssetAccessRegistry,
     selected_theme: AppTheme,
+    document_size: crate::app::DocumentSize,
 ) -> Result<WebView, wry::Error> {
     let ipc_proxy = proxy.clone();
     let page_load_proxy = proxy.clone();
@@ -87,7 +91,7 @@ fn build_webview(
     let drag_drop_proxy = proxy.clone();
 
     WebViewBuilder::new()
-        .with_html(app_shell_html(selected_theme))
+        .with_html(app_shell_html(selected_theme, document_size))
         .with_devtools(true)
         .with_drag_drop_handler(move |event| {
             match event {

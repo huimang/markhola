@@ -53,12 +53,18 @@ unsafe impl NSObjectProtocol for MenuTarget {}
         fn toggle_document_mode(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ToggleMode, "toggleDocumentMode:"); }
         #[unsafe(method(selectDefaultTheme:))]
         fn select_default_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Default), "selectDefaultTheme:"); }
-        #[unsafe(method(selectGithubTheme:))]
-        fn select_github_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Github), "selectGithubTheme:"); }
         #[unsafe(method(selectDarkTheme:))]
         fn select_dark_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Dark), "selectDarkTheme:"); }
         #[unsafe(method(selectLightTheme:))]
         fn select_light_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Light), "selectLightTheme:"); }
+        #[unsafe(method(increaseDocumentSize:))]
+        fn increase_document_size(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::IncreaseDocumentSize, "increaseDocumentSize:"); }
+        #[unsafe(method(decreaseDocumentSize:))]
+        fn decrease_document_size(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::DecreaseDocumentSize, "decreaseDocumentSize:"); }
+        #[unsafe(method(resetDocumentSize:))]
+        fn reset_document_size(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ResetDocumentSize, "resetDocumentSize:"); }
+        #[unsafe(method(toggleOutlinePanel:))]
+        fn toggle_outline_panel(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ToggleOutline, "toggleOutlinePanel:"); }
         #[unsafe(method(toggleFullscreenWindow:))]
         fn toggle_fullscreen_window(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ToggleFullscreen, "toggleFullscreenWindow:"); }
         #[unsafe(method(closeCurrentDocument:))]
@@ -87,7 +93,7 @@ impl MenuTarget {
     }
 }
 
-pub(super) fn target_ref(
+pub(crate) fn target_ref(
     mtm: MainThreadMarker,
     proxy: EventLoopProxy<UserEvent>,
 ) -> &'static AnyObject {

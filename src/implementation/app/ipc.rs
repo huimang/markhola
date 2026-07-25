@@ -25,8 +25,16 @@ pub(super) fn handle_ipc_message(proxy: &EventLoopProxy<UserEvent>, payload: Str
             let ctx = new_action_context("ipc-open-file");
             dispatch_user_event(proxy, "ipc", UserEvent::OpenFile(ctx));
         }
+        Some("new-document") => dispatch_user_event(proxy, "ipc", UserEvent::NewDocument),
         Some("shell-ready") => dispatch_user_event(proxy, "ipc", UserEvent::ShellReady),
         Some("toggle-mode") => dispatch_user_event(proxy, "ipc", UserEvent::ToggleMode),
+        Some("toggle-outline") => dispatch_user_event(proxy, "ipc", UserEvent::ToggleOutline),
+        Some("increase-document-size") => {
+            dispatch_user_event(proxy, "ipc", UserEvent::IncreaseDocumentSize)
+        }
+        Some("decrease-document-size") => {
+            dispatch_user_event(proxy, "ipc", UserEvent::DecreaseDocumentSize)
+        }
         Some("close-current-document") => {
             dispatch_user_event(proxy, "ipc", UserEvent::CloseCurrentDocument)
         }

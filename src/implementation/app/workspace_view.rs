@@ -30,7 +30,16 @@ pub(super) fn present_workspace(
 
 pub(super) fn sync_native_menu_state(workspace: &DocumentWorkspace) {
     #[cfg(target_os = "macos")]
-    macos_menu::set_document_output_enabled(workspace.active_document().is_some());
+    {
+        macos_menu::set_document_output_enabled(workspace.active_document().is_some());
+        macos_menu::set_outline_available(
+            workspace
+                .active_document()
+                .is_some_and(|document| {
+                    document.mode() == crate::document::DocumentMode::Readonly
+                }),
+        );
+    }
 }
 
 pub(super) fn sync_native_theme_state(theme: AppTheme) {

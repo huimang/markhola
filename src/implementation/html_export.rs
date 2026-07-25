@@ -62,6 +62,10 @@ const HTML_EXPORT_TEMPLATE: &str = r#"<!DOCTYPE html>
         });
       };
 
+      const removeMermaidRenderArtifact = (renderId) => {
+        document.getElementById(`d${renderId}`)?.remove();
+      };
+
       const renderMermaidDiagrams = async () => {
         ensureMermaidInitialized();
         if (!window.mermaid) return;
@@ -72,8 +76,9 @@ const HTML_EXPORT_TEMPLATE: &str = r#"<!DOCTYPE html>
           const statusNode = block.querySelector(".mermaid-block__status");
           const source = sourceNode?.textContent || "";
           if (!diagramNode) continue;
+          const renderId = `markhola-html-export-${index}-${Date.now()}`;
           try {
-            const { svg } = await window.mermaid.render(`markhola-html-export-${index}-${Date.now()}`, source);
+            const { svg } = await window.mermaid.render(renderId, source);
             diagramNode.innerHTML = svg;
             statusNode?.remove();
           } catch (error) {
@@ -82,6 +87,8 @@ const HTML_EXPORT_TEMPLATE: &str = r#"<!DOCTYPE html>
                 ? String(error.message)
                 : String(error || "Unknown Mermaid error");
             diagramNode.innerHTML = `<pre class="mermaid-block__error">${escapeHtml(message)}\n\n${escapeHtml(source)}</pre>`;
+          } finally {
+            removeMermaidRenderArtifact(renderId);
           }
         }
       };

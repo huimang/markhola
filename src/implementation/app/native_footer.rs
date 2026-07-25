@@ -11,8 +11,6 @@ use objc2::MainThreadOnly;
 #[cfg(target_os = "macos")]
 use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
-use objc2::runtime::AnyObject;
-#[cfg(target_os = "macos")]
 use objc2::msg_send;
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
@@ -30,10 +28,10 @@ const FOOTER_PADDING_X: f64 = 16.0;
 const FOOTER_LABEL_Y: f64 = 11.0;
 const FOOTER_LABEL_HEIGHT: f64 = 18.0;
 const FOOTER_GAP: f64 = 10.0;
-const FOOTER_STATUS_WIDTH: f64 = 160.0;
-const FOOTER_MODE_WIDTH: f64 = 118.0;
-const FOOTER_LINES_WIDTH: f64 = 86.0;
-const FOOTER_WORDS_WIDTH: f64 = 90.0;
+const FOOTER_STATUS_WIDTH: f64 = 168.0;
+const FOOTER_MODE_WIDTH: f64 = 76.0;
+const FOOTER_LINES_WIDTH: f64 = 78.0;
+const FOOTER_WORDS_WIDTH: f64 = 82.0;
 
 pub(super) struct NativeFooter {
     #[cfg(target_os = "macos")]
@@ -51,7 +49,11 @@ struct NativeFooterHandle {
 }
 
 impl NativeFooter {
-    pub(super) fn install(window: &Window, webview: &WebView, theme: AppTheme) -> Self {
+    pub(super) fn install(
+        window: &Window,
+        webview: &WebView,
+        theme: AppTheme,
+    ) -> Self {
         #[cfg(target_os = "macos")]
         unsafe {
             let Some(mtm) = MainThreadMarker::new() else {
@@ -78,13 +80,13 @@ impl NativeFooter {
             let mode_field = footer_label(mtm, "");
             let status_field = footer_label(mtm, "");
 
-            apply_footer_fonts(
+            apply_footer_fonts(&[
                 &path_field,
                 &words_field,
                 &lines_field,
                 &mode_field,
                 &status_field,
-            );
+            ]);
 
             footer_view.addSubview(&path_field);
             footer_view.addSubview(&words_field);
@@ -131,7 +133,7 @@ impl NativeFooter {
             handle.words_field.setTextColor(Some(&primary));
             handle.lines_field.setTextColor(Some(&primary));
             handle.mode_field.setTextColor(Some(&primary));
-            handle.status_field.setTextColor(Some(&primary));
+            handle.status_field.setTextColor(Some(&secondary));
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -164,8 +166,7 @@ impl NativeFooter {
             let mode_x = status_x - FOOTER_GAP - FOOTER_MODE_WIDTH;
             let lines_x = mode_x - FOOTER_GAP - FOOTER_LINES_WIDTH;
             let words_x = lines_x - FOOTER_GAP - FOOTER_WORDS_WIDTH;
-            let path_width = (words_x - FOOTER_GAP - FOOTER_PADDING_X).max(120.0);
-
+            let path_width = (words_x - FOOTER_GAP - FOOTER_PADDING_X).max(0.0);
             handle.path_field.setFrame(NSRect::new(
                 NSPoint::new(FOOTER_PADDING_X, FOOTER_LABEL_Y),
                 NSSize::new(path_width, FOOTER_LABEL_HEIGHT),
@@ -186,7 +187,6 @@ impl NativeFooter {
                 NSPoint::new(status_x, FOOTER_LABEL_Y),
                 NSSize::new(FOOTER_STATUS_WIDTH, FOOTER_LABEL_HEIGHT),
             ));
-
             let webview_handle = webview.webview();
             webview_handle.setFrame(NSRect::new(
                 NSPoint::new(0.0, footer_height),
@@ -208,29 +208,47 @@ impl NativeFooter {
             };
 
             if let Some(active) = workspace.active_document_snapshot() {
-                set_label_text(&handle.path_field, &format!("Path: {}", active.file_path));
+                set_label_text(&handle.path_field, &active.file_path);
                 set_label_text(&handle.words_field, &format!("Words {}", active.word_count));
                 set_label_text(&handle.lines_field, &format!("Lines {}", active.line_count));
-                set_label_text(&handle.mode_field, &format!("Mode {}", active.mode_label));
-                set_label_text(&handle.status_field, &format!("Status {}", status));
+                set_label_text(&handle.mode_field, &active.mode_label);
+                set_label_text(&handle.status_field, status);
+                set_hidden(&handle.path_field, false);
                 set_hidden(&handle.words_field, false);
                 set_hidden(&handle.lines_field, false);
                 set_hidden(&handle.mode_field, false);
+                set_hidden(&handle.status_field, false);
             } else {
-                set_label_text(&handle.path_field, "Path: No file opened");
+                set_label_text(&handle.path_field, "");
                 set_label_text(&handle.words_field, "");
                 set_label_text(&handle.lines_field, "");
                 set_label_text(&handle.mode_field, "");
-                set_label_text(&handle.status_field, &format!("Status {}", status));
+                set_label_text(&handle.status_field, "");
+                set_hidden(&handle.path_field, true);
                 set_hidden(&handle.words_field, true);
                 set_hidden(&handle.lines_field, true);
                 set_hidden(&handle.mode_field, true);
+                set_hidden(&handle.status_field, true);
             }
         }
 
         #[cfg(not(target_os = "macos"))]
         {
             let _ = (workspace, status);
+        }
+    }
+
+    pub(super) fn set_status(&self, status: &str) {
+        #[cfg(target_os = "macos")]
+        if let Some(handle) = &self.handle {
+            unsafe {
+                set_label_text(&handle.status_field, status);
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = status;
         }
     }
 }
@@ -254,11 +272,6 @@ fn footer_theme_colors(
             rgb_color(255, 255, 255),
             rgb_color(43, 36, 29),
             rgb_color(111, 98, 88),
-        ),
-        AppTheme::Github => (
-            rgb_color(246, 248, 250),
-            rgb_color(31, 35, 40),
-            rgb_color(87, 96, 106),
         ),
         AppTheme::Dark => (
             rgb_color(13, 17, 23),
@@ -285,18 +298,12 @@ fn rgb_color(red: u8, green: u8, blue: u8) -> Retained<NSColor> {
 
 #[cfg(target_os = "macos")]
 unsafe fn apply_footer_fonts(
-    path_field: &NSTextField,
-    words_field: &NSTextField,
-    lines_field: &NSTextField,
-    mode_field: &NSTextField,
-    status_field: &NSTextField,
+    fields: &[&NSTextField],
 ) {
     let font = NSFont::systemFontOfSize(12.0);
-    let _: () = msg_send![path_field, setFont: Some(&*font)];
-    let _: () = msg_send![words_field, setFont: Some(&*font)];
-    let _: () = msg_send![lines_field, setFont: Some(&*font)];
-    let _: () = msg_send![mode_field, setFont: Some(&*font)];
-    let _: () = msg_send![status_field, setFont: Some(&*font)];
+    for field in fields {
+        let _: () = msg_send![*field, setFont: Some(&*font)];
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -306,6 +313,6 @@ unsafe fn set_label_text(field: &NSTextField, value: &str) {
 }
 
 #[cfg(target_os = "macos")]
-unsafe fn set_hidden(view: &AnyObject, hidden: bool) {
+unsafe fn set_hidden(view: &objc2::runtime::AnyObject, hidden: bool) {
     let _: () = msg_send![view, setHidden: hidden];
 }

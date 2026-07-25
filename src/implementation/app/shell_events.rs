@@ -52,7 +52,10 @@ pub(super) fn recover_shell(url: String, runtime: &mut AppRuntime) {
 
     if let Err(error) = runtime
         .webview
-        .load_html(&super::shell::app_shell_html(runtime.selected_theme))
+        .load_html(&super::shell::app_shell_html(
+            runtime.selected_theme,
+            runtime.document_size,
+        ))
     {
         runtime.shell.recovery_pending = false;
         runtime

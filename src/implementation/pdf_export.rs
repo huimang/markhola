@@ -176,6 +176,10 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         mermaidInitialized = true;
       };
 
+      const removeMermaidRenderArtifact = (renderId) => {
+        document.getElementById(`d${renderId}`)?.remove();
+      };
+
       const renderMermaidDiagrams = async () => {
         ensureMermaidInitialized();
         if (!window.mermaid) return;
@@ -195,11 +199,9 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             statusNode.classList.remove("hidden");
           }
 
+          const renderId = `markhola-export-mermaid-${index}-${Date.now()}`;
           try {
-            const { svg } = await window.mermaid.render(
-              `markhola-export-mermaid-${index}-${Date.now()}`,
-              source
-            );
+            const { svg } = await window.mermaid.render(renderId, source);
             diagramNode.innerHTML = svg;
             statusNode?.classList.add("hidden");
           } catch (error) {
@@ -213,6 +215,8 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             }
             diagramNode.innerHTML =
               `<pre class="mermaid-block__error">${escapeHtml(message)}\n\n${escapeHtml(source)}</pre>`;
+          } finally {
+            removeMermaidRenderArtifact(renderId);
           }
         }
       };

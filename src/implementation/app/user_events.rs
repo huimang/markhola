@@ -2,7 +2,6 @@ use tao::event_loop::ControlFlow;
 use tao::window::Fullscreen;
 
 use crate::app::AppTheme;
-use crate::document::DocumentMode;
 use crate::render_assets;
 
 use super::close_actions::close_document_tab;
@@ -85,6 +84,16 @@ pub(super) fn handle_user_event(
         }
         UserEvent::ToggleMode => toggle_mode(runtime),
         UserEvent::SelectTheme(theme) => select_theme(theme, runtime),
+        UserEvent::IncreaseDocumentSize => {
+            update_document_size(runtime.document_size.increase(), "increased", runtime)
+        }
+        UserEvent::DecreaseDocumentSize => {
+            update_document_size(runtime.document_size.decrease(), "decreased", runtime)
+        }
+        UserEvent::ResetDocumentSize => {
+            update_document_size(crate::app::DocumentSize::default(), "reset", runtime)
+        }
+        UserEvent::ToggleOutline => toggle_outline(runtime),
         UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
         UserEvent::EditorChanged(markdown) => editor_changed(markdown, runtime),
         UserEvent::ShowAbout => render_about(&runtime.webview),
@@ -154,20 +163,16 @@ fn handle_open_path(request: OpenPathRequest, runtime: &mut AppRuntime) {
 }
 
 fn toggle_mode(runtime: &mut AppRuntime) {
-    let status = runtime.workspace.active_document_mut().map(|document| {
+    let toggled = runtime.workspace.active_document_mut().map(|document| {
         document.toggle_mode();
-        match document.mode() {
-            DocumentMode::Readonly => "Readonly preview updated.",
-            DocumentMode::Writable => "Writable mode enabled.",
-        }
     });
-    match status {
-        Some(status) => present_workspace(
+    match toggled {
+        Some(()) => present_workspace(
             &runtime.window,
             &runtime.webview,
             &runtime.native_footer,
             &runtime.workspace,
-            status,
+            "Ready.",
             true,
         ),
         None => render_status(&runtime.webview, "No document opened.", "error"),
@@ -202,6 +207,46 @@ fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
             &format!("Failed to serialize theme CSS: {error}"),
             "error",
         ),
+    }
+}
+
+fn update_document_size(
+    size: crate::app::DocumentSize,
+    action: &str,
+    runtime: &mut AppRuntime,
+) {
+    runtime.document_size = size;
+    theme_preferences::save_document_size(size);
+    let script = format!("window.applyDocumentSize({});", size.percent());
+    if let Err(error) = runtime.webview.evaluate_script(&script) {
+        render_status(
+            &runtime.webview,
+            &format!("Failed to apply document size: {error}"),
+            "error",
+        );
+        return;
+    }
+    let status = format!("Document size {action} to {}%.", size.percent());
+    runtime.native_footer.set_status(&status);
+    render_status(&runtime.webview, &status, "info");
+}
+
+fn toggle_outline(runtime: &mut AppRuntime) {
+    if runtime
+        .workspace
+        .active_document()
+        .is_some_and(|document| document.mode() == crate::document::DocumentMode::Readonly)
+    {
+        #[cfg(target_os = "macos")]
+        let selected = super::macos_menu::toggle_outline_selected();
+        #[cfg(not(target_os = "macos"))]
+        let selected = false;
+        let script = format!("window.setOutlinePanelOpen({selected});");
+        if let Err(error) = runtime.webview.evaluate_script(&script) {
+            let status = format!("Failed to toggle Outline: {error}");
+            runtime.native_footer.set_status(&status);
+            render_status(&runtime.webview, &status, "error");
+        }
     }
 }
 

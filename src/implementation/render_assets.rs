@@ -8,6 +8,7 @@ const DEFAULT_APP_THEME_NAME: &str = "default";
 const DEFAULT_APP_THEME_LAYOUT_FILE: &str = "layout.css";
 const DEFAULT_APP_THEME_CSS: &str = include_str!("../../themes/default/layout.css");
 const DEFAULT_APP_LOGO_PNG: &[u8] = include_bytes!("../../assets/logo.png");
+const DEFAULT_APP_ICON_PNG: &[u8] = include_bytes!("../../assets/app-icon.png");
 
 pub fn load_app_theme_css(theme_name: &str) -> String {
     for path in app_theme_candidates(theme_name) {
@@ -38,6 +39,17 @@ pub fn app_logo_data_url() -> &'static str {
         format!(
             "data:image/png;base64,{}",
             encode_base64(DEFAULT_APP_LOGO_PNG)
+        )
+    })
+}
+
+pub fn app_icon_data_url() -> &'static str {
+    static APP_ICON_DATA_URL: OnceLock<String> = OnceLock::new();
+
+    APP_ICON_DATA_URL.get_or_init(|| {
+        format!(
+            "data:image/png;base64,{}",
+            encode_base64(DEFAULT_APP_ICON_PNG)
         )
     })
 }
