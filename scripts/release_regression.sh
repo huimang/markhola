@@ -28,8 +28,10 @@ require_file() {
 
 verify_help_version() {
   local path="$1"
+  local content
   require_file "$path"
-  if ! grep -Fq "Current version: \`v${APP_VERSION}\`" "$ROOT_DIR/$path"; then
+  content="$(<"$ROOT_DIR/$path")"
+  if [[ "$content" != *"Current version: \`v${APP_VERSION}\`"* ]]; then
     echo "Bundled Help version mismatch: $path must declare v${APP_VERSION}" >&2
     exit 1
   fi
