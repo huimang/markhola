@@ -168,6 +168,10 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - If a clicked local Markdown link targets a file that is already open, activate the existing tab instead of opening a duplicate
    - If the target file is not open, open it in a new tab and make it the active tab
    - Keep non-Markdown links and in-document anchor links on their existing behavior
+6. Add angle-bracket shorthand links for Markdown text
+   - Support `<xx>` as shorthand for `[xx](xx)` while rendering Markdown
+   - Keep standard Markdown links, autolinks, and inline code behavior unchanged
+   - Preserve the original Markdown source text in writable mode
 
 ### v0.8.0
 1. Replace the WebView document tab strip with native macOS window tabs

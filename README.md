@@ -34,6 +34,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Save the current document to another path with `File > Save As`
 - Open the bundled documentation from `Help > Documentation`
 - Render headings, links, images, tables, lists, blockquotes, and code blocks
+- Render angle-bracket shorthand links such as `<README.md>` as clickable links in readonly mode
 - Syntax-highlighted fenced code blocks in readonly mode
 - Improved mainstream language highlight coverage for fenced code blocks
 - Mathematical expressions in readonly mode, including inline math, `$$...$$`, and fenced `math` blocks

@@ -13,7 +13,8 @@ use syntect::util::LinesWithEndings;
 const TOC_PLACEHOLDER: &str = "<markhola-toc></markhola-toc>";
 
 pub fn render_html(markdown: &str) -> String {
-    let (markdown, has_toc_placeholder) = preprocess_toc(markdown);
+    let markdown = preprocess_angle_bracket_links(markdown);
+    let (markdown, has_toc_placeholder) = preprocess_toc(&markdown);
 
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
@@ -191,6 +192,192 @@ fn preprocess_toc(markdown: &str) -> (String, bool) {
     }
 
     (output, has_toc)
+}
+
+fn preprocess_angle_bracket_links(markdown: &str) -> String {
+    let mut output = String::with_capacity(markdown.len());
+    let mut in_fenced_code = false;
+    let mut fence_char = '\0';
+    let mut fence_len = 0usize;
+    let mut first = true;
+
+    for line in markdown.lines() {
+        if !first {
+            output.push('\n');
+        }
+        first = false;
+
+        if let Some((next_fence_char, next_fence_len)) = fence_marker(line) {
+            if in_fenced_code && next_fence_char == fence_char && next_fence_len >= fence_len {
+                in_fenced_code = false;
+            } else if !in_fenced_code {
+                in_fenced_code = true;
+                fence_char = next_fence_char;
+                fence_len = next_fence_len;
+            }
+            output.push_str(line);
+            continue;
+        }
+
+        if in_fenced_code || is_indented_code_line(line) {
+            output.push_str(line);
+            continue;
+        }
+
+        output.push_str(&replace_angle_bracket_links_in_line(line));
+    }
+
+    if markdown.ends_with('\n') {
+        output.push('\n');
+    }
+
+    output
+}
+
+fn fence_marker(line: &str) -> Option<(char, usize)> {
+    let trimmed = line.trim_start();
+    let first = trimmed.chars().next()?;
+    if first != '`' && first != '~' {
+        return None;
+    }
+    let len = trimmed.chars().take_while(|character| *character == first).count();
+    (len >= 3).then_some((first, len))
+}
+
+fn is_indented_code_line(line: &str) -> bool {
+    line.starts_with("    ") || line.starts_with('\t')
+}
+
+fn replace_angle_bracket_links_in_line(line: &str) -> String {
+    let mut output = String::with_capacity(line.len());
+    let mut index = 0usize;
+
+    while index < line.len() {
+        let remainder = &line[index..];
+
+        if remainder.starts_with('`') {
+            let tick_count = remainder.chars().take_while(|character| *character == '`').count();
+            let closing = format!("{}`", "`".repeat(tick_count.saturating_sub(1)));
+            if let Some(offset) = remainder[tick_count..].find(&closing) {
+                let end = index + tick_count + offset + tick_count;
+                output.push_str(&line[index..end]);
+                index = end;
+                continue;
+            }
+            output.push_str(remainder);
+            break;
+        }
+
+        if remainder.starts_with('<') {
+            if let Some(close_offset) = remainder.find('>') {
+                let inner = &remainder[1..close_offset];
+                if is_angle_bracket_link_target(inner) {
+                    output.push('[');
+                    output.push_str(inner);
+                    output.push_str("](");
+                    output.push_str(inner);
+                    output.push(')');
+                    index += close_offset + 1;
+                    continue;
+                }
+            }
+        }
+
+        let ch = remainder.chars().next().unwrap();
+        output.push(ch);
+        index += ch.len_utf8();
+    }
+
+    output
+}
+
+fn is_angle_bracket_link_target(value: &str) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed.contains(char::is_whitespace)
+        || trimmed.contains('=')
+        || trimmed.contains('"')
+        || trimmed.contains('\'')
+    {
+        return false;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    let tag_name = lower
+        .strip_prefix('/')
+        .unwrap_or(&lower)
+        .strip_suffix('/')
+        .unwrap_or(lower.strip_prefix('/').unwrap_or(&lower));
+
+    if is_html_tag_name(tag_name) {
+        return false;
+    }
+
+    true
+}
+
+fn is_html_tag_name(value: &str) -> bool {
+    matches!(
+        value,
+        "a"
+            | "abbr"
+            | "article"
+            | "aside"
+            | "b"
+            | "blockquote"
+            | "body"
+            | "br"
+            | "button"
+            | "code"
+            | "dd"
+            | "div"
+            | "dl"
+            | "dt"
+            | "em"
+            | "figcaption"
+            | "figure"
+            | "footer"
+            | "form"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "head"
+            | "header"
+            | "hr"
+            | "html"
+            | "i"
+            | "img"
+            | "input"
+            | "label"
+            | "li"
+            | "link"
+            | "main"
+            | "meta"
+            | "nav"
+            | "ol"
+            | "p"
+            | "pre"
+            | "script"
+            | "section"
+            | "span"
+            | "strong"
+            | "style"
+            | "sub"
+            | "sup"
+            | "table"
+            | "tbody"
+            | "td"
+            | "textarea"
+            | "th"
+            | "thead"
+            | "title"
+            | "tr"
+            | "u"
+            | "ul"
+    )
 }
 
 fn is_toc_line(line: &str) -> bool {

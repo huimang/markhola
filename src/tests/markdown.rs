@@ -185,3 +185,56 @@ fn does_not_render_toc_without_placeholder() {
 
     assert!(!html.contains("class=\"toc\""));
 }
+
+#[test]
+fn renders_angle_bracket_shorthand_links() {
+    let html = render_html("<xx>");
+
+    assert!(html.contains("<a href=\"xx\">xx</a>"));
+}
+
+#[test]
+fn renders_angle_bracket_paths_and_urls_as_links() {
+    let html = render_html("<README.md>\n<docs/intro.md>\n<https://example.com>");
+
+    assert!(html.contains("<a href=\"README.md\">README.md</a>"));
+    assert!(html.contains("<a href=\"docs/intro.md\">docs/intro.md</a>"));
+    assert!(html.contains("<a href=\"https://example.com\">https://example.com</a>"));
+}
+
+#[test]
+fn keeps_angle_brackets_literal_inside_inline_code() {
+    let html = render_html("`<README.md>`");
+
+    assert!(html.contains("<code>&lt;README.md&gt;</code>"));
+    assert!(!html.contains("href=\"README.md\""));
+}
+
+#[test]
+fn keeps_angle_brackets_literal_inside_fenced_code() {
+    let html = render_html("```text\n<README.md>\n```");
+
+    assert!(html.contains("&lt;README.md&gt;"));
+    assert!(!html.contains("href=\"README.md\""));
+}
+
+#[test]
+fn does_not_turn_html_tags_into_links() {
+    let html = render_html("<b>bold</b>\n<div>block</div>");
+
+    assert!(html.contains("<b>bold</b>"));
+    assert!(html.contains("<div>block</div>"));
+    assert!(!html.contains("href=\"b\""));
+    assert!(!html.contains("href=\"div\""));
+}
+
+#[test]
+fn example_angle_bracket_links_keeps_rendered_and_literal_cases_separate() {
+    let html = render_html(include_str!("../../examples/angle-bracket-links.md"));
+
+    assert!(html.contains("<a href=\"README.md\">README.md</a>"));
+    assert!(html.contains("<a href=\"https://example.com\">https://example.com</a>"));
+    assert!(html.contains("<code>&lt;README.md&gt;</code>"));
+    assert!(html.contains("&lt;README.md&gt;"));
+    assert!(html.contains("<b>bold-like tag</b>"));
+}
