@@ -5,12 +5,13 @@ use rfd::FileDialog;
 use tao::window::Window;
 use wry::WebView;
 
+use crate::app::text;
 use crate::document::ActiveDocument;
 use crate::file_io;
 use crate::workspace::{DocumentWorkspace, WorkspaceOpenResult};
 
-use super::log_event;
 use super::asset_access::{AssetAccessRegistry, register_document};
+use super::log_event;
 use super::native_footer::NativeFooter;
 use super::workspace_view::{present_workspace, render_status, sync_workspace_state};
 
@@ -24,7 +25,7 @@ pub(super) fn open_documents_dialog(event_id: u64) -> Option<Vec<PathBuf>> {
     );
     let result = FileDialog::new()
         .add_filter("Markdown", &["md", "markdown"])
-        .set_title("Open Markdown File")
+        .set_title(text("dialog.open_markdown"))
         .pick_files();
     let elapsed_ms = started_at
         .elapsed()
@@ -49,7 +50,14 @@ pub(super) fn create_blank_document(
     let blank_number = workspace.next_blank_document_number();
     let document = ActiveDocument::new_blank_with_id(document_id, blank_number);
     workspace.open_document(document);
-    present_workspace(window, webview, native_footer, workspace, "New document created.", true);
+    present_workspace(
+        window,
+        webview,
+        native_footer,
+        workspace,
+        text("status.new_document"),
+        true,
+    );
 }
 
 pub(super) fn open_document(
@@ -67,7 +75,7 @@ pub(super) fn open_document(
         "open_document start",
         format!("path={}", path.display()),
     );
-    render_status(webview, "Loading document...", "info");
+    render_status(webview, text("status.loading_document"), "info");
 
     if let Some(document_id) = workspace.find_by_path(path) {
         workspace.activate_document(document_id);
@@ -76,7 +84,7 @@ pub(super) fn open_document(
             webview,
             native_footer,
             workspace,
-            "Document already opened. Switched to tab.",
+            text("status.already_open"),
         );
         return;
     }
@@ -173,25 +181,34 @@ fn open_loaded_document(
         WorkspaceOpenResult::OpenedNew(document_id) => {
             if let Err(error) = register_document(asset_access, document_id, path) {
                 workspace.close_document(document_id);
-                render_status(webview, &format!("Failed to enable local assets: {error}"), "error");
+                let message =
+                    text("status.failed_local_assets").replace("{error}", &error.to_string());
+                render_status(webview, &message, "error");
                 return;
             }
-            present_workspace(window, webview, native_footer, workspace, "Document loaded.", true)
+            present_workspace(
+                window,
+                webview,
+                native_footer,
+                workspace,
+                text("status.document_loaded"),
+                true,
+            )
         }
         WorkspaceOpenResult::ActivatedExisting(_) => sync_workspace_state(
             window,
             webview,
             native_footer,
             workspace,
-            "Document already opened. Switched to tab.",
+            text("status.already_open"),
         ),
     }
 }
 
 fn reload_status_message(reloaded: usize, skipped_dirty: usize) -> String {
     match (reloaded, skipped_dirty) {
-        (0, 0) | (_, 0) => "Document reloaded.".to_string(),
-        (_, 1) => "Document reloaded. One unsaved tab was kept as-is.".to_string(),
-        (_, count) => format!("Document reloaded. {count} unsaved tabs were kept as-is."),
+        (0, 0) | (_, 0) => text("status.reloaded").to_string(),
+        (_, 1) => text("status.reloaded_one_dirty").to_string(),
+        (_, count) => text("status.reloaded_dirty").replace("{count}", &count.to_string()),
     }
 }

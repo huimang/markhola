@@ -2,29 +2,23 @@
 
 ![Application logo](../logo.png)
 
-Current version: `v0.7.7`
+Current version: `v0.7.9`
 
 ## What is MarkHola
 
-MarkHola is a lightweight desktop Markdown reader and editor for macOS.
+MarkHola is a free Markdown reader and editor built with AI.
 
 ## Main Features
 
-- Create a new blank Markdown document
-- Open and read local Markdown files
-- Edit Markdown content in writable mode
+- Create, open, read, edit, and save local Markdown documents
 - Switch between readonly and writable modes with `Command + /`
-- Save the current file with `Command + S`
-- Save the current file to another path with `File > Save As`
-- Export the current document to PDF
-- Export the current document to HTML
-- Print the current document
-- Open multiple Markdown files in one window
-- Switch app shell themes from the View menu
-- Toggle fullscreen viewing from the View menu
-- Open the built-in documentation from the Help menu
-- Use `Command + F` to find text in readonly mode
-- Use `Command + F` to find and replace text in writable mode
+- Open multiple documents in WebView tabs whose titles behave like native non-selectable tabs
+- Switch the interface between English and Simplified Chinese
+- Remember the selected language, theme, and document size across app relaunches
+- Find text in readonly mode and find or replace text in writable mode
+- Open a right-side document Outline in readonly mode
+- Render Mermaid, math, tables, links, images, and highlighted code
+- Export the current document to PDF or HTML and print it
 
 ## Menus
 
@@ -35,17 +29,17 @@ MarkHola is a lightweight desktop Markdown reader and editor for macOS.
 - Save
 - Save As
 - Print
-- Export > PDF
-- Export > HTML
+- Export > PDF / HTML
 - Close
 - Exit
 
 ### Edit
 
+- Toggle Mode
 - Undo / Redo
+- Find
 - Cut / Copy / Paste
 - Select All
-- Find
 
 ### Tab
 
@@ -57,10 +51,10 @@ MarkHola is a lightweight desktop Markdown reader and editor for macOS.
 
 ### View
 
-- Theme > Default
-- Theme > GitHub
-- Theme > Dark
-- Theme > Light
+- Theme > Default / Dark / Light
+- Language > English / 简体中文
+- Size > Zoom In / Zoom Out / Reset
+- Outline
 - Toggle Full Screen
 
 ### Help
@@ -69,9 +63,8 @@ MarkHola is a lightweight desktop Markdown reader and editor for macOS.
 
 ## Notes
 
-- Readonly mode renders Mermaid, math, tables, links, images, and code blocks.
-- Readonly mode supports in-page find across the current rendered document.
-- Writable mode keeps the Markdown source editable.
-- New unsaved documents choose a file path on first save.
-- Writable mode supports in-page find, replace, and replace all on the current document.
-- Exported and printed output are based on the current rendered document.
+- Interface language changes apply immediately without reloading the current document.
+- Markdown content, file names, and exported content are not translated.
+- Operating-system dialogs continue to use the language provided by macOS.
+- The Outline item is available for an opened document in readonly mode.
+- `Show Tab Bar` and `Show All Tabs` are intentionally hidden while MarkHola uses WebView tabs.

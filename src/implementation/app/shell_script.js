@@ -42,7 +42,16 @@
       const aboutBuild = document.getElementById("aboutBuild");
       const aboutGithub = document.getElementById("aboutGithub");
       const aboutCopy = document.getElementById("aboutCopy");
+      const emptyTitle = document.getElementById("emptyTitle");
+      const emptyDescription = document.getElementById("emptyDescription");
+      const outlineTitle = document.getElementById("outlineTitle");
+      const aboutTitle = document.getElementById("aboutTitle");
+      const aboutVersionLabel = document.getElementById("aboutVersionLabel");
+      const aboutAuthorLabel = document.getElementById("aboutAuthorLabel");
+      const aboutBuildLabel = document.getElementById("aboutBuildLabel");
+      const aboutFooter = document.getElementById("aboutFooter");
       const appThemeStyle = document.getElementById("appThemeStyle");
+      let appStrings = __APP_LANGUAGE__;
       const applyDocumentSize = (percent) => {
         const normalized = Math.min(200, Math.max(50, Number(percent) || 100));
         const scale = normalized / 100;
@@ -65,6 +74,50 @@
       let writableMatches = [];
       let outlineOpen = false;
       let writableActiveIndex = -1;
+
+      const applyAppLanguage = (strings) => {
+        appStrings = strings;
+        document.documentElement.lang = strings.language;
+        tabsBar.setAttribute("aria-label", strings.openDocuments);
+        tabNavigation.setAttribute("aria-label", strings.moveThroughTabs);
+        previousTabs.setAttribute("aria-label", strings.moveTabsBackward);
+        nextTabs.setAttribute("aria-label", strings.moveTabsForward);
+        newDocumentTab.setAttribute("aria-label", strings.newDocument);
+        findInput.placeholder = strings.findInDocument;
+        findInput.setAttribute("aria-label", strings.findInDocument);
+        replaceInput.placeholder = strings.replaceWith;
+        replaceInput.setAttribute("aria-label", strings.replaceWith);
+        findPrevious.textContent = strings.previous;
+        findNext.textContent = strings.next;
+        replaceOne.textContent = strings.replace;
+        replaceAll.textContent = strings.replaceAll;
+        findClose.textContent = strings.close;
+        emptyTitle.textContent = strings.noDocument;
+        emptyDescription.textContent = strings.emptyDescription;
+        editor.setAttribute("aria-label", strings.markdownEditor);
+        outlinePanel.setAttribute("aria-label", strings.documentOutline);
+        outlineTitle.textContent = strings.outline;
+        outlineClose.setAttribute("aria-label", strings.closeOutline);
+        outlineList.setAttribute("aria-label", strings.documentHeadings);
+        aboutTitle.textContent = strings.about;
+        aboutClose.setAttribute("aria-label", strings.closeAbout);
+        aboutVersionLabel.textContent = strings.version;
+        aboutAuthorLabel.textContent = strings.author;
+        aboutBuildLabel.textContent = strings.build;
+        aboutCopy.textContent = strings.copy;
+        aboutFooter.textContent = strings.aboutFooter;
+        for (const button of tabsBar.querySelectorAll("[data-close-document]")) {
+          button.setAttribute(
+            "aria-label",
+            `${strings.closeDocument} ${button.dataset.fileName || ""}`.trim()
+          );
+        }
+        updateFindCount(
+          currentDocumentMode === "writable" ? writableMatches.length : readonlyMatches.length,
+          currentDocumentMode === "writable" ? writableActiveIndex : readonlyActiveIndex
+        );
+        refreshOutline();
+      };
 
       const hideAbout = () => {
         aboutOverlay.classList.add("hidden");
@@ -220,7 +273,7 @@
               <div class="document-tab${activeClass}" role="tab" tabindex="0" aria-selected="${tab.active}" data-document-id="${tab.document_id}" title="${escapeHtml(tab.title)}">
                 <span class="document-tab__name">${escapeHtml(tab.file_name)}</span>
                 ${dirty}
-                <button class="document-tab__close" type="button" data-close-document="${tab.document_id}" aria-label="Close ${escapeHtml(tab.file_name)}">&times;</button>
+                <button class="document-tab__close" type="button" data-close-document="${tab.document_id}" data-file-name="${escapeHtml(tab.file_name)}" aria-label="${escapeHtml(appStrings.closeDocument)} ${escapeHtml(tab.file_name)}">&times;</button>
               </div>
             `;
           })
@@ -244,7 +297,7 @@
         if (!headings.length) {
           const empty = document.createElement("p");
           empty.className = "outline-empty";
-          empty.textContent = "No headings in this document.";
+          empty.textContent = appStrings.noHeadings;
           outlineList.appendChild(empty);
           return;
         }
@@ -254,7 +307,7 @@
           item.type = "button";
           item.className = "outline-item";
           item.dataset.level = heading.tagName.slice(1);
-          item.textContent = heading.textContent?.trim() || "Untitled heading";
+          item.textContent = heading.textContent?.trim() || appStrings.untitledHeading;
           item.addEventListener("click", () => {
             heading.scrollIntoView({ behavior: "smooth", block: "start" });
           });
@@ -267,7 +320,7 @@
         document.title = "MarkHola";
         documentBase.setAttribute("href", "");
         showPaneForMode(null);
-        window.showStatus({ message: statusMessage || "Ready.", level: "info" });
+        window.showStatus({ message: statusMessage || appStrings.ready, level: "info" });
       };
 
       const applyWorkspaceChrome = (payload) => {
@@ -329,7 +382,7 @@
 
           diagramNode.innerHTML = "";
           if (statusNode) {
-            statusNode.textContent = "Rendering diagram...";
+            statusNode.textContent = appStrings.renderingDiagram;
             statusNode.classList.remove("hidden");
           }
 
@@ -344,7 +397,7 @@
                 ? String(error.message)
                 : String(error || "Unknown Mermaid error");
             if (statusNode) {
-              statusNode.textContent = "Mermaid render failed.";
+              statusNode.textContent = appStrings.diagramFailed;
               statusNode.classList.remove("hidden");
             }
             diagramNode.innerHTML =
@@ -407,7 +460,7 @@
 
           formulaNode.innerHTML = "";
           if (statusNode) {
-            statusNode.textContent = "Rendering formula...";
+            statusNode.textContent = appStrings.renderingFormula;
             statusNode.classList.remove("hidden");
           }
 
@@ -420,7 +473,7 @@
                 ? String(error.message)
                 : String(error || "Unknown math error");
             if (statusNode) {
-              statusNode.textContent = "Math render failed.";
+              statusNode.textContent = appStrings.formulaFailed;
               statusNode.classList.remove("hidden");
             }
             formulaNode.innerHTML =
@@ -440,11 +493,14 @@
 
       const updateFindCount = (matchCount, activeIndex) => {
         if (matchCount <= 0) {
-          findCount.textContent = "0 results";
+          findCount.textContent = appStrings.resultsZero;
           return;
         }
-
-        findCount.textContent = `${activeIndex + 1} of ${matchCount}`;
+        if (matchCount === 1) {
+          findCount.textContent = appStrings.resultsOne;
+          return;
+        }
+        findCount.textContent = `${activeIndex + 1} / ${matchCount} ${appStrings.resultsMany}`;
       };
 
       const updateFindControls = () => {
@@ -497,7 +553,7 @@
 
       const openFindPanel = () => {
         if (!hasActiveDocument()) {
-          window.showStatus({ message: "No document opened.", level: "error" });
+          window.showStatus({ message: appStrings.noDocumentError, level: "error" });
           return;
         }
 
@@ -814,6 +870,21 @@
         }
       };
 
+      const resolveLocalMarkdownLink = (href) => {
+        const baseHref = documentBase.getAttribute("href") || "";
+        if (!href || !baseHref) return null;
+
+        try {
+          const fileUrl = new URL(href, baseHref);
+          const pathname = decodeURIComponent(fileUrl.pathname || "").toLowerCase();
+          if (fileUrl.protocol !== "file:") return null;
+          if (!pathname.endsWith(".md") && !pathname.endsWith(".markdown")) return null;
+          return fileUrl.href;
+        } catch {
+          return null;
+        }
+      };
+
       aboutClose.addEventListener("click", hideAbout);
       aboutOverlay.addEventListener("click", (event) => {
         if (event.target === aboutOverlay) hideAbout();
@@ -825,14 +896,14 @@
 
         try {
           await navigator.clipboard.writeText(url);
-          aboutCopy.textContent = "Copied";
+          aboutCopy.textContent = appStrings.copied;
           setTimeout(() => {
-            aboutCopy.textContent = "Copy";
+            aboutCopy.textContent = appStrings.copy;
           }, 1200);
         } catch {
-          aboutCopy.textContent = "Failed";
+          aboutCopy.textContent = appStrings.failed;
           setTimeout(() => {
-            aboutCopy.textContent = "Copy";
+            aboutCopy.textContent = appStrings.copy;
           }, 1200);
         }
       });
@@ -1012,6 +1083,15 @@
         if (href.startsWith("http://") || href.startsWith("https://")) {
           event.preventDefault();
           window.ipc.postMessage(JSON.stringify({ kind: "open-external", href }));
+          return;
+        }
+
+        const localMarkdownHref = resolveLocalMarkdownLink(href);
+        if (localMarkdownHref) {
+          event.preventDefault();
+          window.ipc.postMessage(
+            JSON.stringify({ kind: "open-markdown-link", href: localMarkdownHref })
+          );
         }
       });
 
@@ -1032,7 +1112,7 @@
           fallback.className = "image-error";
           const originalSrc = target.getAttribute("data-original-src");
           const visibleSrc = originalSrc || target.getAttribute("src") || "unknown source";
-          fallback.textContent = `Image failed to load: ${visibleSrc}`;
+          fallback.textContent = `${appStrings.imageFailed} ${visibleSrc}`;
           target.replaceWith(fallback);
         },
         true
@@ -1114,12 +1194,13 @@
         aboutBuild.textContent = `${payload.buildPlatform} / ${payload.buildTarget}`;
         aboutGithub.textContent = payload.githubUrl;
         aboutGithub.setAttribute("href", payload.githubUrl);
-        aboutCopy.textContent = "Copy";
+        aboutCopy.textContent = appStrings.copy;
         aboutOverlay.classList.remove("hidden");
       };
 
       window.openFindPanel = openFindPanel;
       window.applyAppTheme = applyAppTheme;
+      window.applyAppLanguage = applyAppLanguage;
       window.applyDocumentSize = applyDocumentSize;
       window.setOutlinePanelOpen = (open) => {
         if (currentDocumentMode !== "readonly") {
@@ -1131,6 +1212,7 @@
       };
 
       applyDocumentSize(__DOCUMENT_SIZE__);
+      applyAppLanguage(appStrings);
       window.ipc.postMessage(JSON.stringify({ kind: "shell-ready" }));
     </script>
   </body>

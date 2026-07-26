@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WITH_PACKAGE=0
+APP_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
 
 for argument in "$@"; do
   case "$argument" in
@@ -21,6 +22,15 @@ require_file() {
   local path="$1"
   if [[ ! -f "$ROOT_DIR/$path" ]]; then
     echo "Missing required file: $path" >&2
+    exit 1
+  fi
+}
+
+verify_help_version() {
+  local path="$1"
+  require_file "$path"
+  if ! grep -Fq "Current version: \`v${APP_VERSION}\`" "$ROOT_DIR/$path"; then
+    echo "Bundled Help version mismatch: $path must declare v${APP_VERSION}" >&2
     exit 1
   fi
 }
@@ -75,10 +85,15 @@ require_file "examples/multi-document.md"
 require_file "examples/pdf-export.md"
 require_file "examples/theme-showcase.md"
 require_file "assets/help/Documentation.md"
+require_file "assets/help/Documentation.zh-CN.md"
+require_file "i18n/en.yaml"
+require_file "i18n/zh-CN.yaml"
 require_file "themes/default/layout.css"
 require_file "themes/dark/layout.css"
 require_file "themes/light/layout.css"
 require_file "scripts/release_regression_checklist.md"
+verify_help_version "assets/help/Documentation.md"
+verify_help_version "assets/help/Documentation.zh-CN.md"
 
 echo "==> Running automated PDF export smoke test"
 SMOKE_EXPORT_PATH="$ROOT_DIR/dist/pdf-export-smoke.pdf"
@@ -170,11 +185,11 @@ if [[ "$WITH_PACKAGE" -eq 1 ]]; then
   echo "==> Packaging app bundle and DMG"
   run_packaging_with_retry
 
-  APP_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
   require_file "dist/MarkHola.app/Contents/Resources/themes/default/layout.css"
   require_file "dist/MarkHola.app/Contents/Resources/themes/dark/layout.css"
   require_file "dist/MarkHola.app/Contents/Resources/themes/light/layout.css"
   require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.md"
+  require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.zh-CN.md"
   require_file "dist/MarkHola-${APP_VERSION}.dmg"
 fi
 

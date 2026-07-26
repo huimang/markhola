@@ -1,3 +1,4 @@
+use crate::app::text;
 use tao::event_loop::ControlFlow;
 
 use super::close_actions::{close_document_tab, close_document_tabs, resolve_all_pending_changes};
@@ -11,10 +12,10 @@ pub(super) fn activate_document(document_id: u64, runtime: &mut AppRuntime) {
             &runtime.webview,
             &runtime.native_footer,
             &runtime.workspace,
-            "Document switched.",
+            text("status.document_switched"),
         );
     } else {
-        render_status(&runtime.webview, "Document tab no longer exists.", "error");
+        render_status(&runtime.webview, text("status.missing_tab"), "error");
     }
 }
 
@@ -26,9 +27,9 @@ pub(super) fn switch_document(runtime: &mut AppRuntime, next: bool) {
     };
     if changed {
         let message = if next {
-            "Switched to next tab."
+            text("status.next_tab")
         } else {
-            "Switched to previous tab."
+            text("status.previous_tab")
         };
         sync_workspace_state(
             &runtime.window,
@@ -48,7 +49,7 @@ pub(super) fn close_current_document(runtime: &mut AppRuntime, control_flow: &mu
             &runtime.native_footer,
             &mut runtime.workspace,
             document_id,
-            "Document closed.",
+            text("status.document_closed"),
             &runtime.asset_access,
         );
     } else {
@@ -60,7 +61,7 @@ pub(super) fn close_other_documents(runtime: &mut AppRuntime) {
     if let Some(active_document_id) = runtime.workspace.active_document_id() {
         let document_ids = runtime.workspace.other_document_ids(active_document_id);
         if document_ids.is_empty() {
-            render_status(&runtime.webview, "No other tabs to close.", "info");
+            render_status(&runtime.webview, text("status.no_other_tabs"), "info");
         } else {
             close_document_tabs(
                 &runtime.window,
@@ -68,19 +69,19 @@ pub(super) fn close_other_documents(runtime: &mut AppRuntime) {
                 &runtime.native_footer,
                 &mut runtime.workspace,
                 &document_ids,
-                "Other tabs closed.",
+                text("status.other_tabs_closed"),
                 &runtime.asset_access,
             );
         }
     } else {
-        render_status(&runtime.webview, "No document opened.", "info");
+        render_status(&runtime.webview, text("status.no_document"), "info");
     }
 }
 
 pub(super) fn close_all_documents(runtime: &mut AppRuntime) {
     let document_ids = runtime.workspace.document_ids();
     if document_ids.is_empty() {
-        render_status(&runtime.webview, "No document opened.", "info");
+        render_status(&runtime.webview, text("status.no_document"), "info");
     } else {
         close_document_tabs(
             &runtime.window,
@@ -88,7 +89,7 @@ pub(super) fn close_all_documents(runtime: &mut AppRuntime) {
             &runtime.native_footer,
             &mut runtime.workspace,
             &document_ids,
-            "All tabs closed.",
+            text("status.all_tabs_closed"),
             &runtime.asset_access,
         );
     }

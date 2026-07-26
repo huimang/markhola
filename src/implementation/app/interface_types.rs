@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::app::AppTheme;
+use crate::app::{AppLanguage, AppTheme};
 use crate::document::{DocumentSnapshot, DocumentTabSnapshot};
 
 #[derive(Clone, Debug)]
@@ -28,6 +28,7 @@ pub(crate) enum UserEvent {
     OpenFind,
     ToggleMode,
     SelectTheme(AppTheme),
+    SelectLanguage(AppLanguage),
     IncreaseDocumentSize,
     DecreaseDocumentSize,
     ResetDocumentSize,

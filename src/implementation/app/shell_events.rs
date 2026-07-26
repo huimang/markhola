@@ -4,12 +4,15 @@ use super::document_actions::{open_document, reload_workspace_documents_from_dis
 use super::runtime::AppRuntime;
 use super::workspace_view::{present_workspace, render_status};
 use super::{UserEvent, dispatch_user_event, log_event};
+use crate::app::text;
 
 pub(super) fn handle_shell_ready(runtime: &mut AppRuntime) {
     let shell_was_ready = runtime.shell.ready;
     runtime.shell.ready = true;
     runtime.native_footer.set_theme(runtime.selected_theme);
-    runtime.native_footer.sync(&runtime.workspace, "Ready.");
+    runtime
+        .native_footer
+        .sync(&runtime.workspace, text("status.ready"));
 
     if (shell_was_ready || runtime.shell.recovery_pending)
         && runtime.workspace.active_document().is_some()
@@ -50,28 +53,23 @@ pub(super) fn recover_shell(url: String, runtime: &mut AppRuntime) {
         .suppress_blank_recovery
         .store(true, Ordering::SeqCst);
 
-    if let Err(error) = runtime
-        .webview
-        .load_html(&super::shell::app_shell_html(
-            runtime.selected_theme,
-            runtime.document_size,
-        ))
-    {
+    if let Err(error) = runtime.webview.load_html(&super::shell::app_shell_html(
+        runtime.selected_theme,
+        runtime.language,
+        runtime.document_size,
+    )) {
         runtime.shell.recovery_pending = false;
         runtime
             .shell
             .suppress_blank_recovery
             .store(false, Ordering::SeqCst);
-        render_status(
-            &runtime.webview,
-            &format!("Failed to recover the document view: {error}"),
-            "error",
-        );
+        let message = text("status.failed_recover_view").replace("{error}", &error.to_string());
+        render_status(&runtime.webview, &message, "error");
     }
 }
 
 pub(super) fn open_documentation(runtime: &mut AppRuntime) {
-    match super::documentation::documentation_markdown_path() {
+    match super::documentation::documentation_markdown_path(runtime.language) {
         Some(path) => open_document(
             &runtime.window,
             &runtime.webview,
@@ -81,6 +79,10 @@ pub(super) fn open_documentation(runtime: &mut AppRuntime) {
             None,
             &runtime.asset_access,
         ),
-        None => render_status(&runtime.webview, "Documentation file not found.", "error"),
+        None => render_status(
+            &runtime.webview,
+            text("status.documentation_missing"),
+            "error",
+        ),
     }
 }

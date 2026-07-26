@@ -1,11 +1,9 @@
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2_app_kit::{
-    NSControlStateValueOff, NSControlStateValueOn, NSMenuItem,
-};
+use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 
-use crate::app::AppTheme;
+use crate::app::{AppLanguage, AppTheme};
 
 thread_local! {
     static EXPORT_PDF_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
@@ -15,6 +13,8 @@ thread_local! {
     static DEFAULT_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static DARK_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static LIGHT_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
+    static ENGLISH_LANGUAGE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
+    static CHINESE_LANGUAGE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static OUTLINE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
 }
 
@@ -23,6 +23,12 @@ pub(super) enum ThemeMenuSlot {
     Default,
     Dark,
     Light,
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum LanguageMenuSlot {
+    English,
+    SimplifiedChinese,
 }
 
 pub(super) fn remember_save_as(item: &Retained<NSMenuItem>) {
@@ -45,6 +51,10 @@ pub(super) fn remember_theme_item(slot: ThemeMenuSlot, item: &Retained<NSMenuIte
     theme_item_slot(slot).with(|state| *state.borrow_mut() = Some(item.clone()));
 }
 
+pub(super) fn remember_language_item(slot: LanguageMenuSlot, item: &Retained<NSMenuItem>) {
+    language_item_slot(slot).with(|state| *state.borrow_mut() = Some(item.clone()));
+}
+
 pub(super) fn remember_outline_item(item: &Retained<NSMenuItem>) {
     OUTLINE_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()));
 }
@@ -62,6 +72,23 @@ pub fn set_selected_theme(theme: AppTheme) {
         theme_item_slot(slot).with(|state| {
             if let Some(item) = state.borrow().as_deref() {
                 item.setState(if theme_for_slot(slot) == theme {
+                    NSControlStateValueOn
+                } else {
+                    NSControlStateValueOff
+                });
+            }
+        });
+    }
+}
+
+pub fn set_selected_language(language: AppLanguage) {
+    for slot in [
+        LanguageMenuSlot::English,
+        LanguageMenuSlot::SimplifiedChinese,
+    ] {
+        language_item_slot(slot).with(|state| {
+            if let Some(item) = state.borrow().as_deref() {
+                item.setState(if language_for_slot(slot) == language {
                     NSControlStateValueOn
                 } else {
                     NSControlStateValueOff
@@ -102,6 +129,26 @@ pub fn toggle_outline_selected() -> bool {
     })
 }
 
+pub fn outline_selected() -> bool {
+    OUTLINE_ITEM.with(|slot| {
+        slot.borrow()
+            .as_deref()
+            .is_some_and(|item| item.state() == NSControlStateValueOn)
+    })
+}
+
+pub fn set_outline_selected(selected: bool) {
+    OUTLINE_ITEM.with(|slot| {
+        if let Some(item) = slot.borrow().as_deref() {
+            item.setState(if selected {
+                NSControlStateValueOn
+            } else {
+                NSControlStateValueOff
+            });
+        }
+    });
+}
+
 fn for_each_output_item(mut f: impl FnMut(&NSMenuItem)) {
     SAVE_AS_ITEM.with(|slot| slot.borrow().as_deref().map(&mut f));
     PRINT_ITEM.with(|slot| slot.borrow().as_deref().map(&mut f));
@@ -124,5 +171,21 @@ fn theme_for_slot(slot: ThemeMenuSlot) -> AppTheme {
         ThemeMenuSlot::Default => AppTheme::Default,
         ThemeMenuSlot::Dark => AppTheme::Dark,
         ThemeMenuSlot::Light => AppTheme::Light,
+    }
+}
+
+fn language_item_slot(
+    slot: LanguageMenuSlot,
+) -> &'static std::thread::LocalKey<RefCell<Option<Retained<NSMenuItem>>>> {
+    match slot {
+        LanguageMenuSlot::English => &ENGLISH_LANGUAGE_ITEM,
+        LanguageMenuSlot::SimplifiedChinese => &CHINESE_LANGUAGE_ITEM,
+    }
+}
+
+fn language_for_slot(slot: LanguageMenuSlot) -> AppLanguage {
+    match slot {
+        LanguageMenuSlot::English => AppLanguage::English,
+        LanguageMenuSlot::SimplifiedChinese => AppLanguage::SimplifiedChinese,
     }
 }

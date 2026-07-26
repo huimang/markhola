@@ -1,3 +1,4 @@
+use crate::app::text;
 use crate::html_export::{self, HtmlExportOutcome};
 use crate::pdf_export::{self, PdfExportOutcome};
 use crate::printing::{self, PrintOutcome};
@@ -11,15 +12,17 @@ pub(super) fn export_pdf(webview: &WebView, workspace: &DocumentWorkspace) {
         Some(document) => match pdf_export::export_document(document) {
             Ok(PdfExportOutcome::Exported(path)) => render_status_with_action(
                 webview,
-                &format!("Exported PDF: {}", path.display()),
+                &text("status.exported_pdf").replace("{path}", &path.display().to_string()),
                 "info",
                 Some(&path.display().to_string()),
-                Some("Open"),
+                Some(text("menu.open")),
             ),
-            Ok(PdfExportOutcome::Cancelled) => render_status(webview, "Export cancelled.", "info"),
+            Ok(PdfExportOutcome::Cancelled) => {
+                render_status(webview, text("status.export_cancelled"), "info")
+            }
             Err(message) => render_status(webview, &message, "error"),
         },
-        None => render_status(webview, "No document opened.", "error"),
+        None => render_status(webview, text("status.no_document"), "error"),
     }
 }
 
@@ -28,15 +31,17 @@ pub(super) fn export_html(webview: &WebView, workspace: &DocumentWorkspace) {
         Some(document) => match html_export::export_document(document) {
             Ok(HtmlExportOutcome::Exported(path)) => render_status_with_action(
                 webview,
-                &format!("Exported HTML: {}", path.display()),
+                &text("status.exported_html").replace("{path}", &path.display().to_string()),
                 "info",
                 Some(&path.display().to_string()),
-                Some("Open"),
+                Some(text("menu.open")),
             ),
-            Ok(HtmlExportOutcome::Cancelled) => render_status(webview, "Export cancelled.", "info"),
+            Ok(HtmlExportOutcome::Cancelled) => {
+                render_status(webview, text("status.export_cancelled"), "info")
+            }
             Err(message) => render_status(webview, &message, "error"),
         },
-        None => render_status(webview, "No document opened.", "error"),
+        None => render_status(webview, text("status.no_document"), "error"),
     }
 }
 
@@ -44,11 +49,11 @@ pub(super) fn print_document(webview: &WebView, workspace: &DocumentWorkspace) {
     match workspace.active_document() {
         Some(document) => match printing::print_document(document) {
             Ok(PrintOutcome::Started) => {
-                render_status(webview, "Print panel requested.", "info")
+                render_status(webview, text("status.print_requested"), "info")
             }
             Err(message) => render_status(webview, &message, "error"),
         },
-        None => render_status(webview, "No document opened.", "error"),
+        None => render_status(webview, text("status.no_document"), "error"),
     }
 }
 
@@ -56,6 +61,6 @@ pub(super) fn open_find_panel(webview: &WebView, workspace: &DocumentWorkspace) 
     if workspace.active_document().is_some() {
         let _ = webview.evaluate_script("window.openFindPanel();");
     } else {
-        render_status(webview, "No document opened.", "error");
+        render_status(webview, text("status.no_document"), "error");
     }
 }

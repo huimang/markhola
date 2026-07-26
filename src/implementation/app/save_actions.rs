@@ -4,6 +4,7 @@ use rfd::FileDialog;
 use tao::window::Window;
 use wry::WebView;
 
+use crate::app::text;
 use crate::document::ActiveDocument;
 use crate::file_io;
 use crate::workspace::DocumentWorkspace;
@@ -37,14 +38,20 @@ pub(super) fn save_active_document(
     }
 
     let Some(document) = workspace.active_document_mut() else {
-        render_status(webview, "No document to save.", "error");
+        render_status(webview, text("status.no_document_to_save"), "error");
         return false;
     };
     if let Err(message) = save_document(document) {
         render_status(webview, &message, "error");
         return false;
     }
-    sync_workspace_state(window, webview, native_footer, workspace, "Saved.");
+    sync_workspace_state(
+        window,
+        webview,
+        native_footer,
+        workspace,
+        text("status.saved"),
+    );
     true
 }
 
@@ -56,24 +63,20 @@ pub(super) fn save_active_document_as(
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     let Some(document) = workspace.active_document() else {
-        render_status(webview, "No document to save.", "error");
+        render_status(webview, text("status.no_document_to_save"), "error");
         return false;
     };
 
     let snapshot = SaveAsSnapshot::from_document(document);
     let Some(path) = choose_save_as_path(&snapshot) else {
-        render_status(webview, "Save As cancelled.", "info");
+        render_status(webview, text("status.save_as_cancelled"), "info");
         return false;
     };
     if workspace
         .find_by_path_excluding(&path, snapshot.document_id)
         .is_some()
     {
-        render_status(
-            webview,
-            "Save As target is already open in another tab.",
-            "error",
-        );
+        render_status(webview, text("status.save_target_open"), "error");
         return false;
     }
     if let Err(error) = file_io::save_markdown(&path, &snapshot.markdown) {
@@ -81,19 +84,16 @@ pub(super) fn save_active_document_as(
         return false;
     }
     let Ok(base_url) = file_io::directory_base_url(&path) else {
-        render_status(
-            webview,
-            "Document directory cannot be converted to a file URL.",
-            "error",
-        );
+        render_status(webview, text("status.invalid_file_url"), "error");
         return false;
     };
     if let Err(error) = register_document(asset_access, snapshot.document_id, &path) {
-        render_status(webview, &format!("Failed to enable local assets: {error}"), "error");
+        let message = text("status.failed_local_assets").replace("{error}", &error.to_string());
+        render_status(webview, &message, "error");
         return false;
     }
     let Some(document) = workspace.active_document_mut() else {
-        render_status(webview, "No document to save.", "error");
+        render_status(webview, text("status.no_document_to_save"), "error");
         return false;
     };
     document.replace_file_path(path, base_url);
@@ -102,7 +102,7 @@ pub(super) fn save_active_document_as(
         webview,
         native_footer,
         workspace,
-        "Saved to new path.",
+        text("status.saved_new_path"),
     );
     true
 }
@@ -132,7 +132,7 @@ impl SaveAsSnapshot {
 fn choose_save_as_path(snapshot: &SaveAsSnapshot) -> Option<PathBuf> {
     FileDialog::new()
         .add_filter("Markdown", &["md", "markdown"])
-        .set_title("Save Markdown File As")
+        .set_title(text("dialog.save_markdown_as"))
         .set_directory(&snapshot.directory)
         .set_file_name(&snapshot.file_name)
         .save_file()

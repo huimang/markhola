@@ -1,7 +1,7 @@
 use tao::event_loop::ControlFlow;
 use tao::window::Fullscreen;
 
-use crate::app::AppTheme;
+use crate::app::{AppLanguage, AppTheme, set_current_language, text};
 use crate::render_assets;
 
 use super::close_actions::close_document_tab;
@@ -16,9 +16,11 @@ use super::save_actions::{save_active_document, save_active_document_as};
 use super::shell_events::{handle_shell_ready, open_documentation, recover_shell};
 use super::theme_preferences;
 use super::workspace_view::{
-    present_workspace, render_about, render_status, sync_native_theme_state, sync_workspace_state,
+    present_workspace, render_about, render_status, sync_native_language_state,
+    sync_native_theme_state, sync_workspace_state,
 };
 use super::{OpenPathRequest, UserEvent, log_event};
+use crate::app::WebStrings;
 
 pub(super) fn handle_user_event(
     user_event: UserEvent,
@@ -46,7 +48,7 @@ pub(super) fn handle_user_event(
                 &runtime.native_footer,
                 &mut runtime.workspace,
                 document_id,
-                "Document closed.",
+                text("status.document_closed"),
                 &runtime.asset_access,
             );
         }
@@ -84,15 +86,22 @@ pub(super) fn handle_user_event(
         }
         UserEvent::ToggleMode => toggle_mode(runtime),
         UserEvent::SelectTheme(theme) => select_theme(theme, runtime),
-        UserEvent::IncreaseDocumentSize => {
-            update_document_size(runtime.document_size.increase(), "increased", runtime)
-        }
-        UserEvent::DecreaseDocumentSize => {
-            update_document_size(runtime.document_size.decrease(), "decreased", runtime)
-        }
-        UserEvent::ResetDocumentSize => {
-            update_document_size(crate::app::DocumentSize::default(), "reset", runtime)
-        }
+        UserEvent::SelectLanguage(language) => select_language(language, runtime),
+        UserEvent::IncreaseDocumentSize => update_document_size(
+            runtime.document_size.increase(),
+            text("status.size_increased_action"),
+            runtime,
+        ),
+        UserEvent::DecreaseDocumentSize => update_document_size(
+            runtime.document_size.decrease(),
+            text("status.size_decreased_action"),
+            runtime,
+        ),
+        UserEvent::ResetDocumentSize => update_document_size(
+            crate::app::DocumentSize::default(),
+            text("status.size_reset_action"),
+            runtime,
+        ),
         UserEvent::ToggleOutline => toggle_outline(runtime),
         UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
         UserEvent::EditorChanged(markdown) => editor_changed(markdown, runtime),
@@ -100,6 +109,47 @@ pub(super) fn handle_user_event(
         UserEvent::OpenDocumentation => open_documentation(runtime),
         UserEvent::Exit => exit_application(runtime, control_flow),
     }
+}
+
+fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
+    if runtime.language == language {
+        return;
+    }
+    #[cfg(target_os = "macos")]
+    let outline_selected = super::macos_menu::outline_selected();
+
+    runtime.language = language;
+    set_current_language(language);
+    theme_preferences::save_app_language(language);
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Err(error) = super::macos_menu::install(&runtime.proxy) {
+            let message =
+                text("status.failed_rebuild_menu").replace("{error}", &error.to_string());
+            render_status(&runtime.webview, &message, "error");
+            return;
+        }
+        sync_native_menu_state_after_language_change(runtime);
+        super::macos_menu::set_outline_selected(outline_selected);
+    }
+
+    let strings = WebStrings::for_language(language);
+    if let Ok(payload) = serde_json::to_string(&strings) {
+        let _ = runtime
+            .webview
+            .evaluate_script(&format!("window.applyAppLanguage({payload});"));
+    }
+    let ready = text("status.ready");
+    runtime.native_footer.sync(&runtime.workspace, ready);
+    render_status(&runtime.webview, ready, "info");
+}
+
+#[cfg(target_os = "macos")]
+fn sync_native_menu_state_after_language_change(runtime: &AppRuntime) {
+    super::workspace_view::sync_native_menu_state(&runtime.workspace);
+    sync_native_theme_state(runtime.selected_theme);
+    sync_native_language_state(runtime.language);
 }
 
 fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
@@ -124,15 +174,16 @@ fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
                     &runtime.asset_access,
                 );
                 let after_active = runtime.workspace.active_document_id();
-                if after_active == before_active && runtime.workspace.find_by_path(&path).is_none() {
+                if after_active == before_active && runtime.workspace.find_by_path(&path).is_none()
+                {
                     failures += 1;
                 }
             }
             if failures > 0 {
-                render_status(&runtime.webview, "Some files failed to open.", "error");
+                render_status(&runtime.webview, text("status.some_open_failed"), "error");
             }
         }
-        None => render_status(&runtime.webview, "Open cancelled.", "info"),
+        None => render_status(&runtime.webview, text("status.open_cancelled"), "info"),
     }
 }
 
@@ -172,10 +223,10 @@ fn toggle_mode(runtime: &mut AppRuntime) {
             &runtime.webview,
             &runtime.native_footer,
             &runtime.workspace,
-            "Ready.",
+            text("status.ready"),
             true,
         ),
-        None => render_status(&runtime.webview, "No document opened.", "error"),
+        None => render_status(&runtime.webview, text("status.no_document"), "error"),
     }
 }
 
@@ -189,44 +240,39 @@ fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
         Ok(serialized_css) => {
             let script = format!("window.applyAppTheme({serialized_css});");
             if let Err(error) = runtime.webview.evaluate_script(&script) {
-                render_status(
-                    &runtime.webview,
-                    &format!("Failed to apply theme: {error}"),
-                    "error",
-                );
+                let message =
+                    text("status.failed_apply_theme").replace("{error}", &error.to_string());
+                render_status(&runtime.webview, &message, "error");
                 return;
             }
-            render_status(
-                &runtime.webview,
-                &format!("Theme switched to {}.", theme.label()),
-                "info",
-            );
+            let theme_name = match theme {
+                AppTheme::Default => text("menu.theme_default"),
+                AppTheme::Dark => text("menu.theme_dark"),
+                AppTheme::Light => text("menu.theme_light"),
+            };
+            let message = text("status.theme_switched").replace("{theme}", theme_name);
+            render_status(&runtime.webview, &message, "info");
         }
-        Err(error) => render_status(
-            &runtime.webview,
-            &format!("Failed to serialize theme CSS: {error}"),
-            "error",
-        ),
+        Err(error) => {
+            let message =
+                text("status.failed_serialize_theme").replace("{error}", &error.to_string());
+            render_status(&runtime.webview, &message, "error");
+        }
     }
 }
 
-fn update_document_size(
-    size: crate::app::DocumentSize,
-    action: &str,
-    runtime: &mut AppRuntime,
-) {
+fn update_document_size(size: crate::app::DocumentSize, action: &str, runtime: &mut AppRuntime) {
     runtime.document_size = size;
     theme_preferences::save_document_size(size);
     let script = format!("window.applyDocumentSize({});", size.percent());
     if let Err(error) = runtime.webview.evaluate_script(&script) {
-        render_status(
-            &runtime.webview,
-            &format!("Failed to apply document size: {error}"),
-            "error",
-        );
+        let message = text("status.failed_apply_size").replace("{error}", &error.to_string());
+        render_status(&runtime.webview, &message, "error");
         return;
     }
-    let status = format!("Document size {action} to {}%.", size.percent());
+    let status = text("status.size_changed")
+        .replace("{action}", action)
+        .replace("{percent}", &size.percent().to_string());
     runtime.native_footer.set_status(&status);
     render_status(&runtime.webview, &status, "info");
 }
@@ -243,7 +289,8 @@ fn toggle_outline(runtime: &mut AppRuntime) {
         let selected = false;
         let script = format!("window.setOutlinePanelOpen({selected});");
         if let Err(error) = runtime.webview.evaluate_script(&script) {
-            let status = format!("Failed to toggle Outline: {error}");
+            let status =
+                text("status.failed_toggle_outline").replace("{error}", &error.to_string());
             runtime.native_footer.set_status(&status);
             render_status(&runtime.webview, &status, "error");
         }
@@ -258,9 +305,9 @@ fn toggle_fullscreen(runtime: &mut AppRuntime) {
     };
     runtime.window.set_fullscreen(next_state);
     let message = if runtime.window.fullscreen().is_some() {
-        "Entered fullscreen."
+        text("status.entered_fullscreen")
     } else {
-        "Exited fullscreen."
+        text("status.exited_fullscreen")
     };
     render_status(&runtime.webview, message, "info");
 }
@@ -273,7 +320,7 @@ fn editor_changed(markdown: String, runtime: &mut AppRuntime) {
             &runtime.webview,
             &runtime.native_footer,
             &runtime.workspace,
-            "Unsaved changes.",
+            text("status.unsaved"),
         );
     }
 }
@@ -286,10 +333,7 @@ fn open_external_link(href: &str, runtime: &AppRuntime) {
             "open external failed",
             format!("error={error}"),
         );
-        render_status(
-            &runtime.webview,
-            &format!("Failed to open link: {error}"),
-            "error",
-        );
+        let message = text("status.failed_open_link").replace("{error}", &error.to_string());
+        render_status(&runtime.webview, &message, "error");
     }
 }

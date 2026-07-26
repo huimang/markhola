@@ -6,14 +6,14 @@ use tao::dpi::LogicalSize;
 use tao::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy};
 use tao::window::WindowBuilder;
 use url::Url;
-use wry::{DragDropEvent, PageLoadEvent, WebView, WebViewBuilder};
 use wry::http::{Response, header};
+use wry::{DragDropEvent, PageLoadEvent, WebView, WebViewBuilder};
 
-use crate::app::AppTheme;
+use crate::app::{AppLanguage, AppTheme, set_current_language};
 
-use super::runtime::AppRuntime;
 use super::asset_access::{AssetAccessRegistry, new_registry, resolve_asset};
 use super::native_footer::NativeFooter;
+use super::runtime::AppRuntime;
 use super::shell::{app_shell_html, should_dispatch_shell_recovery};
 use super::theme_preferences;
 use super::{UserEvent, WINDOW_TITLE, dispatch_user_event, log_event, macos_menu};
@@ -24,7 +24,10 @@ fn is_markdown_path(value: &str) -> bool {
 }
 
 fn local_asset_content_type(path: &std::path::Path) -> &'static str {
-    match path.extension().and_then(|value| value.to_str()).map(|value| value.to_ascii_lowercase())
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
         .as_deref()
     {
         Some("png") => "image/png",
@@ -44,6 +47,8 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
     let suppress_blank_recovery = Arc::new(AtomicBool::new(true));
     let asset_access = new_registry();
     let selected_theme = theme_preferences::load_selected_theme();
+    let language = theme_preferences::load_app_language();
+    set_current_language(language);
     let document_size = theme_preferences::load_document_size();
 
     let window = WindowBuilder::new()
@@ -57,6 +62,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         Arc::clone(&suppress_blank_recovery),
         Arc::clone(&asset_access),
         selected_theme,
+        language,
         document_size,
     )?;
     let native_footer = NativeFooter::install(&window, &webview, selected_theme);
@@ -72,6 +78,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         asset_access,
         native_footer,
         selected_theme,
+        language,
         document_size,
     );
     Ok((event_loop, runtime))
@@ -83,6 +90,7 @@ fn build_webview(
     suppress_blank_recovery: Arc<AtomicBool>,
     asset_access: AssetAccessRegistry,
     selected_theme: AppTheme,
+    language: AppLanguage,
     document_size: crate::app::DocumentSize,
 ) -> Result<WebView, wry::Error> {
     let ipc_proxy = proxy.clone();
@@ -91,7 +99,7 @@ fn build_webview(
     let drag_drop_proxy = proxy.clone();
 
     WebViewBuilder::new()
-        .with_html(app_shell_html(selected_theme, document_size))
+        .with_html(app_shell_html(selected_theme, language, document_size))
         .with_devtools(true)
         .with_drag_drop_handler(move |event| {
             match event {
@@ -152,51 +160,58 @@ fn build_webview(
                 .and_then(|mut segments| segments.next())
                 .and_then(|segment| segment.parse::<u64>().ok())
             else {
-                return Response::builder().status(403).body(std::borrow::Cow::Borrowed(b"forbidden" as &[u8])).unwrap();
+                return Response::builder()
+                    .status(403)
+                    .body(std::borrow::Cow::Borrowed(b"forbidden" as &[u8]))
+                    .unwrap();
             };
-            let raw_relative = parsed.path().strip_prefix(&format!("/{document_id}/")).unwrap_or("");
+            let raw_relative = parsed
+                .path()
+                .strip_prefix(&format!("/{document_id}/"))
+                .unwrap_or("");
             let relative = match percent_encoding::percent_decode_str(raw_relative).decode_utf8() {
                 Ok(value) => value,
-                Err(_) => return Response::builder().status(400).body(std::borrow::Cow::Borrowed(b"bad path" as &[u8])).unwrap(),
+                Err(_) => {
+                    return Response::builder()
+                        .status(400)
+                        .body(std::borrow::Cow::Borrowed(b"bad path" as &[u8]))
+                        .unwrap();
+                }
             };
             match resolve_asset(&asset_access, document_id, &relative) {
                 Ok(path) => match std::fs::read(&path) {
-                Ok(bytes) => {
-                    log_event(
-                        "webview.protocol.markhola_file.response",
-                        None,
-                        "served local asset",
-                        format!(
-                            "uri={uri} path={} bytes={}",
-                            path.display(),
-                            bytes.len()
-                        ),
-                    );
-                    Response::builder()
-                        .status(200)
-                        .header(header::CONTENT_TYPE, local_asset_content_type(&path))
-                        .body(std::borrow::Cow::Owned(bytes))
-                        .unwrap()
-                }
-                Err(error) => {
-                    log_event(
-                        "webview.protocol.markhola_file",
-                        None,
-                        "failed to load local asset",
-                        format!("uri={uri} path={} error={error}", path.display()),
-                    );
-                    log_event(
-                        "webview.protocol.markhola_file.response",
-                        None,
-                        "local asset not found",
-                        format!("uri={uri} path={} status=404", path.display()),
-                    );
-                    Response::builder()
-                        .status(404)
-                        .body(std::borrow::Cow::Borrowed(b"not found" as &[u8]))
-                        .unwrap()
-                }
-            },
+                    Ok(bytes) => {
+                        log_event(
+                            "webview.protocol.markhola_file.response",
+                            None,
+                            "served local asset",
+                            format!("uri={uri} path={} bytes={}", path.display(), bytes.len()),
+                        );
+                        Response::builder()
+                            .status(200)
+                            .header(header::CONTENT_TYPE, local_asset_content_type(&path))
+                            .body(std::borrow::Cow::Owned(bytes))
+                            .unwrap()
+                    }
+                    Err(error) => {
+                        log_event(
+                            "webview.protocol.markhola_file",
+                            None,
+                            "failed to load local asset",
+                            format!("uri={uri} path={} error={error}", path.display()),
+                        );
+                        log_event(
+                            "webview.protocol.markhola_file.response",
+                            None,
+                            "local asset not found",
+                            format!("uri={uri} path={} status=404", path.display()),
+                        );
+                        Response::builder()
+                            .status(404)
+                            .body(std::borrow::Cow::Borrowed(b"not found" as &[u8]))
+                            .unwrap()
+                    }
+                },
                 Err(error) => Response::builder()
                     .status(error.status_code())
                     .body(std::borrow::Cow::Borrowed(b"forbidden" as &[u8]))

@@ -6,6 +6,7 @@ use super::runtime::AppRuntime;
 use super::shortcuts::handle_command_shortcut;
 use super::workspace_view::render_status;
 use super::{UserEvent, dispatch_user_event, log_event, new_action_context};
+use crate::app::text;
 
 pub(super) fn handle_window_event(
     event: WindowEvent,
@@ -21,18 +22,12 @@ pub(super) fn handle_window_event(
             }
         }
         WindowEvent::HoveredFile(path) => {
-            render_status(
-                &runtime.webview,
-                &format!("Drop to open: {}", path.display()),
-                "info",
-            );
+            let message =
+                text("status.drop_to_open").replace("{path}", &path.display().to_string());
+            render_status(&runtime.webview, &message, "info");
         }
         WindowEvent::HoveredFileCancelled => {
-            render_status(
-                &runtime.webview,
-                "Ready. Open a Markdown file or press Command+O.",
-                "info",
-            );
+            render_status(&runtime.webview, text("status.ready_open_hint"), "info");
         }
         WindowEvent::DroppedFile(path) => {
             let ctx = new_action_context("window-dropped-file");

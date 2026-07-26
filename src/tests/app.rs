@@ -4,11 +4,12 @@ use std::sync::atomic::AtomicBool;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
-use crate::app::{AppTheme, DocumentSize};
+use crate::app::{AppLanguage, AppTheme, DocumentSize};
 use crate::workspace::DocumentWorkspace;
 
 use super::implementation::{
-    file_paths_from_urls, load_document, reload_workspace_documents_from_disk,
+    file_paths_from_urls, load_document, markdown_path_from_href,
+    reload_workspace_documents_from_disk,
 };
 use super::shell::{
     app_shell_html, should_dispatch_shell_recovery, should_recover_shell_on_page_load,
@@ -73,13 +74,18 @@ fn suppresses_the_expected_blank_finish_once_before_recovering_again() {
 
 #[test]
 fn app_shell_includes_find_panel_markup_and_handlers() {
-    let html = app_shell_html(AppTheme::Default, DocumentSize::default());
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
 
     assert!(html.contains("id=\"findPanel\""));
     assert!(html.contains("data:image/png;base64,"));
     assert!(html.contains("<img class=\"about-logo\""));
     assert!(html.contains("window.openFindPanel = openFindPanel;"));
     assert!(html.contains("window.applyAppTheme = applyAppTheme;"));
+    assert!(html.contains("window.applyAppLanguage = applyAppLanguage;"));
     assert!(html.contains("id=\"appThemeStyle\""));
     assert!(html.contains("className = \"find-match\""));
     assert!(html.contains("replaceAllWritableMatches"));
@@ -88,8 +94,32 @@ fn app_shell_includes_find_panel_markup_and_handlers() {
 }
 
 #[test]
+fn app_shell_embeds_the_requested_language_catalog() {
+    let english = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+    let chinese = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::SimplifiedChinese,
+        DocumentSize::default(),
+    );
+
+    assert!(english.contains("A free Markdown reader built with AI."));
+    assert!(chinese.contains("基于 AI 构建的免费 Markdown 阅读器。"));
+    assert!(chinese.contains("\"language\":\"zh-CN\""));
+    assert!(!english.contains("__APP_LANGUAGE__"));
+    assert!(!chinese.contains("__APP_LANGUAGE__"));
+}
+
+#[test]
 fn app_shell_uses_requested_theme_css() {
-    let html = app_shell_html(AppTheme::Light, DocumentSize::default());
+    let html = app_shell_html(
+        AppTheme::Light,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
 
     assert!(html.contains("#eef3f8"));
     assert!(html.contains("id=\"appThemeStyle\""));
@@ -98,7 +128,7 @@ fn app_shell_uses_requested_theme_css() {
 #[test]
 fn app_themes_share_the_markhola_brand_palette() {
     for theme in AppTheme::ALL {
-        let html = app_shell_html(theme, DocumentSize::default());
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
 
         for declaration in [
             "--markhola-violet: #6657E8",
@@ -129,7 +159,11 @@ fn app_themes_share_the_markhola_brand_palette() {
 
 #[test]
 fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
-    let html = app_shell_html(AppTheme::Dark, DocumentSize::default());
+    let html = app_shell_html(
+        AppTheme::Dark,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
 
     assert!(html.contains(
         ".markdown-body table {\n  width: 100%;\n  border-collapse: collapse;\n  background: var(--panel-strong);"
@@ -142,7 +176,7 @@ fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
 #[test]
 fn app_themes_use_the_semantic_danger_color_for_mermaid_errors() {
     for theme in AppTheme::ALL {
-        let html = app_shell_html(theme, DocumentSize::default());
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
 
         assert!(html.contains(
             ".markdown-body .mermaid-block__error {\n  margin: 0;\n  padding: 12px 16px 16px;\n  color: var(--danger);"
@@ -178,7 +212,11 @@ fn document_size_restores_only_supported_values() {
 
 #[test]
 fn app_shell_includes_restored_document_size() {
-    let html = app_shell_html(AppTheme::Default, DocumentSize::from_stored(130));
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::from_stored(130),
+    );
 
     assert!(html.contains("window.applyDocumentSize = applyDocumentSize;"));
     assert!(html.contains("applyDocumentSize(130);"));
@@ -187,7 +225,11 @@ fn app_shell_includes_restored_document_size() {
 
 #[test]
 fn app_shell_includes_workspace_tab_and_outline_controls() {
-    let html = app_shell_html(AppTheme::Default, DocumentSize::default());
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
 
     assert!(html.contains("id=\"tabsBar\""));
     assert!(html.contains("class=\"tabs-shell hidden\""));
@@ -195,6 +237,8 @@ fn app_shell_includes_workspace_tab_and_outline_controls() {
     assert!(html.contains("id=\"previousTabs\""));
     assert!(html.contains("id=\"nextTabs\""));
     assert!(html.contains("id=\"newDocumentTab\""));
+    assert!(html.contains("-webkit-user-select: none"));
+    assert!(html.contains("user-select: none"));
     assert!(html.contains("id=\"outlinePanel\""));
     assert!(html.contains("id=\"outlineClose\""));
     assert!(!html.contains("document-toolbar"));
@@ -243,8 +287,8 @@ fn native_footer_contains_document_controls_in_the_confirmed_order() {
         "mode_field:",
         "status_field:",
     ];
-    let positions = controls
-        .map(|control| source.find(control).expect("footer control should exist"));
+    let positions =
+        controls.map(|control| source.find(control).expect("footer control should exist"));
 
     assert!(positions.windows(2).all(|pair| pair[0] < pair[1]));
     assert!(!source.contains("NSButton"));
@@ -252,7 +296,7 @@ fn native_footer_contains_document_controls_in_the_confirmed_order() {
     assert!(!source.contains("\"Mode "));
     assert!(!source.contains("\"Status "));
     assert!(source.contains("set_label_text(&handle.path_field, &active.file_path)"));
-    assert!(source.contains("set_label_text(&handle.mode_field, &active.mode_label)"));
+    assert!(source.contains("set_label_text(&handle.mode_field, mode)"));
     assert!(source.contains("set_label_text(&handle.status_field, status)"));
 }
 
@@ -261,7 +305,7 @@ fn view_menu_owns_the_checked_outline_toggle() {
     let menu = include_str!("../implementation/app/menu_view.rs");
     let state = include_str!("../implementation/app/menu_state.rs");
 
-    assert!(menu.contains("\"Outline\""));
+    assert!(menu.contains("text(\"menu.outline\")"));
     assert!(menu.contains("sel!(toggleOutlinePanel:)"));
     assert!(menu.contains("remember_outline_item(&outline_item)"));
     assert!(state.contains("toggle_outline_selected"));
@@ -270,7 +314,11 @@ fn view_menu_owns_the_checked_outline_toggle() {
 
 #[test]
 fn app_shell_removes_failed_mermaid_render_artifacts() {
-    let html = app_shell_html(AppTheme::Default, DocumentSize::default());
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
 
     assert!(html.contains("const removeMermaidRenderArtifact = (renderId) =>"));
     assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
@@ -278,20 +326,13 @@ fn app_shell_removes_failed_mermaid_render_artifacts() {
 }
 
 #[test]
-fn app_theme_keys_and_labels_are_stable() {
+fn app_theme_keys_are_stable() {
     let summary = AppTheme::ALL
         .iter()
-        .map(|theme| (theme.key(), theme.label()))
+        .map(|theme| theme.key())
         .collect::<Vec<_>>();
 
-    assert_eq!(
-        summary,
-        vec![
-            ("default", "Default"),
-            ("dark", "Dark"),
-            ("light", "Light"),
-        ]
-    );
+    assert_eq!(summary, vec!["default", "dark", "light"]);
 }
 
 #[test]
@@ -330,4 +371,48 @@ fn file_paths_from_urls_ignores_non_file_urls() {
     ]);
 
     assert_eq!(paths, vec![PathBuf::from("/tmp/real.md")]);
+}
+
+#[test]
+fn toggle_mode_lives_only_in_edit_menu_source() {
+    let file_menu = include_str!("../implementation/app/menu_file.rs");
+    let edit_menu = include_str!("../implementation/app/menu_edit.rs");
+
+    assert!(!file_menu.contains("toggleDocumentMode:"));
+    assert!(edit_menu.contains("toggleDocumentMode:"));
+}
+
+#[test]
+fn tab_cleanup_removes_appkit_tab_selectors() {
+    let menu_install = include_str!("../implementation/app/menu_install.rs");
+
+    assert!(menu_install.contains("toggleTabBar:"));
+    assert!(menu_install.contains("toggleTabOverview:"));
+}
+
+#[test]
+fn markdown_path_from_href_accepts_file_markdown_urls_and_ignores_others() {
+    assert_eq!(
+        markdown_path_from_href("file:///tmp/hello.md"),
+        Some(PathBuf::from("/tmp/hello.md"))
+    );
+    assert_eq!(
+        markdown_path_from_href("file:///tmp/guide.markdown#intro"),
+        Some(PathBuf::from("/tmp/guide.markdown"))
+    );
+    assert_eq!(markdown_path_from_href("https://example.com/hello.md"), None);
+    assert_eq!(markdown_path_from_href("file:///tmp/image.png"), None);
+    assert_eq!(markdown_path_from_href("not a url"), None);
+}
+
+#[test]
+fn app_shell_routes_local_markdown_links_through_ipc() {
+    let script = include_str!("../implementation/app/shell_script.js");
+
+    assert!(script.contains("const resolveLocalMarkdownLink = (href) =>"));
+    assert!(script.contains("decodeURIComponent(fileUrl.pathname || \"\").toLowerCase()"));
+    assert!(script.contains("fileUrl.protocol !== \"file:\""));
+    assert!(script.contains("pathname.endsWith(\".md\")"));
+    assert!(script.contains("pathname.endsWith(\".markdown\")"));
+    assert!(script.contains("kind: \"open-markdown-link\""));
 }

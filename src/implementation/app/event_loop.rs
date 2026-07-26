@@ -6,6 +6,7 @@ use super::runtime::AppRuntime;
 use super::window_events::handle_window_event;
 use super::workspace_view::render_status;
 use super::{UserEvent, log_event};
+use crate::app::text;
 
 pub(super) fn handle_event(
     event: Event<'_, UserEvent>,
@@ -15,13 +16,13 @@ pub(super) fn handle_event(
     *control_flow = ControlFlow::Wait;
 
     match event {
-        Event::NewEvents(StartCause::Init) => {
-            log_event("event_loop.init", None, "event loop init", "");
-            render_status(
-                &runtime.webview,
-                "Ready. Open a Markdown file or press Command+O.",
-                "info",
-            );
+        Event::NewEvents(cause) => {
+            #[cfg(target_os = "macos")]
+            super::macos_menu::remove_window_tab_items_from_main_menu();
+            if cause == StartCause::Init {
+                log_event("event_loop.init", None, "event loop init", "");
+                render_status(&runtime.webview, text("status.ready_open_hint"), "info");
+            }
         }
         Event::Opened { urls } => handle_opened_urls(urls, runtime),
         Event::WindowEvent { event, .. } => handle_window_event(event, runtime, control_flow),
@@ -47,11 +48,7 @@ fn handle_opened_urls(urls: Vec<url::Url>, runtime: &mut AppRuntime) {
             "no valid file paths resolved from Event::Opened",
             "",
         );
-        render_status(
-            &runtime.webview,
-            "The requested file path is not valid.",
-            "error",
-        );
+        render_status(&runtime.webview, text("status.invalid_path"), "error");
         return;
     }
 

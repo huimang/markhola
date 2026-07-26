@@ -1,7 +1,7 @@
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSEventModifierFlags, NSMenuItem};
-use objc2_foundation::ns_string;
+use objc2_foundation::NSString;
 
 pub(super) fn action(
     mtm: MainThreadMarker,
@@ -23,84 +23,9 @@ fn item_with_key(
     action: Option<objc2::runtime::Sel>,
     key: &str,
 ) -> objc2::rc::Retained<NSMenuItem> {
-    match (title, key) {
-        ("New", "n") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("New"),
-                action,
-                ns_string!("n"),
-            )
-        },
-        ("Open", "o") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Open"),
-                action,
-                ns_string!("o"),
-            )
-        },
-        ("Save", "s") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Save"),
-                action,
-                ns_string!("s"),
-            )
-        },
-        ("Save As", "S") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Save As"),
-                action,
-                ns_string!("S"),
-            )
-        },
-        ("Print", "p") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Print"),
-                action,
-                ns_string!("p"),
-            )
-        },
-        ("Toggle Mode", "/") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Toggle Mode"),
-                action,
-                ns_string!("/"),
-            )
-        },
-        ("Close", "w") => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                ns_string!("Close"),
-                action,
-                ns_string!("w"),
-            )
-        },
-        _ => unsafe {
-            NSMenuItem::initWithTitle_action_keyEquivalent(
-                NSMenuItem::alloc(mtm),
-                match title {
-                    "Exit" => ns_string!("Exit"),
-                    "Toggle Full Screen" => ns_string!("Toggle Full Screen"),
-                    "Default" => ns_string!("Default"),
-                    "Dark" => ns_string!("Dark"),
-                    "Light" => ns_string!("Light"),
-                    "Zoom In" => ns_string!("Zoom In"),
-                    "Zoom Out" => ns_string!("Zoom Out"),
-                    "Reset" => ns_string!("Reset"),
-                    _ => ns_string!(""),
-                },
-                action,
-                match key {
-                    "q" => ns_string!("q"),
-                    "f" => ns_string!("f"),
-                    _ => ns_string!(""),
-                },
-            )
-        },
+    let title = NSString::from_str(title);
+    let key = NSString::from_str(key);
+    unsafe {
+        NSMenuItem::initWithTitle_action_keyEquivalent(NSMenuItem::alloc(mtm), &title, action, &key)
     }
 }

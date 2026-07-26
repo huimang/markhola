@@ -70,6 +70,8 @@ scripts/release_publish_workflow.md
 
 11. Documentation regression
    Expected: `Help > Documentation` opens the bundled release help markdown file inside the app.
+   Expected: the document's `Current version` matches the version in `Cargo.toml`.
+   Expected: its feature and menu descriptions include the target release changes and do not list removed behavior.
 
 12. Multi-document regression
    Open `examples/basic.md` and `examples/multi-document.md`.
@@ -91,6 +93,7 @@ scripts/release_publish_workflow.md
    Expected: packaged app contains `Contents/Resources/themes/dark/layout.css`.
    Expected: packaged app contains `Contents/Resources/themes/light/layout.css`.
    Expected: packaged app contains `Contents/Resources/help/Documentation.md`.
+   Expected: each supported Help language file is present in `Contents/Resources/help`.
 
 15. Inspect regression
    Right click in the preview area.
@@ -120,3 +123,6 @@ Use the exact DMG candidate that will be uploaded to GitHub.
 
 5. Verify the target release feature in the packaged app
    Expected: the headline feature for the version works in the sandbox before the DMG is uploaded or the GitHub release is published.
+
+6. Open `Help > Documentation` in every supported interface language in the packaged app
+   Expected: each bundled document shows the target version and accurately describes the packaged feature and menu behavior.

@@ -2,12 +2,14 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSMenu, NSMenuItem};
-use objc2_foundation::ns_string;
+use objc2_foundation::{NSString, ns_string};
 
 use super::menu_state::{remember_export_html, remember_export_pdf};
+use crate::app::text;
 
 pub(super) fn build_export_menu(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSMenu> {
-    let export_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), ns_string!("Export"));
+    let title = NSString::from_str(text("menu.export"));
+    let export_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
 
     let pdf = export_item(mtm, "PDF", Some(sel!(exportPdfDocument:)), target);
     pdf.setEnabled(false);

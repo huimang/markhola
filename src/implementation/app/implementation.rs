@@ -6,8 +6,8 @@ mod documentation;
 mod event_loop;
 mod export_actions;
 mod ipc;
-mod navigation_actions;
 mod native_footer;
+mod navigation_actions;
 mod runtime;
 mod save_actions;
 mod shell_events;
@@ -21,6 +21,8 @@ mod workspace_view;
 pub(crate) use self::document_actions::{load_document, reload_workspace_documents_from_disk};
 #[allow(unused_imports)]
 pub(crate) use self::event_loop::file_paths_from_urls;
+#[allow(unused_imports)]
+pub(crate) use self::ipc::markdown_path_from_href;
 
 use super::*;
 
@@ -36,6 +38,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let (event_loop, mut runtime) = bootstrap::build_runtime()?;
     workspace_view::sync_native_menu_state(&runtime.workspace);
     workspace_view::sync_native_theme_state(runtime.selected_theme);
+    workspace_view::sync_native_language_state(runtime.language);
 
     event_loop.run(move |event, _, control_flow| {
         event_loop::handle_event(event, &mut runtime, control_flow);

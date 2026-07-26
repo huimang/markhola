@@ -1,11 +1,12 @@
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class};
+use objc2_app_kit::{NSMenu, NSMenuDelegate};
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
 use tao::event_loop::EventLoopProxy;
 
+use crate::app::{AppLanguage, AppTheme};
 use crate::app::{UserEvent, dispatch_user_event, log_event, new_action_context};
-use crate::app::AppTheme;
 
 #[derive(Debug)]
 struct ProxyIvars {
@@ -19,6 +20,13 @@ define_class!(
     struct MenuTarget;
 
 unsafe impl NSObjectProtocol for MenuTarget {}
+
+    unsafe impl NSMenuDelegate for MenuTarget {
+        #[unsafe(method(menuWillOpen:))]
+        fn menu_will_open(&self, menu: &NSMenu) {
+            super::menu_install::remove_window_tab_items(menu);
+        }
+    }
 
     impl MenuTarget {
         #[unsafe(method(newMenuDocument:))]
@@ -57,6 +65,10 @@ unsafe impl NSObjectProtocol for MenuTarget {}
         fn select_dark_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Dark), "selectDarkTheme:"); }
         #[unsafe(method(selectLightTheme:))]
         fn select_light_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Light), "selectLightTheme:"); }
+        #[unsafe(method(selectEnglishLanguage:))]
+        fn select_english_language(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectLanguage(AppLanguage::English), "selectEnglishLanguage:"); }
+        #[unsafe(method(selectSimplifiedChineseLanguage:))]
+        fn select_simplified_chinese_language(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectLanguage(AppLanguage::SimplifiedChinese), "selectSimplifiedChineseLanguage:"); }
         #[unsafe(method(increaseDocumentSize:))]
         fn increase_document_size(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::IncreaseDocumentSize, "increaseDocumentSize:"); }
         #[unsafe(method(decreaseDocumentSize:))]
@@ -97,8 +109,19 @@ pub(crate) fn target_ref(
     mtm: MainThreadMarker,
     proxy: EventLoopProxy<UserEvent>,
 ) -> &'static AnyObject {
-    let target = Box::leak(Box::new(MenuTarget::new(mtm, proxy)));
-    (&**target).as_ref()
+    thread_local! {
+        static TARGET: Cell<*const AnyObject> = const { Cell::new(std::ptr::null()) };
+    }
+    TARGET.with(|slot| {
+        let existing = slot.get();
+        if !existing.is_null() {
+            return unsafe { &*existing };
+        }
+        let target = Box::leak(Box::new(MenuTarget::new(mtm, proxy)));
+        let object: &'static AnyObject = (&**target).as_ref();
+        slot.set(object as *const AnyObject);
+        object
+    })
 }
 
 fn emit(proxy: &EventLoopProxy<UserEvent>, event: UserEvent, action: &str) {
@@ -110,3 +133,4 @@ fn emit(proxy: &EventLoopProxy<UserEvent>, event: UserEvent, action: &str) {
     );
     dispatch_user_event(proxy, "macos-menu", event);
 }
+use std::cell::Cell;

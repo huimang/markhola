@@ -3,15 +3,22 @@ mod shell_script;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::app::{AppTheme, DocumentSize};
+use crate::app::{AppLanguage, AppTheme, DocumentSize};
 use crate::render_assets;
 
 use self::shell_markup::APP_SHELL_MARKUP;
 use self::shell_script::APP_SHELL_SCRIPT;
+use super::web_localization::WebStrings;
 
 const WORKSPACE_CHROME_CSS: &str = include_str!("workspace_chrome.css");
 
-pub(crate) fn app_shell_html(theme: AppTheme, document_size: DocumentSize) -> String {
+pub(crate) fn app_shell_html(
+    theme: AppTheme,
+    language: AppLanguage,
+    document_size: DocumentSize,
+) -> String {
+    let strings = serde_json::to_string(&WebStrings::for_language(language))
+        .expect("web localization must serialize");
     [APP_SHELL_MARKUP, APP_SHELL_SCRIPT]
         .join("")
         .replace(
@@ -28,6 +35,7 @@ pub(crate) fn app_shell_html(theme: AppTheme, document_size: DocumentSize) -> St
             &render_assets::mathjax_runtime_for_inline_script(),
         )
         .replace("__DOCUMENT_SIZE__", &document_size.percent().to_string())
+        .replace("__APP_LANGUAGE__", &strings)
         .replace("__APP_ICON_DATA_URL__", render_assets::app_icon_data_url())
         .replace("__APP_LOGO_DATA_URL__", render_assets::app_logo_data_url())
 }

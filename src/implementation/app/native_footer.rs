@@ -1,7 +1,7 @@
 use tao::window::Window;
 use wry::WebView;
 
-use crate::app::AppTheme;
+use crate::app::{AppTheme, text};
 use crate::workspace::DocumentWorkspace;
 
 #[cfg(target_os = "macos")]
@@ -9,13 +9,11 @@ use objc2::MainThreadMarker;
 #[cfg(target_os = "macos")]
 use objc2::MainThreadOnly;
 #[cfg(target_os = "macos")]
-use objc2::rc::Retained;
-#[cfg(target_os = "macos")]
 use objc2::msg_send;
 #[cfg(target_os = "macos")]
-use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSFont, NSTextField, NSView, NSWindow,
-};
+use objc2::rc::Retained;
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSAutoresizingMaskOptions, NSColor, NSFont, NSTextField, NSView, NSWindow};
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 #[cfg(target_os = "macos")]
@@ -49,11 +47,7 @@ struct NativeFooterHandle {
 }
 
 impl NativeFooter {
-    pub(super) fn install(
-        window: &Window,
-        webview: &WebView,
-        theme: AppTheme,
-    ) -> Self {
+    pub(super) fn install(window: &Window, webview: &WebView, theme: AppTheme) -> Self {
         #[cfg(target_os = "macos")]
         unsafe {
             let Some(mtm) = MainThreadMarker::new() else {
@@ -209,9 +203,20 @@ impl NativeFooter {
 
             if let Some(active) = workspace.active_document_snapshot() {
                 set_label_text(&handle.path_field, &active.file_path);
-                set_label_text(&handle.words_field, &format!("Words {}", active.word_count));
-                set_label_text(&handle.lines_field, &format!("Lines {}", active.line_count));
-                set_label_text(&handle.mode_field, &active.mode_label);
+                set_label_text(
+                    &handle.words_field,
+                    &format!("{} {}", text("footer.words"), active.word_count),
+                );
+                set_label_text(
+                    &handle.lines_field,
+                    &format!("{} {}", text("footer.lines"), active.line_count),
+                );
+                let mode = if active.mode_label == "Readonly" {
+                    text("footer.readonly")
+                } else {
+                    text("footer.writable")
+                };
+                set_label_text(&handle.mode_field, mode);
                 set_label_text(&handle.status_field, status);
                 set_hidden(&handle.path_field, false);
                 set_hidden(&handle.words_field, false);
@@ -297,9 +302,7 @@ fn rgb_color(red: u8, green: u8, blue: u8) -> Retained<NSColor> {
 }
 
 #[cfg(target_os = "macos")]
-unsafe fn apply_footer_fonts(
-    fields: &[&NSTextField],
-) {
+unsafe fn apply_footer_fonts(fields: &[&NSTextField]) {
     let font = NSFont::systemFontOfSize(12.0);
     for field in fields {
         let _: () = msg_send![*field, setFont: Some(&*font)];

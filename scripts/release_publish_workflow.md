@@ -17,7 +17,18 @@ Make sure the target version is already aligned in:
 - `PLAN.MD`
 - `README.md`
 - `assets/help/Documentation.md`
+- `assets/help/Documentation.zh-CN.md` when the release supports Simplified Chinese
 - any release notes or user-facing example files affected by the release
+
+The bundled Help document is a required release artifact, not an optional documentation follow-up.
+Before packaging:
+
+- set `Current version` in every bundled Help language file to the exact target `v<version>`
+- update every language file's feature and menu descriptions for each user-visible release change
+- remove descriptions of menu items or behavior that no longer exist from every language file
+
+Do not build or publish the release candidate while any bundled Help version or visible behavior
+description is stale or while a supported language's Help file is missing.
 
 Run the automated regression flow first:
 
@@ -62,6 +73,8 @@ Minimum required manual coverage:
 
 - open a Markdown file successfully
 - edit and save successfully
+- open `Help > Documentation` in each supported interface language and confirm it shows the target
+  version and current release behavior
 - verify the release's new feature works
 - verify one or more existing core features still work
 
@@ -93,6 +106,8 @@ Publish the release only after confirming all of the following:
 - the uploaded DMG is the same validated artifact
 - the release title matches `MarkHola-<version>`
 - the release notes match the target version scope
+- every packaged `Help > Documentation` language matches the target version and user-visible release
+  scope
 - the Git tag points at the intended final release commit
 
 ## 5. Keep evidence

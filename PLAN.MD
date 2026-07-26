@@ -141,6 +141,34 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Number new blank-document titles sequentially as `Untitled-1`, `Untitled-2`, and so on
    - Remove failed Mermaid render artifacts so error SVGs cannot escape the document content area
 
+### v0.7.9
+1. Add English and Simplified Chinese interface languages
+   - Use English as the default language when no preference has been saved
+   - Add `View > Language > English / 简体中文`
+   - Apply language changes immediately to MarkHola's native menus, WebView interface, status messages, alerts, and bundled Help
+   - Remember the selected language across app relaunches
+   - Keep Markdown document content unchanged and leave operating-system-owned dialogs in the system language
+2. Match native tab text-selection behavior
+   - Prevent document tab titles from being selected by pointer dragging
+   - Preserve tab activation, close buttons, keyboard focus, overflow navigation, and accessibility behavior
+3. Fix and simplify the native View menu
+   - Show `Outline` as the visible menu-item title instead of leaving the row blank
+   - Keep the existing enabled, disabled, checked, unchecked, and toggle behavior unchanged
+   - Verify the visible label in both the empty workspace and an opened readonly document
+   - Remove the unused macOS `Show Tab Bar` and `Show All Tabs` items while MarkHola still uses its WebView document tabs
+   - Keep MarkHola's own `Tab` menu and WebView tab controls unchanged
+   - Remove the duplicate `Toggle Mode` item from the File menu while keeping it in Edit and
+     preserving `Command + /`
+4. Keep the bundled Help documentation synchronized with every release
+   - Update the English and Simplified Chinese bundled Help files to the target version before packaging
+   - Open the Help file matching the selected interface language
+   - Keep both files' user-visible feature and menu descriptions aligned with the packaged app
+   - Block release validation when either bundled Help version does not match the package version
+5. Reuse tabs when opening local Markdown links
+   - If a clicked local Markdown link targets a file that is already open, activate the existing tab instead of opening a duplicate
+   - If the target file is not open, open it in a new tab and make it the active tab
+   - Keep non-Markdown links and in-document anchor links on their existing behavior
+
 ### v0.8.0
 1. Replace the WebView document tab strip with native macOS window tabs
    - Give each open Markdown document its own native window, WebView, footer, and document runtime

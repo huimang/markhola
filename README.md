@@ -2,11 +2,11 @@
 
 ![MarkHola logo](assets/logo.png)
 
-MarkHola is a lightweight desktop Markdown reader and editor built with Rust for Apple Silicon Macs.
+MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.7.8`
+- `v0.7.9`
 
 ## Features
 
@@ -15,6 +15,9 @@ MarkHola is a lightweight desktop Markdown reader and editor built with Rust for
 - Open local `.md` and `.markdown` files (Open File supports multi-select)
 - Open and keep multiple Markdown documents in one window
 - Use flat document tabs with a fixed `+` shortcut and overflow navigation
+- Keep document tab titles non-selectable while preserving native-style tab interaction
+- Switch the interface between English and Simplified Chinese from `View > Language`
+- Reopen the app with the previously selected interface language still active
 - Open a heading outline panel from the checked `View > Outline` menu item in readonly mode
 - Use the read-only native bottom status bar for the file path, Words, Lines, mode value, and status value
 - Export the current document to PDF from `File > Export > PDF`
@@ -82,6 +85,7 @@ MarkHola is a lightweight desktop Markdown reader and editor built with Rust for
 - `tao`
 - `url`
 - `wry`
+- `yaml-rust`
 
 ## Development
 

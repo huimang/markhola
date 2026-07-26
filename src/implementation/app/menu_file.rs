@@ -1,27 +1,30 @@
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSEventModifierFlags, NSMenu, NSMenuItem};
-use objc2_foundation::ns_string;
+use objc2_foundation::{NSString, ns_string};
+
+use crate::app::text;
 
 use super::menu_file_export::build_export_menu;
 use super::menu_file_items::action;
 use super::menu_state::{remember_print, remember_save_as};
 
 pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &AnyObject) {
+    let file_title = NSString::from_str(text("menu.file"));
     let file_menu_item = unsafe {
         NSMenuItem::initWithTitle_action_keyEquivalent(
             NSMenuItem::alloc(mtm),
-            ns_string!("File"),
+            &file_title,
             None,
             ns_string!(""),
         )
     };
     main_menu.addItem(&file_menu_item);
 
-    let file_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), ns_string!("File"));
+    let file_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &file_title);
     file_menu.addItem(&action(
         mtm,
-        "New",
+        text("menu.new"),
         Some(sel!(newMenuDocument:)),
         "n",
         NSEventModifierFlags::Command,
@@ -29,7 +32,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
     ));
     file_menu.addItem(&action(
         mtm,
-        "Open",
+        text("menu.open"),
         Some(sel!(openMenuDocument:)),
         "o",
         NSEventModifierFlags::Command,
@@ -37,7 +40,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
     ));
     file_menu.addItem(&action(
         mtm,
-        "Save",
+        text("menu.save"),
         Some(sel!(saveMenuDocument:)),
         "s",
         NSEventModifierFlags::Command,
@@ -46,7 +49,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
 
     let save_as = action(
         mtm,
-        "Save As",
+        text("menu.save_as"),
         Some(sel!(saveMenuDocumentAs:)),
         "S",
         NSEventModifierFlags::Command | NSEventModifierFlags::Shift,
@@ -59,7 +62,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
 
     let print = action(
         mtm,
-        "Print",
+        text("menu.print"),
         Some(sel!(printDocument:)),
         "p",
         NSEventModifierFlags::Command,
@@ -69,10 +72,11 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
     remember_print(&print);
     file_menu.addItem(&print);
 
+    let export_title = NSString::from_str(text("menu.export"));
     let export_item = unsafe {
         NSMenuItem::initWithTitle_action_keyEquivalent(
             NSMenuItem::alloc(mtm),
-            ns_string!("Export"),
+            &export_title,
             None,
             ns_string!(""),
         )
@@ -83,16 +87,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
     file_menu.addItem(&NSMenuItem::separatorItem(mtm));
     file_menu.addItem(&action(
         mtm,
-        "Toggle Mode",
-        Some(sel!(toggleDocumentMode:)),
-        "/",
-        NSEventModifierFlags::Command,
-        target,
-    ));
-    file_menu.addItem(&NSMenuItem::separatorItem(mtm));
-    file_menu.addItem(&action(
-        mtm,
-        "Close",
+        text("menu.close"),
         Some(sel!(closeCurrentDocument:)),
         "w",
         NSEventModifierFlags::Command,
@@ -100,7 +95,7 @@ pub(super) fn add_file_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
     ));
     file_menu.addItem(&action(
         mtm,
-        "Exit",
+        text("menu.exit"),
         Some(sel!(exitApplication:)),
         "q",
         NSEventModifierFlags::Command,

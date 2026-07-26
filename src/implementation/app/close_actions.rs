@@ -2,6 +2,7 @@ use rfd::{MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
 use tao::window::Window;
 use wry::WebView;
 
+use crate::app::text;
 use crate::document::ActiveDocument;
 use crate::workspace::DocumentWorkspace;
 
@@ -42,7 +43,7 @@ pub(super) fn close_document_tab(
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     let Some(document) = workspace.document_by_id_mut(document_id) else {
-        render_status(webview, "Document tab no longer exists.", "error");
+        render_status(webview, text("status.missing_tab"), "error");
         return false;
     };
     if !resolve_document_pending_changes(window, webview, document) {
@@ -97,7 +98,7 @@ pub(super) fn resolve_document_pending_changes(
         },
         PendingChangesAction::Discard => true,
         PendingChangesAction::Cancel => {
-            render_status(webview, "Action cancelled.", "info");
+            render_status(webview, text("status.action_cancelled"), "info");
             false
         }
     }
@@ -107,18 +108,22 @@ fn ask_pending_changes_action(window: &Window, file_name: &str) -> PendingChange
     let result = MessageDialog::new()
         .set_parent(window)
         .set_level(MessageLevel::Warning)
-        .set_title("Unsaved changes")
-        .set_description(format!("Save changes to {file_name} before continuing?"))
+        .set_title(text("dialog.unsaved_title"))
+        .set_description(text("dialog.unsaved_description").replace("{file_name}", file_name))
         .set_buttons(MessageButtons::YesNoCancelCustom(
-            "Save".to_string(),
-            "Discard".to_string(),
-            "Cancel".to_string(),
+            text("dialog.save").to_string(),
+            text("dialog.discard").to_string(),
+            text("dialog.cancel").to_string(),
         ))
         .show();
 
     match result {
-        MessageDialogResult::Custom(choice) if choice == "Save" => PendingChangesAction::Save,
-        MessageDialogResult::Custom(choice) if choice == "Discard" => PendingChangesAction::Discard,
+        MessageDialogResult::Custom(choice) if choice == text("dialog.save") => {
+            PendingChangesAction::Save
+        }
+        MessageDialogResult::Custom(choice) if choice == text("dialog.discard") => {
+            PendingChangesAction::Discard
+        }
         _ => PendingChangesAction::Cancel,
     }
 }

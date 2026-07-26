@@ -1,14 +1,14 @@
 use tao::window::Window;
 use wry::WebView;
 
-use crate::app::AppTheme;
+use crate::app::{AppLanguage, AppTheme, text};
 use crate::workspace::DocumentWorkspace;
 
+use super::native_footer::NativeFooter;
 use super::{
     APP_AUTHOR, APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_GITHUB_URL, APP_VERSION, StatusPayload,
     WINDOW_TITLE, WorkspacePresentation, macos_menu,
 };
-use super::native_footer::NativeFooter;
 
 pub(super) fn present_workspace(
     window: &Window,
@@ -35,9 +35,7 @@ pub(super) fn sync_native_menu_state(workspace: &DocumentWorkspace) {
         macos_menu::set_outline_available(
             workspace
                 .active_document()
-                .is_some_and(|document| {
-                    document.mode() == crate::document::DocumentMode::Readonly
-                }),
+                .is_some_and(|document| document.mode() == crate::document::DocumentMode::Readonly),
         );
     }
 }
@@ -45,6 +43,11 @@ pub(super) fn sync_native_menu_state(workspace: &DocumentWorkspace) {
 pub(super) fn sync_native_theme_state(theme: AppTheme) {
     #[cfg(target_os = "macos")]
     macos_menu::set_selected_theme(theme);
+}
+
+pub(super) fn sync_native_language_state(language: AppLanguage) {
+    #[cfg(target_os = "macos")]
+    macos_menu::set_selected_language(language);
 }
 
 pub(super) fn sync_workspace_state(
@@ -120,15 +123,14 @@ fn evaluate_workspace_script(
     let serialized = match serde_json::to_string(&payload) {
         Ok(serialized) => serialized,
         Err(error) => {
-            render_status(
-                webview,
-                &format!("Failed to serialize workspace: {error}"),
-                "error",
-            );
+            let message =
+                text("status.failed_serialize_workspace").replace("{error}", &error.to_string());
+            render_status(webview, &message, "error");
             return;
         }
     };
     if let Err(error) = webview.evaluate_script(&format!("{function_name}({serialized});")) {
-        render_status(webview, &format!("WebView script error: {error}"), "error");
+        let message = text("status.webview_error").replace("{error}", &error.to_string());
+        render_status(webview, &message, "error");
     }
 }

@@ -16,14 +16,6 @@ impl AppTheme {
         }
     }
 
-    pub(crate) const fn label(self) -> &'static str {
-        match self {
-            AppTheme::Default => "Default",
-            AppTheme::Dark => "Dark",
-            AppTheme::Light => "Light",
-        }
-    }
-
     pub(crate) fn from_key(value: &str) -> Option<Self> {
         match value {
             "default" => Some(AppTheme::Default),

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,29 +11,29 @@
       <body class="workspace-empty">
         <div class="app">
           <div class="tabs-shell hidden" id="tabsShell">
-            <div class="tabs-bar" id="tabsBar" role="tablist" aria-label="Open documents"></div>
-            <div class="tab-navigation hidden" id="tabNavigation" aria-label="Move through open tabs">
-              <button id="previousTabs" type="button" aria-label="Move tabs backward">&lsaquo;</button>
-              <button id="nextTabs" type="button" aria-label="Move tabs forward">&rsaquo;</button>
+            <div class="tabs-bar" id="tabsBar" role="tablist" aria-label=""></div>
+            <div class="tab-navigation hidden" id="tabNavigation" aria-label="">
+              <button id="previousTabs" type="button" aria-label="">&lsaquo;</button>
+              <button id="nextTabs" type="button" aria-label="">&rsaquo;</button>
             </div>
-            <button class="new-document-tab" id="newDocumentTab" type="button" aria-label="New document">+</button>
+            <button class="new-document-tab" id="newDocumentTab" type="button" aria-label="">+</button>
           </div>
           <section class="preview-shell">
-            <span id="status" class="shell-status" data-level="info" aria-live="polite">Ready.</span>
+            <span id="status" class="shell-status" data-level="info" aria-live="polite"></span>
             <div class="find-panel hidden" id="findPanel">
               <div class="find-panel__group">
-                <input id="findInput" class="find-panel__input" type="text" placeholder="Find in document" aria-label="Find in document" />
-                <span id="findCount" class="find-panel__count">0 results</span>
+                <input id="findInput" class="find-panel__input" type="text" placeholder="" aria-label="" />
+                <span id="findCount" class="find-panel__count"></span>
               </div>
               <div class="find-panel__group find-panel__replace hidden" id="replaceGroup">
-                <input id="replaceInput" class="find-panel__input" type="text" placeholder="Replace with" aria-label="Replace with" />
+                <input id="replaceInput" class="find-panel__input" type="text" placeholder="" aria-label="" />
               </div>
               <div class="find-panel__actions">
-                <button id="findPrevious" class="find-panel__button" type="button">Previous</button>
-                <button id="findNext" class="find-panel__button" type="button">Next</button>
-                <button id="replaceOne" class="find-panel__button hidden" type="button">Replace</button>
-                <button id="replaceAll" class="find-panel__button hidden" type="button">Replace All</button>
-                <button id="findClose" class="find-panel__button find-panel__button--ghost" type="button">Close</button>
+                <button id="findPrevious" class="find-panel__button" type="button"></button>
+                <button id="findNext" class="find-panel__button" type="button"></button>
+                <button id="replaceOne" class="find-panel__button hidden" type="button"></button>
+                <button id="replaceAll" class="find-panel__button hidden" type="button"></button>
+                <button id="findClose" class="find-panel__button find-panel__button--ghost" type="button"></button>
               </div>
             </div>
             <div class="workspace">
@@ -41,8 +41,8 @@
                 <div class="empty-card">
                   <img class="empty-state__icon" src="__APP_ICON_DATA_URL__" alt="MarkHola" />
                   <div class="empty-state__copy">
-                    <h2>No document opened</h2>
-                    <p>Open, drag, or drop a Markdown file to preview or edit the current Markdown source.</p>
+                    <h2 id="emptyTitle"></h2>
+                    <p id="emptyDescription"></p>
                   </div>
                 </div>
               </div>
@@ -52,15 +52,15 @@
               <div class="editor-pane pane hidden" id="editorPane">
                 <div class="editor-shell" id="editorShell">
                   <div id="editorLineNumbers" class="editor-line-numbers" aria-hidden="true">1</div>
-                  <textarea id="editor" class="editor" spellcheck="false" aria-label="Markdown editor"></textarea>
+                  <textarea id="editor" class="editor" spellcheck="false" aria-label=""></textarea>
                 </div>
               </div>
-              <aside class="outline-panel hidden" id="outlinePanel" aria-label="Document outline">
+              <aside class="outline-panel hidden" id="outlinePanel" aria-label="">
                 <div class="outline-header">
-                  <strong>Outline</strong>
-                  <button id="outlineClose" type="button" aria-label="Close outline">&times;</button>
+                  <strong id="outlineTitle"></strong>
+                  <button id="outlineClose" type="button" aria-label="">&times;</button>
                 </div>
-                <nav class="outline-list" id="outlineList" aria-label="Document headings"></nav>
+                <nav class="outline-list" id="outlineList" aria-label=""></nav>
               </aside>
             </div>
           </section>
@@ -70,34 +70,34 @@
     <div class="about-overlay hidden" id="aboutOverlay">
       <div class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
         <div class="about-header">
-          <h2 id="aboutTitle">About MarkHola</h2>
-          <button class="about-close" id="aboutClose" type="button" aria-label="Close About">&times;</button>
+          <h2 id="aboutTitle"></h2>
+          <button class="about-close" id="aboutClose" type="button" aria-label="">&times;</button>
         </div>
         <div class="about-brand">
           <img class="about-logo" src="__APP_LOGO_DATA_URL__" alt="Application logo" />
         </div>
         <div class="about-meta">
           <div class="about-meta-row">
-            <strong>Version</strong>
+            <strong id="aboutVersionLabel"></strong>
             <span class="about-value" id="aboutVersion">0.7.0</span>
             <span></span>
           </div>
           <div class="about-meta-row">
-            <strong>Author</strong>
+            <strong id="aboutAuthorLabel"></strong>
             <span class="about-value" id="aboutAuthor">Ronnie Deng</span>
             <span></span>
           </div>
           <div class="about-meta-row">
-            <strong>Build</strong>
+            <strong id="aboutBuildLabel"></strong>
             <span class="about-value" id="aboutBuild">apple / arm64</span>
             <span></span>
           </div>
           <div class="about-meta-row">
             <strong>GitHub</strong>
             <a class="about-value" id="aboutGithub" href="https://github.com/phpple/markhola">https://github.com/phpple/markhola</a>
-            <button class="about-copy" id="aboutCopy" type="button">Copy</button>
+            <button class="about-copy" id="aboutCopy" type="button"></button>
           </div>
         </div>
-        <div class="about-footer">Built for local Markdown reading and writing on Apple Silicon.</div>
+        <div class="about-footer" id="aboutFooter"></div>
       </div>
     </div>
