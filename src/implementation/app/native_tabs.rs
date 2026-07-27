@@ -1,10 +1,15 @@
 #[cfg(target_os = "macos")]
 use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
+use objc2::{MainThreadMarker, MainThreadOnly};
+#[cfg(target_os = "macos")]
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSColor, NSWindow, NSWindowOrderingMode, NSWindowTabbingMode,
+    NSAutoresizingMaskOptions, NSColor, NSUserInterfaceItemIdentification, NSView, NSWindow,
+    NSWindowButton, NSWindowOrderingMode, NSWindowTabbingMode,
 };
+#[cfg(target_os = "macos")]
+use objc2_foundation::NSString;
 #[cfg(target_os = "macos")]
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::Window;
@@ -14,6 +19,8 @@ use super::runtime::AppRuntime;
 use crate::app::AppTheme;
 
 const TABBING_IDENTIFIER: &str = "com.markhola.document-tabs";
+#[cfg(target_os = "macos")]
+const TITLEBAR_BACKGROUND_IDENTIFIER: &str = "com.markhola.titlebar-background";
 
 pub(super) fn configure(window: &Window, theme: AppTheme) {
     #[cfg(target_os = "macos")]
@@ -113,19 +120,62 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
         if let Some(appearance) = NSAppearance::appearanceNamed(appearance_name) {
             ns_window.setAppearance(Some(&appearance));
         }
-        let (red, green, blue) = match theme {
-            AppTheme::Default => (242, 240, 255),
-            AppTheme::Light => (242, 240, 255),
-            AppTheme::Dark => (36, 33, 58),
+        let (tab_rgb, titlebar_rgb) = match theme {
+            AppTheme::Default => ((234, 249, 245), (23, 184, 144)),
+            AppTheme::Light => ((234, 249, 245), (234, 249, 245)),
+            AppTheme::Dark => ((36, 33, 58), (36, 33, 58)),
         };
-        let color = NSColor::colorWithSRGBRed_green_blue_alpha(
-            red as f64 / 255.0,
-            green as f64 / 255.0,
-            blue as f64 / 255.0,
+        let tab_color = NSColor::colorWithSRGBRed_green_blue_alpha(
+            tab_rgb.0 as f64 / 255.0,
+            tab_rgb.1 as f64 / 255.0,
+            tab_rgb.2 as f64 / 255.0,
             1.0,
         );
-        ns_window.setBackgroundColor(Some(&color));
+        ns_window.setBackgroundColor(Some(&tab_color));
+
+        let titlebar_color = NSColor::colorWithSRGBRed_green_blue_alpha(
+            titlebar_rgb.0 as f64 / 255.0,
+            titlebar_rgb.1 as f64 / 255.0,
+            titlebar_rgb.2 as f64 / 255.0,
+            1.0,
+        );
+        if let Some(titlebar_background) = titlebar_background_view(ns_window) {
+            if let Some(layer) = titlebar_background.layer() {
+                layer.setBackgroundColor(Some(&titlebar_color.CGColor()));
+            }
+        }
     }
     #[cfg(not(target_os = "macos"))]
     let _ = (window, theme);
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn titlebar_background_view(ns_window: &NSWindow) -> Option<Retained<NSView>> {
+    let titlebar_view = unsafe {
+        ns_window
+            .standardWindowButton(NSWindowButton::CloseButton)?
+            .superview()?
+    };
+    let titlebar_container = unsafe { titlebar_view.superview()? };
+
+    if let Some(background) = titlebar_container.subviews().iter().find(|view| {
+        view.identifier()
+            .is_some_and(|identifier| identifier.to_string() == TITLEBAR_BACKGROUND_IDENTIFIER)
+    }) {
+        return Some(background);
+    }
+
+    let mtm = MainThreadMarker::new()?;
+    let background = NSView::initWithFrame(NSView::alloc(mtm), titlebar_view.frame());
+    background.setIdentifier(Some(&NSString::from_str(TITLEBAR_BACKGROUND_IDENTIFIER)));
+    background.setWantsLayer(true);
+    background.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMinYMargin,
+    );
+    titlebar_container.addSubview_positioned_relativeTo(
+        &background,
+        NSWindowOrderingMode::Below,
+        Some(&titlebar_view),
+    );
+    Some(background)
 }

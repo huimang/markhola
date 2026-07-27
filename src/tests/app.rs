@@ -197,7 +197,7 @@ fn default_theme_uses_green_subtle_for_its_background_surfaces() {
 }
 
 #[test]
-fn default_theme_separates_native_tabs_from_the_lighter_document_surface() {
+fn default_theme_separates_titlebar_tabs_and_document_surface() {
     let native_tabs = include_str!("../implementation/app/native_tabs.rs");
     let html = app_shell_html(
         AppTheme::Default,
@@ -205,10 +205,14 @@ fn default_theme_separates_native_tabs_from_the_lighter_document_surface() {
         DocumentSize::default(),
     );
 
-    assert!(native_tabs.contains("AppTheme::Default => (242, 240, 255)"));
-    assert!(native_tabs.contains("AppTheme::Light => (242, 240, 255)"));
+    assert!(native_tabs.contains("AppTheme::Default => ((234, 249, 245), (23, 184, 144))"));
+    assert!(native_tabs.contains("AppTheme::Light => ((234, 249, 245), (234, 249, 245))"));
+    assert!(native_tabs.contains("ns_window.setBackgroundColor(Some(&tab_color))"));
+    assert!(native_tabs.contains("NSWindowButton::CloseButton"));
+    assert!(native_tabs.contains("titlebar_background_view(ns_window)"));
+    assert!(native_tabs.contains("TITLEBAR_BACKGROUND_IDENTIFIER"));
     assert!(html.contains("--bg: var(--markhola-green-subtle)"));
-    assert!(html.contains("--markhola-violet-tint: #F2F0FF"));
+    assert!(html.contains("--markhola-green: #17B890"));
     assert!(html.contains("--markhola-green-tint: #EAF9F5"));
     assert!(html.contains("--markhola-green-subtle: #FAFEFD"));
 }
