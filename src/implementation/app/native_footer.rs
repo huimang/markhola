@@ -14,7 +14,9 @@ use objc2::msg_send;
 #[cfg(target_os = "macos")]
 use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
-use objc2_app_kit::{NSAutoresizingMaskOptions, NSColor, NSFont, NSTextField, NSView, NSWindow};
+use objc2_app_kit::{
+    NSAutoresizingMaskOptions, NSColor, NSFont, NSTextAlignment, NSTextField, NSView, NSWindow,
+};
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 #[cfg(target_os = "macos")]
@@ -71,6 +73,9 @@ impl NativeFooter {
             let words_field = footer_label(mtm, "");
             let lines_field = footer_label(mtm, "");
             let mode_field = footer_label(mtm, "");
+            words_field.setAlignment(NSTextAlignment::Right);
+            lines_field.setAlignment(NSTextAlignment::Right);
+            mode_field.setAlignment(NSTextAlignment::Right);
 
             apply_footer_fonts(&[&path_field, &words_field, &lines_field, &mode_field]);
 

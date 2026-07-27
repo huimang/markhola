@@ -385,6 +385,18 @@ fn native_footer_uses_one_lower_brightness_text_color() {
 }
 
 #[test]
+fn native_footer_right_aligns_metadata_but_keeps_the_path_on_the_left() {
+    let source = include_str!("../implementation/app/native_footer.rs");
+
+    for field in ["words_field", "lines_field", "mode_field"] {
+        assert!(source.contains(&format!(
+            "{field}.setAlignment(NSTextAlignment::Right)"
+        )));
+    }
+    assert!(!source.contains("path_field.setAlignment(NSTextAlignment::Right)"));
+}
+
+#[test]
 fn native_footer_omits_the_status_block() {
     let source = include_str!("../implementation/app/native_footer.rs");
 

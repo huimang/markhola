@@ -19,7 +19,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Switch the interface between English and Simplified Chinese from `View > Language`
 - Reopen the app with the previously selected interface language still active
 - Open a heading outline panel from the checked `View > Outline` menu item in readonly mode
-- Use the compact read-only native bottom status bar for the file path, Words, Lines, and mode value, with one consistent neutral text color
+- Use the compact read-only native bottom status bar with the file path on the left and right-aligned Words, Lines, and mode values in one consistent neutral text color
 - Export the current document to PDF from `File > Export > PDF`
 - Export the current document to HTML from `File > Export > HTML`
 - Print the current document from `File > Print`
