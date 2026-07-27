@@ -181,6 +181,16 @@ fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
 }
 
 #[test]
+fn app_themes_render_tables_without_rounded_corners() {
+    for theme in AppTheme::ALL {
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
+
+        assert!(html.contains("overflow: hidden;\n  border-radius: 0;"));
+        assert!(!html.contains("overflow: hidden;\n  border-radius: 14px;"));
+    }
+}
+
+#[test]
 fn default_theme_uses_green_subtle_for_its_background_surfaces() {
     let html = app_shell_html(
         AppTheme::Default,

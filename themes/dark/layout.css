@@ -499,7 +499,7 @@ body.workspace-empty #modeState {
   border-collapse: collapse;
   background: var(--panel-strong);
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 0;
 }
 
 .markdown-body th,
