@@ -163,11 +163,39 @@ References:
 - Separate the code area, gutter, and document through gentle hierarchy rather than a strong
   light-versus-dark cut.
 
+| Role | Token | Value | HTML preview | Contrast |
+| --- | --- | --- | --- | ---: |
+| Code surface | `--code-surface` | `#F1F0F7` | <span title="Default code surface #F1F0F7" aria-label="Default code surface #F1F0F7" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#F1F0F7;border:1px solid #857E99;"></span> | — |
+| Gutter | `--code-gutter` | `#E8E6F0` | <span title="Default code gutter #E8E6F0" aria-label="Default code gutter #E8E6F0" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#E8E6F0;border:1px solid #857E99;"></span> | — |
+| Code text | `--code-text` | `#514B64` | <span title="Default code text #514B64" aria-label="Default code text #514B64" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#514B64;border:1px solid #94A3B8;"></span> | 7.30:1 |
+| Line number | `--code-line-number` | `#68627A` | <span title="Default line number #68627A" aria-label="Default line number #68627A" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#68627A;border:1px solid #94A3B8;"></span> | 4.70:1 |
+| Divider | `--code-divider` | `#857E99` | <span title="Default code divider #857E99" aria-label="Default code divider #857E99" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#857E99;border:1px solid #64748B;"></span> | 3.13:1 minimum |
+| Keyword | `--code-syntax-keyword` | `#6657E8` | <span title="Default keyword #6657E8" aria-label="Default keyword #6657E8" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6657E8;border:1px solid #94A3B8;"></span> | 4.53:1 |
+| String | `--code-syntax-string` | `#287B68` | <span title="Default string #287B68" aria-label="Default string #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;border:1px solid #94A3B8;"></span> | 4.50:1 |
+| Comment | `--code-syntax-comment` | `#6F687B` | <span title="Default comment #6F687B" aria-label="Default comment #6F687B" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6F687B;border:1px solid #94A3B8;"></span> | 4.70:1 |
+| Constant | `--code-syntax-constant` | `#855272` | <span title="Default constant #855272" aria-label="Default constant #855272" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#855272;border:1px solid #94A3B8;"></span> | 5.38:1 |
+| Entity | `--code-syntax-entity` | `#5F5682` | <span title="Default entity #5F5682" aria-label="Default entity #5F5682" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#5F5682;border:1px solid #94A3B8;"></span> | 5.91:1 |
+| Badge text/background | `--code-badge-text` / `--code-badge-background` | `#F1F0F7` / `#287B68` | <span title="Default badge #F1F0F7 on #287B68" aria-label="Default badge #F1F0F7 on #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;color:#F1F0F7;border:1px solid #94A3B8;text-align:center;">Aa</span> | 4.50:1 |
+
 ### Dark Code Palette
 
 - Use a soft, low-saturation dark gray-violet background rather than pure black.
 - Distinguish code from the Dark document surface without making the block appear luminous or
   isolated.
+
+| Role | Token | Value | HTML preview | Contrast |
+| --- | --- | --- | --- | ---: |
+| Code surface | `--code-surface` | `#2D2A3A` | <span title="Dark code surface #2D2A3A" aria-label="Dark code surface #2D2A3A" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#2D2A3A;border:1px solid #827A98;"></span> | — |
+| Gutter | `--code-gutter` | `#343044` | <span title="Dark code gutter #343044" aria-label="Dark code gutter #343044" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#343044;border:1px solid #827A98;"></span> | — |
+| Code text | `--code-text` | `#C5C0D3` | <span title="Dark code text #C5C0D3" aria-label="Dark code text #C5C0D3" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#C5C0D3;border:1px solid #64748B;"></span> | 7.88:1 |
+| Line number | `--code-line-number` | `#A49EB5` | <span title="Dark line number #A49EB5" aria-label="Dark line number #A49EB5" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#A49EB5;border:1px solid #64748B;"></span> | 4.92:1 |
+| Divider | `--code-divider` | `#827A98` | <span title="Dark code divider #827A98" aria-label="Dark code divider #827A98" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#827A98;border:1px solid #64748B;"></span> | 3.14:1 minimum |
+| Keyword | `--code-syntax-keyword` | `#AFA7ED` | <span title="Dark keyword #AFA7ED" aria-label="Dark keyword #AFA7ED" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#AFA7ED;border:1px solid #64748B;"></span> | 6.37:1 |
+| String | `--code-syntax-string` | `#83C9B4` | <span title="Dark string #83C9B4" aria-label="Dark string #83C9B4" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#83C9B4;border:1px solid #64748B;"></span> | 7.30:1 |
+| Comment | `--code-syntax-comment` | `#9B94A8` | <span title="Dark comment #9B94A8" aria-label="Dark comment #9B94A8" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#9B94A8;border:1px solid #64748B;"></span> | 4.78:1 |
+| Constant | `--code-syntax-constant` | `#D0A7BF` | <span title="Dark constant #D0A7BF" aria-label="Dark constant #D0A7BF" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#D0A7BF;border:1px solid #64748B;"></span> | 6.62:1 |
+| Entity | `--code-syntax-entity` | `#B8B0CA` | <span title="Dark entity #B8B0CA" aria-label="Dark entity #B8B0CA" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#B8B0CA;border:1px solid #64748B;"></span> | 6.72:1 |
+| Badge text/background | `--code-badge-text` / `--code-badge-background` | `#D8F0E9` / `#376E62` | <span title="Dark badge #D8F0E9 on #376E62" aria-label="Dark badge #D8F0E9 on #376E62" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#376E62;color:#D8F0E9;border:1px solid #64748B;text-align:center;">Aa</span> | 4.92:1 |
 
 ### Syntax Colors
 

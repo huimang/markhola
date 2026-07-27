@@ -64,7 +64,7 @@ Verify the workspace with:
 
 1. Default
 2. Dark
-3. Light
+3. Follow System
 
 Tab structure and Outline behavior should remain consistent in every theme.
 

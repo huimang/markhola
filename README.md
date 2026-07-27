@@ -6,7 +6,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.8.0`
+- `v0.8.1`
 
 ## Features
 
@@ -24,7 +24,8 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Export the current document to PDF from `File > Export > PDF`
 - Export the current document to HTML from `File > Export > HTML`
 - Print the current document from `File > Print`
-- Switch app shell themes from `View > Theme > Default / Dark / Light`
+- Switch app shell themes from `View > Theme > Follow System / Default / Dark`
+- Follow the macOS Light or Dark appearance automatically unless a fixed theme is selected
 - Use Green Subtle `#FAFEFD` instead of pale yellow for the Default theme background
 - Use a subtle Gray Tint title-bar material, Green Tint `#EAF9F5` for native tabs, and Green Subtle `#FAFEFD` for the document surface
 - Use a wider centered 960 px reading area across all themes
@@ -39,11 +40,13 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Save the current document to another path with `File > Save As`
 - Open the bundled documentation from `Help > Documentation`
 - Render headings, links, images, tables, lists, blockquotes, and code blocks
+- Render Markdown links without underlines while retaining themed hover and focus colors
 - Render angle-bracket shorthand links such as `<README.md>` as clickable links in readonly mode
 - Syntax-highlighted fenced code blocks in readonly mode
 - Improved mainstream language highlight coverage for fenced code blocks
 - Mathematical expressions in readonly mode, including inline math, `$$...$$`, and fenced `math` blocks
 - Code block line numbers and hover language badges in readonly mode
+- Use separate low-stimulation code palettes for Default and Dark
 - Render Mermaid fenced code blocks in readonly mode
 - Support `[toc]` placeholder for table of contents in readonly mode
 - In-page find in readonly mode with `Command + F`

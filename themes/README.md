@@ -2,9 +2,9 @@
 
 - `default/layout.css`: current default app shell layout theme
 - `dark/layout.css`: dark reading shell theme
-- `light/layout.css`: bright neutral shell theme
 
 MarkHola loads the selected theme from `themes/<theme-name>/layout.css` at runtime when available.
+`Follow System` resolves the macOS Light appearance to Default and Dark appearance to Dark.
 In development, edit the repository `themes/<theme-name>/layout.css` directly.
 In the packaged macOS app, the same theme directories are copied into `MarkHola.app/Contents/Resources/themes/`.
 

@@ -189,6 +189,28 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Render Markdown tables with straight corners across all themes
 
 ### v0.8.1
+1. Clean up the native Tab menu
+   - Remove the repeated `Tab 1` through `Tab 9` menu items
+   - Keep `Command + 1` through `Command + 9` switching available through the native Tab shortcuts
+   - Keep previous, next, close current, close other, and close all Tab menu actions unchanged
+2. Remove underlines from rendered Markdown links
+   - Keep links mapped to the shared Violet and Green theme colors
+   - Do not show an underline in default, visited, hover, focus, or active states
+   - Apply the same link treatment to Default and Dark themes and exported output
+3. Simplify themes and follow the macOS appearance
+   - Remove the separate Light theme
+   - Offer Follow System, Default, and Dark choices in the Theme menu
+   - Map the macOS Light appearance to MarkHola Default and the macOS Dark appearance to MarkHola Dark while Follow System is selected
+   - Apply macOS appearance changes immediately to every native Tab surface without restarting the app
+   - Keep manually selected Default or Dark fixed until the user selects Follow System again
+   - Migrate the removed stored Light preference to Default
+4. Improve code-block visual comfort
+   - Use a pale gray-violet code surface in Default instead of a large dark block
+   - Use a soft dark gray-violet code surface in Dark instead of pure black
+   - Keep 14 px code text near `6:1–8:1`, line numbers near `4.5:1–5.5:1`, separators at least `3:1`, and language labels at least `4.5:1`
+   - Use separate low-saturation syntax palettes for Default and Dark
+   - Reduce keyword weight and avoid combining excessive brightness, saturation, and bold emphasis
+### v0.8.2
 1. Add Typora-style inline Markdown reading and editing
    - Keep Markdown source as the single source of truth while presenting formatted content in the WebView
    - Allow users to click formatted headings, paragraphs, emphasis, links, lists, blockquotes, task items, and code blocks and edit them in place
@@ -204,20 +226,96 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Synchronize edits back to the Rust document model without sending and reprocessing the complete document on every keystroke when incremental changes are sufficient
    - Preserve cursor position, selection, undo and redo, input method behavior, copy and paste, find and replace, saving, and dirty-state tracking
 
+### v0.9.0
+1. Add Apple Intel support
+   - Run the macOS app on Apple Intel in addition to Apple Silicon
+   - Keep the existing macOS document, export, menu, and packaging behavior aligned across both chip families
+
+### v0.9.1
+1. Add Windows 11 support
+   - Run MarkHola on Windows 11 with the same core Markdown reading flow as macOS
+   - Keep readonly and writable document behavior aligned with the existing product scope
+   - Preserve the currently supported Markdown rendering set on Windows as far as the chosen WebView stack allows
+   - Support opening local Markdown files, editing, saving, and basic document navigation on Windows
+   - Provide Windows-specific packaging and installer output instead of reusing macOS-only release artifacts
+   - Exclude Apple-only packaging resources and build steps from the Windows release flow
+
+### v0.9.2
+1. Add platform-aware packaging slimming
+   - Split platform-specific build, packaging, and release dependencies so each target platform only ships what it actually needs
+   - Remove Apple-only packaging assets, libraries, and release steps from Windows artifacts
+   - Prevent Windows-only packaging assets, libraries, and release steps from being pulled into macOS artifacts
+   - Keep common Markdown, rendering, and document logic shared while isolating platform-exclusive runtime and packaging code
+   - Reduce installer and application bundle size by target-aware dependency selection, conditional compilation, and packaging-resource pruning
+
 ### v1.0.0
-1. Two models: Readonly、writeonly.
-2. Readonly:Default mode, you can open any markdown file.
-   Support features:
-   - Table
-   - Link
-   - Picture
-   - Flow
-   - Math Expression
-   - Code Highlight
-3. Writeonly:You can edit the markdown file under this model.After you enter "Command + /", you can switch the model both for readonly and writeonly.
-4. Export to PDF. 
-5. Support: English, Chinese
-6. Platform: Apple Intel、Apple M、Windows 11
+1. Platform: Apple Intel、Apple M、Windows 11
+2. Detect external Markdown file changes while a document is open
+   - If the current document has no unsaved changes, automatically reload the latest on-disk content
+   - If the current document has unsaved changes, prompt the user to choose one of:
+     - Reload the latest on-disk content directly
+     - Save the current in-memory content to a temporary file, then load the latest on-disk content
+     - Keep the current document unchanged
+   - When saving, compare the on-disk file content or file version against the version originally loaded for editing
+   - If the file changed on disk during editing, prompt the user to choose one of:
+     - Overwrite the current on-disk file with the editor content
+     - Save the current editor content to a temporary file, then load the latest on-disk content
+     - Keep the current document unchanged
+3. Add large-view support for diagrams and other oversized rendered content
+   - Allow Mermaid diagrams and similar rendered blocks to be opened in a larger reading view when the normal document layout is too small
+   - Make large diagrams readable without requiring permanent document font-size changes
+   - Keep the original document content unchanged while entering and leaving the larger viewing mode
+   - Keep this capability separate from document font-size changes and document-view zoom
+   - Treat this as a block-focused viewing mode for oversized rendered content rather than a global document scaling action
+4. Add a dedicated Settings page for MarkHola configuration
+   - Provide one configuration entry for the user to manage app settings instead of scattering them only across menus
+   - Cover at least theme, document font size, and interface language in the first version
+   - Keep the page style consistent with MarkHola's existing visual language
+   - Allow the Settings page to become the shared entry point for future configuration items
+
+### v1.0.1
+1. Update `README.md`, bundled Help, examples, validation records, and release workflow for the 1.0 release
+2. Support macOS and Windows release packaging and validation
+3. Support document font-size changes
+   - Support `Command +` and `Command -` to increase or decrease document font size
+   - Treat document font size as a typography setting for the current reading and editing experience
+   - Let font-size changes affect text-centric layout such as paragraphs, headings, lists, blockquotes, code blocks, and spacing
+   - Allow the visible document reading area to respond with proportional layout adjustments when font size changes, but do not treat font-size changes as full document zoom
+
+### v1.0.2
+1. Add document-view zoom for reading
+   - Add macOS two-finger pinch zoom for document viewing
+   - Use system trackpad pinch gestures to zoom the document view itself instead of changing the saved document font-size preference
+   - Treat document-view zoom as a viewport-scale behavior that can enlarge rendered content such as images, tables, formulas, and diagrams together
+   - Keep document-view zoom separate from the saved document font-size setting
+
+### v1.1.0
+1. Add MarkHola CLI capabilities for AI-facing automation
+   - Provide a stable `markhola` command-line entry for opening Markdown files from external tools
+   - Support opening a local Markdown file by explicit path
+   - Support opening generated Markdown text as a temporary document with a caller-provided title
+   - Define clear exit codes, stdout/stderr behavior, and failure messages so external agents can call the CLI reliably
+   - Keep the CLI scope focused on safe document-opening actions first, without requiring in-app AI UI
+
+### v1.1.1
+1. Add MCP support for MarkHola operations
+   - Wrap the stable CLI operations as MCP tools instead of requiring agents to assemble shell commands directly
+   - Expose at least document-opening tools for local files and generated temporary Markdown content
+   - Keep the MCP layer thin so MarkHola's app behavior stays owned by the existing application runtime
+   - Reuse the same document-opening path validation and tab-activation behavior as the native app flow
+
+### v1.1.2
+1. Publish Tool schemas for AI discovery
+   - Define structured tool names, descriptions, argument schemas, return fields, and side-effect expectations for the MCP tools
+   - Document which tools are read-only, which tools open or focus app windows, and which tools may create temporary files
+   - Keep the schema versioned so future AI-facing operations can expand without breaking existing integrations
+
+### v1.1.3
+1. Make MarkHola's AI-facing operations discoverable and usable by external AI systems
+   - Ensure AI clients can understand the available MarkHola operations from the published Tool schemas
+   - Validate the end-to-end path `CLI support -> MCP support -> Tool schemas -> AI understands available operations`
+   - Use the resulting foundation for future AI workflows such as Confluence-to-Markdown import, external content ingestion, and in-app AI entry points
+   - Keep direct AI chat UI as a later optional product layer on top of these integration capabilities
 
 ## Tech architecture
 1. Written by Rust.

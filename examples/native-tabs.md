@@ -1,6 +1,6 @@
 # Native macOS Tabs
 
-This document verifies the native tab replacement in MarkHola v0.8.0.
+This document verifies the native tab behavior in MarkHola v0.8.1.
 
 ## Open another tab
 
@@ -13,6 +13,12 @@ Opening the link again should activate the existing native tab instead of creati
 Use `Command + 1` and `Command + 2` to switch between the visible native tabs.
 
 The document title, content, Outline, and footer should always describe the selected tab.
+
+## Tab menu
+
+Open the `Tab` menu and confirm it does not list repeated `Tab 1` through `Tab 9` items.
+
+Previous, next, and close actions should remain available in the menu.
 
 ## Edit and save
 

@@ -1,6 +1,6 @@
 # MarkHola Documentation
 
-Current version: `v0.8.0`
+Current version: `v0.8.1`
 
 ## What is MarkHola
 
@@ -43,14 +43,13 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 - Next Tab
 - Previous Tab
-- Tab 1 through Tab 9 (`Command + 1` through `Command + 9`)
 - Close Tab
 - Close Other Tabs
 - Close All Tabs
 
 ### View
 
-- Theme > Default / Dark / Light
+- Theme > Follow System / Default / Dark
 - Language > English / 简体中文
 - Size > Zoom In / Zoom Out / Reset
 - Outline
@@ -67,3 +66,6 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Operating-system dialogs continue to use the language provided by macOS.
 - The Outline item is available for an opened document in readonly mode.
 - Use `Command + 1` through `Command + 9` to select native tabs by their visible order.
+- Follow System changes between Default and Dark when the macOS appearance changes.
+- Rendered Markdown links do not use underlines.
+- Default and Dark use separate visually comfortable code palettes.
