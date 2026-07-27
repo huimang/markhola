@@ -178,13 +178,15 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Use native macOS tabs to replace the current custom document tab UI
    - Keep the existing single-window document workspace model as much as possible instead of expanding to multi-window document runtime changes in this version
    - Support `Command + 1` through `Command + 9` for switching tabs by their visible order
+   - Show the available `⌘1` through `⌘9` shortcut on the right side of each corresponding native tab
    - Keep open, save, close, unsaved-state, theme, font-size, Outline, and footer behavior working after the tab replacement
    - Extend both brand scales with Violet Subtle `#F9F8FF` and Green Subtle `#FAFEFD`
    - Add a third shared Gray scale for neutral application surfaces alongside the Violet and Green scales
    - Use a subtle Gray Tint title-bar material, Green Tint for native tabs, and Green Subtle for the document background so the three surfaces remain visually distinct
    - Reduce the native bottom status bar height to 34 px while keeping its labels vertically aligned
-   - Use the Gray scale for the native footer, keep the path on the left, right-align Words, Lines, and mode, keep all labels on the same lower-brightness foreground color, and remove the rightmost status column entirely
+   - Use the Gray scale for the native footer, keep the path on the left, right-align Words and Lines, remove the mode and status columns, and keep all labels on the same lower-brightness foreground color
    - Increase the centered document reading width from 860 px to 960 px across all themes
+   - Render Markdown tables with straight corners across all themes
 
 ### v0.8.1
 1. Add Typora-style inline Markdown reading and editing

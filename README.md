@@ -15,11 +15,12 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Open local `.md` and `.markdown` files (Open File supports multi-select)
 - Open and keep multiple Markdown documents in one native macOS window tab group
 - Switch native tabs by their visible order with `Command + 1` through `Command + 9`
+- Show `⌘1` through `⌘9` on the right side of the corresponding native tabs
 - Drag native tabs to reorder them while keeping numbered switching aligned with the new order
 - Switch the interface between English and Simplified Chinese from `View > Language`
 - Reopen the app with the previously selected interface language still active
 - Open a heading outline panel from the checked `View > Outline` menu item in readonly mode
-- Use the compact read-only native bottom status bar with the file path on the left and right-aligned Words, Lines, and mode values in one consistent neutral text color
+- Use the compact read-only native bottom status bar with the file path on the left and right-aligned Words and Lines in one consistent neutral text color
 - Export the current document to PDF from `File > Export > PDF`
 - Export the current document to HTML from `File > Export > HTML`
 - Print the current document from `File > Print`
@@ -27,6 +28,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Use Green Subtle `#FAFEFD` instead of pale yellow for the Default theme background
 - Use a subtle Gray Tint title-bar material, Green Tint `#EAF9F5` for native tabs, and Green Subtle `#FAFEFD` for the document surface
 - Use a wider centered 960 px reading area across all themes
+- Render Markdown tables with straight corners
 - Reopen the app with the previously selected shell theme still active
 - Use shared Violet, Green, and Gray color scales across native tabs, document surfaces, the native footer, links, Outline, tables, and fenced code highlighting
 - Adjust document text from `View > Size > Zoom In / Zoom Out / Reset`
