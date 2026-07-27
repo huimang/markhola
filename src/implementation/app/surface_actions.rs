@@ -81,6 +81,9 @@ pub(super) fn activate_window_surface(
 }
 
 pub(super) fn sync_active_surface(runtime: &AppRuntime, status: &str, full_render: bool) {
+    runtime
+        .native_footer
+        .relayout(&runtime.window, &runtime.webview);
     present_workspace(
         &runtime.window,
         &runtime.webview,

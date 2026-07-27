@@ -486,6 +486,31 @@ fn native_footer_right_aligns_metadata_but_keeps_the_path_on_the_left() {
     }
     assert!(!source.contains("path_field.setAlignment(NSTextAlignment::Right)"));
     assert!(!source.contains("mode_field"));
+    assert!(source.contains(
+        "path_field.setAutoresizingMask(\n                NSAutoresizingMaskOptions::ViewWidthSizable"
+    ));
+    for field in ["words_field", "lines_field"] {
+        assert!(source.contains(&format!(
+            "{field}.setAutoresizingMask(\n                NSAutoresizingMaskOptions::ViewMinXMargin"
+        )));
+    }
+}
+
+#[test]
+fn active_native_tab_relayouts_its_footer_before_presenting_content() {
+    let source = include_str!("../implementation/app/surface_actions.rs");
+    let sync_start = source
+        .find("pub(super) fn sync_active_surface")
+        .expect("active surface synchronization should exist");
+    let sync_source = &source[sync_start..];
+    let relayout = sync_source
+        .find(".relayout(&runtime.window, &runtime.webview)")
+        .expect("active footer should be laid out against its current window");
+    let present = sync_source
+        .find("present_workspace(")
+        .expect("active workspace should be presented");
+
+    assert!(relayout < present);
 }
 
 #[test]

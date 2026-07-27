@@ -70,6 +70,18 @@ impl NativeFooter {
             let path_field = footer_label(mtm, "");
             let words_field = footer_label(mtm, "");
             let lines_field = footer_label(mtm, "");
+            path_field.setAutoresizingMask(
+                NSAutoresizingMaskOptions::ViewWidthSizable
+                    | NSAutoresizingMaskOptions::ViewMinYMargin,
+            );
+            words_field.setAutoresizingMask(
+                NSAutoresizingMaskOptions::ViewMinXMargin
+                    | NSAutoresizingMaskOptions::ViewMinYMargin,
+            );
+            lines_field.setAutoresizingMask(
+                NSAutoresizingMaskOptions::ViewMinXMargin
+                    | NSAutoresizingMaskOptions::ViewMinYMargin,
+            );
             words_field.setAlignment(NSTextAlignment::Right);
             lines_field.setAlignment(NSTextAlignment::Right);
 
@@ -215,11 +227,7 @@ impl NativeFooter {
 #[cfg(target_os = "macos")]
 unsafe fn footer_label(mtm: MainThreadMarker, value: &str) -> Retained<NSTextField> {
     let string = NSString::from_str(value);
-    let label = NSTextField::labelWithString(&string, mtm);
-    label.setAutoresizingMask(
-        NSAutoresizingMaskOptions::ViewMaxXMargin | NSAutoresizingMaskOptions::ViewMinYMargin,
-    );
-    label
+    NSTextField::labelWithString(&string, mtm)
 }
 
 #[cfg(target_os = "macos")]
