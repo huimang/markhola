@@ -214,6 +214,9 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Relayout the active native footer whenever a document surface becomes active
    - Keep Words and Lines right-aligned after opening multiple files, enlarging the window, and switching tabs
    - Keep the file path on the left and preserve the compact footer height
+6. Keep native Tab window zoom state consistent
+   - Synchronize the active window's zoomed or restored state when switching native tabs
+   - Preserve the original window size so double-clicking the title bar can restore it after a tab switch
 ### v0.8.2
 1. Add Typora-style inline Markdown reading and editing
    - Keep Markdown source as the single source of truth while presenting formatted content in the WebView

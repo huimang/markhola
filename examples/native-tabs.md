@@ -17,6 +17,9 @@ The document title, content, Outline, and footer should always describe the sele
 After opening multiple files together, enlarge the window from the title bar and switch between
 tabs. The file path should stay on the left while Words and Lines remain aligned to the right edge.
 
+Double-click the title bar to enlarge the window, switch to another tab, and double-click the title
+bar again. The window should return to the size it had before it was enlarged.
+
 ## Tab menu
 
 Open the `Tab` menu and confirm it does not list repeated `Tab 1` through `Tab 9` items.

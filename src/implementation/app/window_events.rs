@@ -54,10 +54,13 @@ pub(super) fn handle_window_event(
                 UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
             );
         }
-        WindowEvent::Resized(_) if runtime.active_window_id() == window_id => {
-            runtime
-                .native_footer
-                .relayout(&runtime.window, &runtime.webview);
+        WindowEvent::Resized(_) => {
+            super::native_tabs::sync_group_zoom_state(runtime, window_id);
+            if runtime.active_window_id() == window_id {
+                runtime
+                    .native_footer
+                    .relayout(&runtime.window, &runtime.webview);
+            }
         }
         WindowEvent::ThemeChanged(theme) => {
             super::theme_actions::system_theme_changed(theme, runtime);

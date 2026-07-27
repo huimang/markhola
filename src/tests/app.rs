@@ -514,6 +514,34 @@ fn active_native_tab_relayouts_its_footer_before_presenting_content() {
 }
 
 #[test]
+fn native_tab_activation_synchronizes_window_zoom_state_before_swapping_surfaces() {
+    let tabs = include_str!("../implementation/app/native_tabs.rs");
+    let runtime = include_str!("../implementation/app/runtime.rs");
+    let window_events = include_str!("../implementation/app/window_events.rs");
+
+    assert!(tabs.contains("pub(super) fn sync_zoom_state(source: &Window, target: &Window)"));
+    assert!(tabs.contains("if source.isZoomed() != target.isZoomed()"));
+    assert!(tabs.contains("target.zoom(None)"));
+    assert!(tabs.contains("pub(super) fn sync_group_zoom_state"));
+    assert!(window_events.contains(
+        "WindowEvent::Resized(_) => {\n            super::native_tabs::sync_group_zoom_state"
+    ));
+
+    let activation = runtime
+        .find("pub(super) fn activate_surface")
+        .expect("surface activation should exist");
+    let activation_source = &runtime[activation..];
+    let synchronize = activation_source
+        .find("native_tabs::sync_zoom_state(&self.window, &surface.window)")
+        .expect("window zoom state should be synchronized");
+    let swap = activation_source
+        .find("let DocumentSurface")
+        .expect("document surfaces should be swapped");
+
+    assert!(synchronize < swap);
+}
+
+#[test]
 fn native_footer_omits_the_status_block() {
     let source = include_str!("../implementation/app/native_footer.rs");
 

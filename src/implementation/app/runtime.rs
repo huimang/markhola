@@ -117,6 +117,7 @@ impl AppRuntime {
             return false;
         };
 
+        super::native_tabs::sync_zoom_state(&self.window, &surface.window);
         let DocumentSurface {
             window,
             webview,

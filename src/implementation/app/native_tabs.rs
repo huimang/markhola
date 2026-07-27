@@ -6,9 +6,8 @@ use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     NSAutoresizingMaskOptions, NSColor, NSFont, NSTextField, NSUserInterfaceItemIdentification,
-    NSWindow,
     NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView,
-    NSWindowButton, NSWindowOrderingMode, NSWindowTabbingMode,
+    NSWindow, NSWindowButton, NSWindowOrderingMode, NSWindowTabbingMode,
 };
 #[cfg(target_os = "macos")]
 use objc2_foundation::NSString;
@@ -41,6 +40,7 @@ pub(super) fn configure(window: &Window, theme: AppTheme) {
 }
 
 pub(super) fn add_to_group(anchor: &Window, window: &Window) {
+    sync_zoom_state(anchor, window);
     #[cfg(target_os = "macos")]
     unsafe {
         let anchor = &*(anchor.ns_window() as *mut NSWindow);
@@ -55,6 +55,42 @@ pub(super) fn add_to_group(anchor: &Window, window: &Window) {
 pub(super) fn select(window: &Window) {
     window.set_visible(true);
     window.set_focus();
+}
+
+pub(super) fn sync_zoom_state(source: &Window, target: &Window) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        let source = &*(source.ns_window() as *mut NSWindow);
+        let target = &*(target.ns_window() as *mut NSWindow);
+        if source.isZoomed() != target.isZoomed() {
+            target.zoom(None);
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (source, target);
+}
+
+pub(super) fn sync_group_zoom_state(runtime: &AppRuntime, source_id: WindowId) {
+    let source = if runtime.window.id() == source_id {
+        Some(&runtime.window)
+    } else {
+        runtime
+            .inactive_surfaces
+            .get(&source_id)
+            .map(|surface| &surface.window)
+    };
+    let Some(source) = source else {
+        return;
+    };
+
+    if runtime.window.id() != source_id {
+        sync_zoom_state(source, &runtime.window);
+    }
+    for (window_id, surface) in &runtime.inactive_surfaces {
+        if *window_id != source_id {
+            sync_zoom_state(source, &surface.window);
+        }
+    }
 }
 
 pub(super) fn select_window_id(runtime: &AppRuntime, window_id: WindowId) {
