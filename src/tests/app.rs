@@ -205,8 +205,10 @@ fn default_theme_separates_native_tabs_from_the_lighter_document_surface() {
         DocumentSize::default(),
     );
 
-    assert!(native_tabs.contains("AppTheme::Default => (234, 249, 245)"));
+    assert!(native_tabs.contains("AppTheme::Default => (242, 240, 255)"));
+    assert!(native_tabs.contains("AppTheme::Light => (242, 240, 255)"));
     assert!(html.contains("--bg: var(--markhola-green-subtle)"));
+    assert!(html.contains("--markhola-violet-tint: #F2F0FF"));
     assert!(html.contains("--markhola-green-tint: #EAF9F5"));
     assert!(html.contains("--markhola-green-subtle: #FAFEFD"));
 }

@@ -114,8 +114,8 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
             ns_window.setAppearance(Some(&appearance));
         }
         let (red, green, blue) = match theme {
-            AppTheme::Default => (234, 249, 245),
-            AppTheme::Light => (234, 249, 245),
+            AppTheme::Default => (242, 240, 255),
+            AppTheme::Light => (242, 240, 255),
             AppTheme::Dark => (36, 33, 58),
         };
         let color = NSColor::colorWithSRGBRed_green_blue_alpha(

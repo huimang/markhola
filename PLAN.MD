@@ -181,7 +181,7 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Keep open, save, close, unsaved-state, theme, font-size, Outline, and footer behavior working after the tab replacement
    - Extend both brand scales with Violet Subtle `#F9F8FF` and Green Subtle `#FAFEFD`
    - Add a third shared Gray scale for neutral application surfaces alongside the Violet and Green scales
-   - Use Green Subtle for the Default document background while keeping the native tab title bar on Green Tint so the tab and document surfaces remain visually distinct
+   - Use Green Subtle for the Default document background while using Violet Tint for the native tab title bar so the tab and document surfaces remain visually distinct
    - Reduce the native bottom status bar height to 34 px while keeping its labels vertically aligned
    - Use the Gray scale for the native footer, keep all footer labels on the same lower-brightness foreground color, and remove the rightmost status column entirely
 
