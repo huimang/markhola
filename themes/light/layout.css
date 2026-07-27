@@ -476,13 +476,17 @@ body.workspace-empty #modeState {
   margin: 1em 0;
 }
 
-.markdown-body a {
+.markdown-body a,
+.markdown-body a:visited {
   color: var(--markhola-violet);
+  text-decoration: none;
 }
 
-.markdown-body a:hover {
+.markdown-body a:hover,
+.markdown-body a:focus,
+.markdown-body a:active {
   color: var(--markhola-green);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .markdown-body img {

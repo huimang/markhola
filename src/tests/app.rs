@@ -369,6 +369,25 @@ fn app_themes_use_the_wider_document_reading_width() {
 }
 
 #[test]
+fn rendered_markdown_links_never_use_underlines() {
+    for theme in AppTheme::ALL {
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
+
+        assert!(html.contains(".markdown-body a,\n.markdown-body a:visited {"));
+        assert!(html.contains(
+            ".markdown-body a:hover,\n.markdown-body a:focus,\n.markdown-body a:active {"
+        ));
+        assert_eq!(
+            html.matches("text-decoration: none;").count(),
+            2,
+            "{} should explicitly remove link underlines in both state groups",
+            theme.key()
+        );
+        assert!(!html.contains(".markdown-body a:hover {\n  color:"));
+    }
+}
+
+#[test]
 fn app_shell_removes_failed_mermaid_render_artifacts() {
     let html = app_shell_html(
         AppTheme::Default,
