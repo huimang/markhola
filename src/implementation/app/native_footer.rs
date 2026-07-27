@@ -29,7 +29,6 @@ const FOOTER_PADDING_X: f64 = 16.0;
 const FOOTER_LABEL_Y: f64 = 7.0;
 const FOOTER_LABEL_HEIGHT: f64 = 18.0;
 const FOOTER_GAP: f64 = 10.0;
-const FOOTER_MODE_WIDTH: f64 = 76.0;
 const FOOTER_LINES_WIDTH: f64 = 78.0;
 const FOOTER_WORDS_WIDTH: f64 = 82.0;
 
@@ -44,7 +43,6 @@ struct NativeFooterHandle {
     path_field: Retained<NSTextField>,
     words_field: Retained<NSTextField>,
     lines_field: Retained<NSTextField>,
-    mode_field: Retained<NSTextField>,
 }
 
 impl NativeFooter {
@@ -72,17 +70,14 @@ impl NativeFooter {
             let path_field = footer_label(mtm, "");
             let words_field = footer_label(mtm, "");
             let lines_field = footer_label(mtm, "");
-            let mode_field = footer_label(mtm, "");
             words_field.setAlignment(NSTextAlignment::Right);
             lines_field.setAlignment(NSTextAlignment::Right);
-            mode_field.setAlignment(NSTextAlignment::Right);
 
-            apply_footer_fonts(&[&path_field, &words_field, &lines_field, &mode_field]);
+            apply_footer_fonts(&[&path_field, &words_field, &lines_field]);
 
             footer_view.addSubview(&path_field);
             footer_view.addSubview(&words_field);
             footer_view.addSubview(&lines_field);
-            footer_view.addSubview(&mode_field);
             content_view.addSubview(&footer_view);
 
             let handle = NativeFooterHandle {
@@ -90,7 +85,6 @@ impl NativeFooter {
                 path_field,
                 words_field,
                 lines_field,
-                mode_field,
             };
 
             let footer = Self {
@@ -121,7 +115,6 @@ impl NativeFooter {
             handle.path_field.setTextColor(Some(&foreground));
             handle.words_field.setTextColor(Some(&foreground));
             handle.lines_field.setTextColor(Some(&foreground));
-            handle.mode_field.setTextColor(Some(&foreground));
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -150,8 +143,7 @@ impl NativeFooter {
                 NSSize::new(width, footer_height),
             ));
 
-            let mode_x = width - FOOTER_PADDING_X - FOOTER_MODE_WIDTH;
-            let lines_x = mode_x - FOOTER_GAP - FOOTER_LINES_WIDTH;
+            let lines_x = width - FOOTER_PADDING_X - FOOTER_LINES_WIDTH;
             let words_x = lines_x - FOOTER_GAP - FOOTER_WORDS_WIDTH;
             let path_width = (words_x - FOOTER_GAP - FOOTER_PADDING_X).max(0.0);
             handle.path_field.setFrame(NSRect::new(
@@ -165,10 +157,6 @@ impl NativeFooter {
             handle.lines_field.setFrame(NSRect::new(
                 NSPoint::new(lines_x, FOOTER_LABEL_Y),
                 NSSize::new(FOOTER_LINES_WIDTH, FOOTER_LABEL_HEIGHT),
-            ));
-            handle.mode_field.setFrame(NSRect::new(
-                NSPoint::new(mode_x, FOOTER_LABEL_Y),
-                NSSize::new(FOOTER_MODE_WIDTH, FOOTER_LABEL_HEIGHT),
             ));
             let webview_handle = webview.webview();
             webview_handle.setFrame(NSRect::new(
@@ -204,25 +192,16 @@ impl NativeFooter {
                     &handle.lines_field,
                     &format!("{} {}", text("footer.lines"), active.line_count),
                 );
-                let mode = if active.mode_label == "Readonly" {
-                    text("footer.readonly")
-                } else {
-                    text("footer.writable")
-                };
-                set_label_text(&handle.mode_field, mode);
                 set_hidden(&handle.path_field, false);
                 set_hidden(&handle.words_field, false);
                 set_hidden(&handle.lines_field, false);
-                set_hidden(&handle.mode_field, false);
             } else {
                 set_label_text(&handle.path_field, "");
                 set_label_text(&handle.words_field, "");
                 set_label_text(&handle.lines_field, "");
-                set_label_text(&handle.mode_field, "");
                 set_hidden(&handle.path_field, true);
                 set_hidden(&handle.words_field, true);
                 set_hidden(&handle.lines_field, true);
-                set_hidden(&handle.mode_field, true);
             }
         }
 

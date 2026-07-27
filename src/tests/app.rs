@@ -332,7 +332,7 @@ fn app_shell_leaves_tabs_to_appkit_and_keeps_outline_controls() {
 #[test]
 fn native_footer_contains_document_controls_in_the_confirmed_order() {
     let source = include_str!("../implementation/app/native_footer.rs");
-    let controls = ["path_field:", "words_field:", "lines_field:", "mode_field:"];
+    let controls = ["path_field:", "words_field:", "lines_field:"];
     let positions =
         controls.map(|control| source.find(control).expect("footer control should exist"));
 
@@ -342,7 +342,7 @@ fn native_footer_contains_document_controls_in_the_confirmed_order() {
     assert!(!source.contains("\"Mode "));
     assert!(!source.contains("\"Status "));
     assert!(source.contains("set_label_text(&handle.path_field, &active.file_path)"));
-    assert!(source.contains("set_label_text(&handle.mode_field, mode)"));
+    assert!(!source.contains("mode_field"));
     assert!(!source.contains("status_field"));
 }
 
@@ -395,7 +395,7 @@ fn native_footer_uses_the_compact_v080_height() {
 fn native_footer_uses_one_lower_brightness_text_color() {
     let source = include_str!("../implementation/app/native_footer.rs");
 
-    for field in ["path_field", "words_field", "lines_field", "mode_field"] {
+    for field in ["path_field", "words_field", "lines_field"] {
         assert!(source.contains(&format!("handle.{field}.setTextColor(Some(&foreground))")));
     }
     assert!(!source.contains("setTextColor(Some(&primary))"));
@@ -408,12 +408,13 @@ fn native_footer_uses_one_lower_brightness_text_color() {
 fn native_footer_right_aligns_metadata_but_keeps_the_path_on_the_left() {
     let source = include_str!("../implementation/app/native_footer.rs");
 
-    for field in ["words_field", "lines_field", "mode_field"] {
+    for field in ["words_field", "lines_field"] {
         assert!(source.contains(&format!(
             "{field}.setAlignment(NSTextAlignment::Right)"
         )));
     }
     assert!(!source.contains("path_field.setAlignment(NSTextAlignment::Right)"));
+    assert!(!source.contains("mode_field"));
 }
 
 #[test]
@@ -424,6 +425,8 @@ fn native_footer_omits_the_status_block() {
     assert!(!source.contains("status_field"));
     assert!(!source.contains("footer.saved"));
     assert!(!source.contains("footer.unsaved"));
+    assert!(!source.contains("footer.readonly"));
+    assert!(!source.contains("footer.writable"));
 }
 
 #[test]
