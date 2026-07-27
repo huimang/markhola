@@ -134,9 +134,16 @@ fn app_themes_share_the_markhola_brand_palette() {
             "--markhola-violet: #6657E8",
             "--markhola-violet-mid: #ACA4F4",
             "--markhola-violet-tint: #F2F0FF",
+            "--markhola-violet-subtle: #F9F8FF",
             "--markhola-green: #17B890",
             "--markhola-green-mid: #81D9C3",
             "--markhola-green-tint: #EAF9F5",
+            "--markhola-green-subtle: #FAFEFD",
+            "--markhola-gray-strong: #1E293B",
+            "--markhola-gray: #475569",
+            "--markhola-gray-mid: #94A3B8",
+            "--markhola-gray-tint: #E2E8F0",
+            "--markhola-gray-subtle: #F8FAFC",
             "--accent: var(--markhola-violet)",
             "--accent-strong: var(--markhola-green)",
         ] {
@@ -171,6 +178,37 @@ fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
     assert!(html.contains(
         ".markdown-body thead {\n  background: var(--markhola-green-tint);\n  color: var(--table-header-text);"
     ));
+}
+
+#[test]
+fn default_theme_uses_green_subtle_for_its_background_surfaces() {
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+
+    assert!(html.contains("--bg: var(--markhola-green-subtle)"));
+    assert!(html.contains("--panel: rgba(250, 254, 253, 0.88)"));
+    assert!(html.contains("--panel-strong: rgba(250, 254, 253, 0.97)"));
+    assert!(html.contains("background: var(--bg)"));
+    assert!(!html.contains("--bg: #f5f1e8"));
+    assert!(!html.contains("rgba(255, 251, 243"));
+}
+
+#[test]
+fn default_theme_separates_native_tabs_from_the_lighter_document_surface() {
+    let native_tabs = include_str!("../implementation/app/native_tabs.rs");
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+
+    assert!(native_tabs.contains("AppTheme::Default => (234, 249, 245)"));
+    assert!(html.contains("--bg: var(--markhola-green-subtle)"));
+    assert!(html.contains("--markhola-green-tint: #EAF9F5"));
+    assert!(html.contains("--markhola-green-subtle: #FAFEFD"));
 }
 
 #[test]
@@ -224,27 +262,22 @@ fn app_shell_includes_restored_document_size() {
 }
 
 #[test]
-fn app_shell_includes_workspace_tab_and_outline_controls() {
+fn app_shell_leaves_tabs_to_appkit_and_keeps_outline_controls() {
     let html = app_shell_html(
         AppTheme::Default,
         AppLanguage::English,
         DocumentSize::default(),
     );
 
-    assert!(html.contains("id=\"tabsBar\""));
-    assert!(html.contains("class=\"tabs-shell hidden\""));
-    assert!(html.contains(".tabs-shell {\n  min-width: 0;\n  min-height: 36px"));
-    assert!(html.contains("id=\"previousTabs\""));
-    assert!(html.contains("id=\"nextTabs\""));
-    assert!(html.contains("id=\"newDocumentTab\""));
-    assert!(html.contains("-webkit-user-select: none"));
-    assert!(html.contains("user-select: none"));
+    assert!(!html.contains("id=\"tabsBar\""));
+    assert!(!html.contains("class=\"tabs-shell"));
+    assert!(!html.contains("id=\"previousTabs\""));
+    assert!(!html.contains("id=\"nextTabs\""));
+    assert!(!html.contains("id=\"newDocumentTab\""));
     assert!(html.contains("id=\"outlinePanel\""));
     assert!(html.contains("id=\"outlineClose\""));
     assert!(!html.contains("document-toolbar"));
-    assert!(html.contains("tabsShell.classList.toggle(\"hidden\", !tabs.length)"));
     assert!(html.contains("body.workspace-empty .empty-state"));
-    assert!(html.contains("body.workspace-empty .app"));
     assert!(html.contains("body.workspace-empty .preview-shell"));
     assert!(html.contains("class=\"empty-state__icon\""));
     assert!(html.contains("alt=\"MarkHola\""));
@@ -261,15 +294,11 @@ fn app_shell_includes_workspace_tab_and_outline_controls() {
     assert!(!html.contains("id=\"decreaseSize\""));
     assert!(!html.contains("id=\"sizeValue\""));
     assert!(!html.contains("id=\"increaseSize\""));
-    assert!(html.contains("kind: \"new-document\""));
     assert!(html.contains("const refreshOutline = () =>"));
     assert!(html.contains("heading.scrollIntoView"));
     assert!(html.contains("window.setOutlinePanelOpen = (open) =>"));
     assert!(html.contains(r#"{ kind: "toggle-outline" }"#));
-    assert!(html.contains(".document-tab.active::after"));
-    assert!(html.contains("background: var(--markhola-green)"));
     assert!(html.contains("background: var(--markhola-violet-tint)"));
-    assert!(html.contains("border-color: var(--markhola-green-mid)"));
     assert!(!html.contains("Readonly preview updated."));
     assert!(!html.contains("Writable mode enabled."));
     assert!(!html.contains("brand-mark"));
@@ -280,13 +309,7 @@ fn app_shell_includes_workspace_tab_and_outline_controls() {
 #[test]
 fn native_footer_contains_document_controls_in_the_confirmed_order() {
     let source = include_str!("../implementation/app/native_footer.rs");
-    let controls = [
-        "path_field:",
-        "words_field:",
-        "lines_field:",
-        "mode_field:",
-        "status_field:",
-    ];
+    let controls = ["path_field:", "words_field:", "lines_field:", "mode_field:"];
     let positions =
         controls.map(|control| source.find(control).expect("footer control should exist"));
 
@@ -297,7 +320,7 @@ fn native_footer_contains_document_controls_in_the_confirmed_order() {
     assert!(!source.contains("\"Status "));
     assert!(source.contains("set_label_text(&handle.path_field, &active.file_path)"));
     assert!(source.contains("set_label_text(&handle.mode_field, mode)"));
-    assert!(source.contains("set_label_text(&handle.status_field, status)"));
+    assert!(!source.contains("status_field"));
 }
 
 #[test]
@@ -323,6 +346,39 @@ fn app_shell_removes_failed_mermaid_render_artifacts() {
     assert!(html.contains("const removeMermaidRenderArtifact = (renderId) =>"));
     assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
     assert!(html.contains("removeMermaidRenderArtifact(renderId)"));
+}
+
+#[test]
+fn native_footer_uses_the_compact_v080_height() {
+    let source = include_str!("../implementation/app/native_footer.rs");
+
+    assert!(source.contains("const FOOTER_HEIGHT: f64 = 34.0;"));
+    assert!(source.contains("const FOOTER_LABEL_Y: f64 = 7.0;"));
+    assert!(!source.contains("const FOOTER_HEIGHT: f64 = 38.0;"));
+    assert!(!source.contains("const FOOTER_HEIGHT: f64 = 42.0;"));
+}
+
+#[test]
+fn native_footer_uses_one_lower_brightness_text_color() {
+    let source = include_str!("../implementation/app/native_footer.rs");
+
+    for field in ["path_field", "words_field", "lines_field", "mode_field"] {
+        assert!(source.contains(&format!("handle.{field}.setTextColor(Some(&foreground))")));
+    }
+    assert!(!source.contains("setTextColor(Some(&primary))"));
+    assert!(!source.contains("setTextColor(Some(&secondary))"));
+    assert!(source.contains("rgb_color(71, 85, 105)"));
+    assert!(source.contains("rgb_color(148, 163, 184)"));
+}
+
+#[test]
+fn native_footer_omits_the_status_block() {
+    let source = include_str!("../implementation/app/native_footer.rs");
+
+    assert!(!source.contains("FOOTER_STATUS_WIDTH"));
+    assert!(!source.contains("status_field"));
+    assert!(!source.contains("footer.saved"));
+    assert!(!source.contains("footer.unsaved"));
 }
 
 #[test]
@@ -383,11 +439,17 @@ fn toggle_mode_lives_only_in_edit_menu_source() {
 }
 
 #[test]
-fn tab_cleanup_removes_appkit_tab_selectors() {
+fn native_tabs_keep_appkit_tab_controls_and_numeric_shortcuts() {
     let menu_install = include_str!("../implementation/app/menu_install.rs");
+    let menu_tab = include_str!("../implementation/app/menu_tab.rs");
+    let native_tabs = include_str!("../implementation/app/native_tabs.rs");
 
-    assert!(menu_install.contains("toggleTabBar:"));
-    assert!(menu_install.contains("toggleTabOverview:"));
+    assert!(!menu_install.contains("toggleTabBar:"));
+    assert!(!menu_install.contains("toggleTabOverview:"));
+    assert!(menu_tab.contains("activateDocumentOne:"));
+    assert!(menu_tab.contains("activateDocumentNine:"));
+    assert!(native_tabs.contains("tabbedWindows()"));
+    assert!(native_tabs.contains("NSWindowTabbingMode::Preferred"));
 }
 
 #[test]
@@ -400,7 +462,10 @@ fn markdown_path_from_href_accepts_file_markdown_urls_and_ignores_others() {
         markdown_path_from_href("file:///tmp/guide.markdown#intro"),
         Some(PathBuf::from("/tmp/guide.markdown"))
     );
-    assert_eq!(markdown_path_from_href("https://example.com/hello.md"), None);
+    assert_eq!(
+        markdown_path_from_href("https://example.com/hello.md"),
+        None
+    );
     assert_eq!(markdown_path_from_href("file:///tmp/image.png"), None);
     assert_eq!(markdown_path_from_href("not a url"), None);
 }

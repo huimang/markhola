@@ -9,9 +9,16 @@
   --markhola-violet: #6657E8;
   --markhola-violet-mid: #ACA4F4;
   --markhola-violet-tint: #F2F0FF;
+  --markhola-violet-subtle: #F9F8FF;
   --markhola-green: #17B890;
   --markhola-green-mid: #81D9C3;
   --markhola-green-tint: #EAF9F5;
+  --markhola-green-subtle: #FAFEFD;
+  --markhola-gray-strong: #1E293B;
+  --markhola-gray: #475569;
+  --markhola-gray-mid: #94A3B8;
+  --markhola-gray-tint: #E2E8F0;
+  --markhola-gray-subtle: #F8FAFC;
   --accent: var(--markhola-violet);
   --accent-strong: var(--markhola-green);
   --table-header-text: var(--text);
