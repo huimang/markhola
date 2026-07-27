@@ -174,13 +174,16 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Preserve the original Markdown source text in writable mode
 
 ### v0.8.0
-1. Replace the WebView document tab strip with native macOS window tabs
-   - Give each open Markdown document its own native window, WebView, footer, and document runtime
-   - Group document windows with the native macOS window tab system
-   - Support `Command + 1` through `Command + 9` for selecting tabs by their visible order
-   - Support moving a tab into a separate window and merging compatible windows back into one tab group
-   - Keep document titles, unsaved state, close confirmation, themes, font size, Outline, and footer information synchronized per window
-   - Preserve correct open, save, close, drag-and-drop, and application-exit behavior across multiple windows
+1. Replace the current document tab strip with native macOS window tabs
+   - Use native macOS tabs to replace the current custom document tab UI
+   - Keep the existing single-window document workspace model as much as possible instead of expanding to multi-window document runtime changes in this version
+   - Support `Command + 1` through `Command + 9` for switching tabs by their visible order
+   - Keep open, save, close, unsaved-state, theme, font-size, Outline, and footer behavior working after the tab replacement
+   - Extend both brand scales with Violet Subtle `#F9F8FF` and Green Subtle `#FAFEFD`
+   - Add a third shared Gray scale for neutral application surfaces alongside the Violet and Green scales
+   - Use Green Subtle for the Default document background while keeping the native tab title bar on Green Tint so the tab and document surfaces remain visually distinct
+   - Reduce the native bottom status bar height to 34 px while keeping its labels vertically aligned
+   - Use the Gray scale for the native footer, keep all footer labels on the same lower-brightness foreground color, and remove the rightmost status column entirely
 
 ### v0.8.1
 1. Add Typora-style inline Markdown reading and editing

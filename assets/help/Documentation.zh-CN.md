@@ -2,7 +2,7 @@
 
 ![应用图标](../logo.png)
 
-Current version: `v0.7.9`
+Current version: `v0.8.0`
 
 ## MarkHola 是什么
 
@@ -12,7 +12,7 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 
 - 新建、打开、阅读、编辑和保存本地 Markdown 文档
 - 使用 `Command + /` 在只读与编辑模式之间切换
-- 在同一窗口打开多个文档，WebView 标签标题与原生标签一样不能被拖选
+- 使用 macOS 原生标签页打开多个文档
 - 在 English 和简体中文界面之间切换
 - 跨应用重启记住语言、主题和文档字号
 - 在只读模式查找文本，在编辑模式查找或替换文本
@@ -45,6 +45,7 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 
 - 下一个标签页
 - 上一个标签页
+- 标签页 1 到标签页 9（`Command + 1` 到 `Command + 9`）
 - 关闭标签页
 - 关闭其他标签页
 - 关闭所有标签页
@@ -67,4 +68,4 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - Markdown 正文、文件名和导出内容不会被翻译。
 - 操作系统对话框继续使用 macOS 提供的语言。
 - 打开文档并处于只读模式时，大纲菜单可用。
-- MarkHola 使用 WebView 标签期间，会有意隐藏 `Show Tab Bar` 和 `Show All Tabs`。
+- 使用 `Command + 1` 到 `Command + 9` 按可见顺序选择原生标签页。
