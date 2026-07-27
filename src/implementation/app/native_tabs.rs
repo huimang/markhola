@@ -5,7 +5,8 @@ use objc2::{MainThreadMarker, MainThreadOnly};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAutoresizingMaskOptions, NSColor, NSUserInterfaceItemIdentification, NSWindow,
+    NSAutoresizingMaskOptions, NSColor, NSFont, NSTextField, NSUserInterfaceItemIdentification,
+    NSWindow,
     NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView,
     NSWindowButton, NSWindowOrderingMode, NSWindowTabbingMode,
 };
@@ -48,6 +49,7 @@ pub(super) fn add_to_group(anchor: &Window, window: &Window) {
     }
     window.set_visible(true);
     window.set_focus();
+    sync_shortcut_accessories(anchor);
 }
 
 pub(super) fn select(window: &Window) {
@@ -66,6 +68,7 @@ pub(super) fn select_window_id(runtime: &AppRuntime, window_id: WindowId) {
 }
 
 pub(super) fn visible_document_ids(runtime: &AppRuntime) -> Vec<u64> {
+    sync_shortcut_accessories(&runtime.window);
     #[cfg(target_os = "macos")]
     unsafe {
         let active_window = &*(runtime.window.ns_window() as *mut NSWindow);
@@ -85,6 +88,36 @@ pub(super) fn visible_document_ids(runtime: &AppRuntime) -> Vec<u64> {
         .into_iter()
         .map(|tab| tab.document_id)
         .collect()
+}
+
+pub(super) fn sync_shortcut_accessories(window: &Window) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
+        let ns_window = &*(window.ns_window() as *mut NSWindow);
+        let Some(tabbed_windows) = ns_window.tabbedWindows() else {
+            return;
+        };
+
+        for (index, tabbed_window) in tabbed_windows.iter().enumerate() {
+            let tab = tabbed_window.tab();
+            if index >= 9 {
+                tab.setAccessoryView(None);
+                continue;
+            }
+
+            let shortcut = NSString::from_str(&format!("⌘{}", index + 1));
+            let label = NSTextField::labelWithString(&shortcut, mtm);
+            label.setFont(Some(&NSFont::systemFontOfSize(10.0)));
+            label.setTextColor(Some(&NSColor::secondaryLabelColor()));
+            label.sizeToFit();
+            tab.setAccessoryView(Some(&label));
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = window;
 }
 
 #[cfg(target_os = "macos")]

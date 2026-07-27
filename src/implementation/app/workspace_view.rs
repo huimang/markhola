@@ -113,6 +113,7 @@ fn sync_native_window_state(window: &Window, workspace: &DocumentWorkspace) {
         .active_document()
         .is_some_and(|document| document.is_dirty());
     native_tabs::set_document_edited(window, dirty);
+    native_tabs::sync_shortcut_accessories(window);
 }
 
 fn workspace_presentation(workspace: &DocumentWorkspace, status: &str) -> WorkspacePresentation {

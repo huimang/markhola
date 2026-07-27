@@ -498,6 +498,10 @@ fn native_tabs_keep_appkit_tab_controls_and_numeric_shortcuts() {
     assert!(menu_tab.contains("activateDocumentNine:"));
     assert!(native_tabs.contains("tabbedWindows()"));
     assert!(native_tabs.contains("NSWindowTabbingMode::Preferred"));
+    assert!(native_tabs.contains("tab.setAccessoryView(Some(&label))"));
+    assert!(native_tabs.contains("format!(\"⌘{}\", index + 1)"));
+    assert!(native_tabs.contains("if index >= 9"));
+    assert!(native_tabs.contains("tab.setAccessoryView(None)"));
 }
 
 #[test]
