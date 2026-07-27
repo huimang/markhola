@@ -1,7 +1,5 @@
 # MarkHola Documentation
 
-![Application logo](../logo.png)
-
 Current version: `v0.8.0`
 
 ## What is MarkHola

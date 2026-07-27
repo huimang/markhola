@@ -1,7 +1,5 @@
 # MarkHola 文档
 
-![应用图标](../logo.png)
-
 Current version: `v0.8.0`
 
 ## MarkHola 是什么
