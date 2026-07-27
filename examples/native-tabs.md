@@ -14,6 +14,9 @@ Use `Command + 1` and `Command + 2` to switch between the visible native tabs.
 
 The document title, content, Outline, and footer should always describe the selected tab.
 
+After opening multiple files together, enlarge the window from the title bar and switch between
+tabs. The file path should stay on the left while Words and Lines remain aligned to the right edge.
+
 ## Tab menu
 
 Open the `Tab` menu and confirm it does not list repeated `Tab 1` through `Tab 9` items.

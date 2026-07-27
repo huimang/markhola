@@ -210,6 +210,10 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Keep 14 px code text near `6:1–8:1`, line numbers near `4.5:1–5.5:1`, separators at least `3:1`, and language labels at least `4.5:1`
    - Use separate low-saturation syntax palettes for Default and Dark
    - Reduce keyword weight and avoid combining excessive brightness, saturation, and bold emphasis
+5. Keep native footer metadata aligned after native Tab window changes
+   - Relayout the active native footer whenever a document surface becomes active
+   - Keep Words and Lines right-aligned after opening multiple files, enlarging the window, and switching tabs
+   - Keep the file path on the left and preserve the compact footer height
 ### v0.8.2
 1. Add Typora-style inline Markdown reading and editing
    - Keep Markdown source as the single source of truth while presenting formatted content in the WebView
