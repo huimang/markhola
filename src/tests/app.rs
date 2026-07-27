@@ -490,12 +490,22 @@ fn toggle_mode_lives_only_in_edit_menu_source() {
 fn native_tabs_keep_appkit_tab_controls_and_numeric_shortcuts() {
     let menu_install = include_str!("../implementation/app/menu_install.rs");
     let menu_tab = include_str!("../implementation/app/menu_tab.rs");
+    let menu_target = include_str!("../implementation/app/menu_target.rs");
     let native_tabs = include_str!("../implementation/app/native_tabs.rs");
 
     assert!(!menu_install.contains("toggleTabBar:"));
     assert!(!menu_install.contains("toggleTabOverview:"));
-    assert!(menu_tab.contains("activateDocumentOne:"));
-    assert!(menu_tab.contains("activateDocumentNine:"));
+    assert!(!menu_tab.contains("activateDocumentOne:"));
+    assert!(!menu_tab.contains("activateDocumentNine:"));
+    assert!(!menu_tab.contains("&number.to_string()"));
+    assert_eq!(
+        menu_tab
+            .matches("tab_menu.addItem(&NSMenuItem::separatorItem(mtm))")
+            .count(),
+        1
+    );
+    assert!(menu_target.contains("activateDocumentOne:"));
+    assert!(menu_target.contains("activateDocumentNine:"));
     assert!(native_tabs.contains("tabbedWindows()"));
     assert!(native_tabs.contains("NSWindowTabbingMode::Preferred"));
     assert!(native_tabs.contains("tab.setAccessoryView(Some(&label))"));
