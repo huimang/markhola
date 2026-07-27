@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use super::document_actions::{open_document, reload_workspace_documents_from_disk};
+use super::document_actions::reload_workspace_documents_from_disk;
 use super::runtime::AppRuntime;
 use super::workspace_view::{present_workspace, render_status};
 use super::{UserEvent, dispatch_user_event, log_event};
@@ -14,18 +14,20 @@ pub(super) fn handle_shell_ready(runtime: &mut AppRuntime) {
         .native_footer
         .sync(&runtime.workspace, text("status.ready"));
 
-    if (shell_was_ready || runtime.shell.recovery_pending)
-        && runtime.workspace.active_document().is_some()
-    {
-        runtime.shell.recovery_pending = false;
-        let status = reload_workspace_documents_from_disk(&mut runtime.workspace)
-            .unwrap_or_else(|message| message);
+    if runtime.workspace.active_document().is_some() {
+        let status = if shell_was_ready || runtime.shell.recovery_pending {
+            runtime.shell.recovery_pending = false;
+            reload_workspace_documents_from_disk(&mut runtime.workspace)
+                .unwrap_or_else(|message| message)
+        } else {
+            text("status.ready").to_string()
+        };
         present_workspace(
             &runtime.window,
             &runtime.webview,
             &runtime.native_footer,
             &runtime.workspace,
-            &status,
+            status.as_str(),
             true,
         );
     }
@@ -70,15 +72,14 @@ pub(super) fn recover_shell(url: String, runtime: &mut AppRuntime) {
 
 pub(super) fn open_documentation(runtime: &mut AppRuntime) {
     match super::documentation::documentation_markdown_path(runtime.language) {
-        Some(path) => open_document(
-            &runtime.window,
-            &runtime.webview,
-            &runtime.native_footer,
-            &mut runtime.workspace,
-            &path,
-            None,
-            &runtime.asset_access,
-        ),
+        Some(path) => {
+            let ctx = super::new_action_context("help-documentation");
+            dispatch_user_event(
+                &runtime.proxy,
+                "help-documentation",
+                UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
+            );
+        }
         None => render_status(
             &runtime.webview,
             text("status.documentation_missing"),

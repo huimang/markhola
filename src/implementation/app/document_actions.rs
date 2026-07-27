@@ -1,9 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use rfd::FileDialog;
-use tao::window::Window;
-use wry::WebView;
 
 use crate::app::text;
 use crate::document::ActiveDocument;
@@ -12,8 +10,6 @@ use crate::workspace::{DocumentWorkspace, WorkspaceOpenResult};
 
 use super::asset_access::{AssetAccessRegistry, register_document};
 use super::log_event;
-use super::native_footer::NativeFooter;
-use super::workspace_view::{present_workspace, render_status, sync_workspace_state};
 
 pub(super) fn open_documents_dialog(event_id: u64) -> Option<Vec<PathBuf>> {
     let started_at = SystemTime::now();
@@ -40,66 +36,33 @@ pub(super) fn open_documents_dialog(event_id: u64) -> Option<Vec<PathBuf>> {
     result
 }
 
-pub(super) fn create_blank_document(
-    window: &Window,
-    webview: &WebView,
-    native_footer: &NativeFooter,
-    workspace: &mut DocumentWorkspace,
-) {
+pub(super) fn create_blank_document_model(workspace: &mut DocumentWorkspace) -> u64 {
     let document_id = workspace.next_document_id();
     let blank_number = workspace.next_blank_document_number();
     let document = ActiveDocument::new_blank_with_id(document_id, blank_number);
     workspace.open_document(document);
-    present_workspace(
-        window,
-        webview,
-        native_footer,
-        workspace,
-        text("status.new_document"),
-        true,
-    );
+    document_id
 }
 
-pub(super) fn open_document(
-    window: &Window,
-    webview: &WebView,
-    native_footer: &NativeFooter,
+pub(super) fn open_document_model(
     workspace: &mut DocumentWorkspace,
     path: &PathBuf,
     event_id: Option<u64>,
     asset_access: &AssetAccessRegistry,
-) {
+) -> Result<WorkspaceOpenResult, String> {
     log_event(
         "open_document.begin",
         event_id,
         "open_document start",
         format!("path={}", path.display()),
     );
-    render_status(webview, text("status.loading_document"), "info");
-
     if let Some(document_id) = workspace.find_by_path(path) {
         workspace.activate_document(document_id);
-        sync_workspace_state(
-            window,
-            webview,
-            native_footer,
-            workspace,
-            text("status.already_open"),
-        );
-        return;
+        return Ok(WorkspaceOpenResult::ActivatedExisting(document_id));
     }
 
-    match load_document(workspace.next_document_id(), path) {
-        Ok(document) => open_loaded_document(
-            window,
-            webview,
-            native_footer,
-            workspace,
-            path,
-            event_id,
-            document,
-            asset_access,
-        ),
+    let document = match load_document(workspace.next_document_id(), path) {
+        Ok(document) => document,
         Err(message) => {
             log_event(
                 "open_document.end",
@@ -107,9 +70,23 @@ pub(super) fn open_document(
                 "open_document failed",
                 format!("path={} error={message}", path.display()),
             );
-            render_status(webview, &message, "error");
+            return Err(message);
+        }
+    };
+    log_event(
+        "open_document.end",
+        event_id,
+        "open_document success",
+        format!("path={}", path.display()),
+    );
+    let result = workspace.open_document(document);
+    if let WorkspaceOpenResult::OpenedNew(document_id) = result {
+        if let Err(error) = register_document(asset_access, document_id, path) {
+            workspace.close_document(document_id);
+            return Err(text("status.failed_local_assets").replace("{error}", &error.to_string()));
         }
     }
+    Ok(result)
 }
 
 pub(crate) fn load_document(document_id: u64, path: &PathBuf) -> Result<ActiveDocument, String> {
@@ -159,50 +136,6 @@ pub(crate) fn reload_workspace_documents_from_disk(
         || Ok(reload_status_message(reloaded, skipped_dirty)),
         |failure| Err(format!("Reload failed: {failure}")),
     )
-}
-
-fn open_loaded_document(
-    window: &Window,
-    webview: &WebView,
-    native_footer: &NativeFooter,
-    workspace: &mut DocumentWorkspace,
-    path: &Path,
-    event_id: Option<u64>,
-    document: ActiveDocument,
-    asset_access: &AssetAccessRegistry,
-) {
-    log_event(
-        "open_document.end",
-        event_id,
-        "open_document success",
-        format!("path={}", path.display()),
-    );
-    match workspace.open_document(document) {
-        WorkspaceOpenResult::OpenedNew(document_id) => {
-            if let Err(error) = register_document(asset_access, document_id, path) {
-                workspace.close_document(document_id);
-                let message =
-                    text("status.failed_local_assets").replace("{error}", &error.to_string());
-                render_status(webview, &message, "error");
-                return;
-            }
-            present_workspace(
-                window,
-                webview,
-                native_footer,
-                workspace,
-                text("status.document_loaded"),
-                true,
-            )
-        }
-        WorkspaceOpenResult::ActivatedExisting(_) => sync_workspace_state(
-            window,
-            webview,
-            native_footer,
-            workspace,
-            text("status.already_open"),
-        ),
-    }
 }
 
 fn reload_status_message(reloaded: usize, skipped_dirty: usize) -> String {

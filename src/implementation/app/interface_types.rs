@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
+use tao::window::WindowId;
 
 use crate::app::{AppLanguage, AppTheme};
 use crate::document::{DocumentSnapshot, DocumentTabSnapshot};
@@ -11,14 +12,15 @@ pub(crate) enum UserEvent {
     OpenFile(ActionContext),
     OpenPath(OpenPathRequest),
     ActivateDocument(u64),
+    ActivateDocumentAtIndex(usize),
     ActivateNextDocument,
     ActivatePreviousDocument,
     CloseDocument(u64),
     CloseCurrentDocument,
     CloseOtherDocuments,
     CloseAllDocuments,
-    ShellReady,
-    RecoverShell(String),
+    ShellReady(WindowId),
+    RecoverShell(WindowId, String),
     OpenExternal(String),
     SaveDocument,
     SaveDocumentAs,
@@ -34,7 +36,7 @@ pub(crate) enum UserEvent {
     ResetDocumentSize,
     ToggleOutline,
     ToggleFullscreen,
-    EditorChanged(String),
+    EditorChanged(WindowId, String),
     ShowAbout,
     OpenDocumentation,
     Exit,

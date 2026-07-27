@@ -1,5 +1,5 @@
 use tao::event::{Event, StartCause};
-use tao::event_loop::ControlFlow;
+use tao::event_loop::{ControlFlow, EventLoopWindowTarget};
 use url::Url;
 
 use super::runtime::AppRuntime;
@@ -10,6 +10,7 @@ use crate::app::text;
 
 pub(super) fn handle_event(
     event: Event<'_, UserEvent>,
+    target: &EventLoopWindowTarget<UserEvent>,
     runtime: &mut AppRuntime,
     control_flow: &mut ControlFlow,
 ) {
@@ -17,17 +18,17 @@ pub(super) fn handle_event(
 
     match event {
         Event::NewEvents(cause) => {
-            #[cfg(target_os = "macos")]
-            super::macos_menu::remove_window_tab_items_from_main_menu();
             if cause == StartCause::Init {
                 log_event("event_loop.init", None, "event loop init", "");
                 render_status(&runtime.webview, text("status.ready_open_hint"), "info");
             }
         }
         Event::Opened { urls } => handle_opened_urls(urls, runtime),
-        Event::WindowEvent { event, .. } => handle_window_event(event, runtime, control_flow),
+        Event::WindowEvent {
+            window_id, event, ..
+        } => handle_window_event(window_id, event, runtime, control_flow),
         Event::UserEvent(user_event) => {
-            super::user_events::handle_user_event(user_event, runtime, control_flow)
+            super::user_events::handle_user_event(user_event, target, runtime, control_flow)
         }
         _ => {}
     }

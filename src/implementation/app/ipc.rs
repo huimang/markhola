@@ -1,10 +1,15 @@
 use serde_json::Value;
 use tao::event_loop::EventLoopProxy;
+use tao::window::WindowId;
 use url::Url;
 
 use super::{UserEvent, dispatch_user_event, log_event, new_action_context};
 
-pub(super) fn handle_ipc_message(proxy: &EventLoopProxy<UserEvent>, payload: String) {
+pub(super) fn handle_ipc_message(
+    proxy: &EventLoopProxy<UserEvent>,
+    window_id: WindowId,
+    payload: String,
+) {
     log_event(
         "ipc.received",
         None,
@@ -27,7 +32,7 @@ pub(super) fn handle_ipc_message(proxy: &EventLoopProxy<UserEvent>, payload: Str
             dispatch_user_event(proxy, "ipc", UserEvent::OpenFile(ctx));
         }
         Some("new-document") => dispatch_user_event(proxy, "ipc", UserEvent::NewDocument),
-        Some("shell-ready") => dispatch_user_event(proxy, "ipc", UserEvent::ShellReady),
+        Some("shell-ready") => dispatch_user_event(proxy, "ipc", UserEvent::ShellReady(window_id)),
         Some("toggle-mode") => dispatch_user_event(proxy, "ipc", UserEvent::ToggleMode),
         Some("toggle-outline") => dispatch_user_event(proxy, "ipc", UserEvent::ToggleOutline),
         Some("increase-document-size") => {
@@ -57,7 +62,13 @@ pub(super) fn handle_ipc_message(proxy: &EventLoopProxy<UserEvent>, payload: Str
             dispatch_u64_event(value.get("documentId"), proxy, UserEvent::CloseDocument)
         }
         Some("editor-changed") => {
-            dispatch_string_event(value.get("markdown"), proxy, UserEvent::EditorChanged)
+            if let Some(markdown) = value.get("markdown").and_then(Value::as_str) {
+                dispatch_user_event(
+                    proxy,
+                    "ipc",
+                    UserEvent::EditorChanged(window_id, markdown.to_string()),
+                );
+            }
         }
         _ => {}
     }
@@ -97,7 +108,11 @@ fn dispatch_open_path_event(value: Option<&Value>, proxy: &EventLoopProxy<UserEv
         return;
     };
     let ctx = new_action_context("ipc-open-markdown-link");
-    dispatch_user_event(proxy, "ipc", UserEvent::OpenPath(super::OpenPathRequest { ctx, path }));
+    dispatch_user_event(
+        proxy,
+        "ipc",
+        UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
+    );
 }
 
 pub(crate) fn markdown_path_from_href(href: &str) -> Option<std::path::PathBuf> {

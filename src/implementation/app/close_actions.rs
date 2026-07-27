@@ -8,9 +8,8 @@ use crate::workspace::DocumentWorkspace;
 
 use super::PendingChangesAction;
 use super::asset_access::{AssetAccessRegistry, unregister_document};
-use super::native_footer::NativeFooter;
 use super::save_actions::save_document;
-use super::workspace_view::{render_status, sync_workspace_state};
+use super::workspace_view::render_status;
 
 pub(super) fn resolve_all_pending_changes(
     window: &Window,
@@ -33,13 +32,11 @@ pub(super) fn resolve_all_pending_changes(
     true
 }
 
-pub(super) fn close_document_tab(
+pub(super) fn close_document_model(
     window: &Window,
     webview: &WebView,
-    native_footer: &NativeFooter,
     workspace: &mut DocumentWorkspace,
     document_id: u64,
-    status: &str,
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     let Some(document) = workspace.document_by_id_mut(document_id) else {
@@ -51,17 +48,14 @@ pub(super) fn close_document_tab(
     }
     workspace.close_document(document_id);
     unregister_document(asset_access, document_id);
-    sync_workspace_state(window, webview, native_footer, workspace, status);
     true
 }
 
-pub(super) fn close_document_tabs(
+pub(super) fn close_document_models(
     window: &Window,
     webview: &WebView,
-    native_footer: &NativeFooter,
     workspace: &mut DocumentWorkspace,
     document_ids: &[u64],
-    status: &str,
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     for document_id in document_ids {
@@ -76,7 +70,6 @@ pub(super) fn close_document_tabs(
         workspace.close_document(*document_id);
         unregister_document(asset_access, *document_id);
     }
-    sync_workspace_state(window, webview, native_footer, workspace, status);
     true
 }
 

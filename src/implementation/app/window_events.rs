@@ -1,7 +1,7 @@
 use tao::event::{ElementState, WindowEvent};
 use tao::event_loop::ControlFlow;
+use tao::window::WindowId;
 
-use super::close_actions::resolve_all_pending_changes;
 use super::runtime::AppRuntime;
 use super::shortcuts::handle_command_shortcut;
 use super::workspace_view::render_status;
@@ -9,10 +9,21 @@ use super::{UserEvent, dispatch_user_event, log_event, new_action_context};
 use crate::app::text;
 
 pub(super) fn handle_window_event(
+    window_id: WindowId,
     event: WindowEvent,
     runtime: &mut AppRuntime,
     control_flow: &mut ControlFlow,
 ) {
+    if matches!(
+        event,
+        WindowEvent::Focused(true) | WindowEvent::CloseRequested
+    ) {
+        super::surface_actions::activate_window_surface(
+            window_id,
+            runtime,
+            text("status.document_switched"),
+        );
+    }
     match event {
         WindowEvent::CloseRequested => handle_close_requested(runtime, control_flow),
         WindowEvent::ModifiersChanged(next_modifiers) => runtime.modifiers = next_modifiers,
@@ -43,7 +54,7 @@ pub(super) fn handle_window_event(
                 UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
             );
         }
-        WindowEvent::Resized(_) => {
+        WindowEvent::Resized(_) if runtime.active_window_id() == window_id => {
             runtime
                 .native_footer
                 .relayout(&runtime.window, &runtime.webview);
@@ -54,7 +65,5 @@ pub(super) fn handle_window_event(
 
 fn handle_close_requested(runtime: &mut AppRuntime, control_flow: &mut ControlFlow) {
     log_event("window.close_requested", None, "window close requested", "");
-    if resolve_all_pending_changes(&runtime.window, &runtime.webview, &mut runtime.workspace) {
-        *control_flow = ControlFlow::Exit;
-    }
+    super::navigation_actions::close_current_document(runtime, control_flow);
 }

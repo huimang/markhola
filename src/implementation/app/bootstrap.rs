@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use tao::dpi::LogicalSize;
-use tao::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy};
+use tao::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
 use tao::window::WindowBuilder;
 use url::Url;
 use wry::http::{Response, header};
@@ -12,7 +12,9 @@ use wry::{DragDropEvent, PageLoadEvent, WebView, WebViewBuilder};
 use crate::app::{AppLanguage, AppTheme, set_current_language};
 
 use super::asset_access::{AssetAccessRegistry, new_registry, resolve_asset};
+use super::document_surface::DocumentSurface;
 use super::native_footer::NativeFooter;
+use super::native_tabs;
 use super::runtime::AppRuntime;
 use super::shell::{app_shell_html, should_dispatch_shell_recovery};
 use super::theme_preferences;
@@ -56,6 +58,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         .with_inner_size(LogicalSize::new(1120.0, 760.0))
         .with_min_inner_size(LogicalSize::new(800.0, 560.0))
         .build(&event_loop)?;
+    native_tabs::configure(&window, selected_theme);
     let webview = build_webview(
         &window,
         &proxy,
@@ -84,7 +87,43 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
     Ok((event_loop, runtime))
 }
 
-fn build_webview(
+pub(super) fn build_document_surface(
+    target: &EventLoopWindowTarget<UserEvent>,
+    proxy: &EventLoopProxy<UserEvent>,
+    asset_access: AssetAccessRegistry,
+    selected_theme: AppTheme,
+    language: AppLanguage,
+    document_size: crate::app::DocumentSize,
+    document_id: u64,
+) -> Result<DocumentSurface, Box<dyn Error>> {
+    let suppress_blank_recovery = Arc::new(AtomicBool::new(true));
+    let window = WindowBuilder::new()
+        .with_title(WINDOW_TITLE)
+        .with_visible(false)
+        .with_inner_size(LogicalSize::new(1120.0, 760.0))
+        .with_min_inner_size(LogicalSize::new(800.0, 560.0))
+        .build(target)?;
+    native_tabs::configure(&window, selected_theme);
+    let webview = build_webview(
+        &window,
+        proxy,
+        Arc::clone(&suppress_blank_recovery),
+        asset_access,
+        selected_theme,
+        language,
+        document_size,
+    )?;
+    let native_footer = NativeFooter::install(&window, &webview, selected_theme);
+    Ok(DocumentSurface::new(
+        window,
+        webview,
+        suppress_blank_recovery,
+        native_footer,
+        Some(document_id),
+    ))
+}
+
+pub(super) fn build_webview(
     window: &tao::window::Window,
     proxy: &EventLoopProxy<UserEvent>,
     suppress_blank_recovery: Arc<AtomicBool>,
@@ -93,6 +132,7 @@ fn build_webview(
     language: AppLanguage,
     document_size: crate::app::DocumentSize,
 ) -> Result<WebView, wry::Error> {
+    let window_id = window.id();
     let ipc_proxy = proxy.clone();
     let page_load_proxy = proxy.clone();
     let navigation_proxy = proxy.clone();
@@ -256,7 +296,7 @@ fn build_webview(
             true
         })
         .with_ipc_handler(move |request| {
-            super::ipc::handle_ipc_message(&ipc_proxy, request.body().to_owned());
+            super::ipc::handle_ipc_message(&ipc_proxy, window_id, request.body().to_owned());
         })
         .with_on_page_load_handler(move |event, url| {
             let event_name = match event {
@@ -272,7 +312,11 @@ fn build_webview(
             if matches!(event, PageLoadEvent::Finished)
                 && should_dispatch_shell_recovery(&url, &suppress_blank_recovery)
             {
-                dispatch_user_event(&page_load_proxy, "page-load", UserEvent::RecoverShell(url));
+                dispatch_user_event(
+                    &page_load_proxy,
+                    "page-load",
+                    UserEvent::RecoverShell(window_id, url),
+                );
             }
         })
         .build(window)

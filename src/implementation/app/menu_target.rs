@@ -1,7 +1,6 @@
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class};
-use objc2_app_kit::{NSMenu, NSMenuDelegate};
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
 use tao::event_loop::EventLoopProxy;
 
@@ -20,13 +19,6 @@ define_class!(
     struct MenuTarget;
 
 unsafe impl NSObjectProtocol for MenuTarget {}
-
-    unsafe impl NSMenuDelegate for MenuTarget {
-        #[unsafe(method(menuWillOpen:))]
-        fn menu_will_open(&self, menu: &NSMenu) {
-            super::menu_install::remove_window_tab_items(menu);
-        }
-    }
 
     impl MenuTarget {
         #[unsafe(method(newMenuDocument:))]
@@ -85,6 +77,24 @@ unsafe impl NSObjectProtocol for MenuTarget {}
         fn activate_next_document(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateNextDocument, "activateNextDocument:"); }
         #[unsafe(method(activatePreviousDocument:))]
         fn activate_previous_document(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivatePreviousDocument, "activatePreviousDocument:"); }
+        #[unsafe(method(activateDocumentOne:))]
+        fn activate_document_one(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(0), "activateDocumentOne:"); }
+        #[unsafe(method(activateDocumentTwo:))]
+        fn activate_document_two(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(1), "activateDocumentTwo:"); }
+        #[unsafe(method(activateDocumentThree:))]
+        fn activate_document_three(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(2), "activateDocumentThree:"); }
+        #[unsafe(method(activateDocumentFour:))]
+        fn activate_document_four(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(3), "activateDocumentFour:"); }
+        #[unsafe(method(activateDocumentFive:))]
+        fn activate_document_five(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(4), "activateDocumentFive:"); }
+        #[unsafe(method(activateDocumentSix:))]
+        fn activate_document_six(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(5), "activateDocumentSix:"); }
+        #[unsafe(method(activateDocumentSeven:))]
+        fn activate_document_seven(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(6), "activateDocumentSeven:"); }
+        #[unsafe(method(activateDocumentEight:))]
+        fn activate_document_eight(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(7), "activateDocumentEight:"); }
+        #[unsafe(method(activateDocumentNine:))]
+        fn activate_document_nine(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ActivateDocumentAtIndex(8), "activateDocumentNine:"); }
         #[unsafe(method(closeOtherDocuments:))]
         fn close_other_documents(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::CloseOtherDocuments, "closeOtherDocuments:"); }
         #[unsafe(method(closeAllDocuments:))]

@@ -89,6 +89,11 @@ fn describe_user_event(
             "ActivateDocument",
             format!("source={} document_id={document_id}", stage_source),
         ),
+        UserEvent::ActivateDocumentAtIndex(index) => (
+            None,
+            "ActivateDocumentAtIndex",
+            format!("source={} index={index}", stage_source),
+        ),
         UserEvent::ActivateNextDocument => (
             None,
             "ActivateNextDocument",
@@ -117,11 +122,15 @@ fn describe_user_event(
         UserEvent::CloseAllDocuments => {
             (None, "CloseAllDocuments", format!("source={stage_source}"))
         }
-        UserEvent::ShellReady => (None, "ShellReady", format!("source={stage_source}")),
-        UserEvent::RecoverShell(url) => (
+        UserEvent::ShellReady(window_id) => (
+            None,
+            "ShellReady",
+            format!("source={stage_source} window_id={window_id:?}"),
+        ),
+        UserEvent::RecoverShell(window_id, url) => (
             None,
             "RecoverShell",
-            format!("source={} url={url}", stage_source),
+            format!("source={} window_id={window_id:?} url={url}", stage_source),
         ),
         UserEvent::OpenExternal(href) => (
             None,
@@ -160,10 +169,14 @@ fn describe_user_event(
         }
         UserEvent::ToggleOutline => (None, "ToggleOutline", format!("source={stage_source}")),
         UserEvent::ToggleFullscreen => (None, "ToggleFullscreen", format!("source={stage_source}")),
-        UserEvent::EditorChanged(markdown) => (
+        UserEvent::EditorChanged(window_id, markdown) => (
             None,
             "EditorChanged",
-            format!("source={} bytes={}", stage_source, markdown.len()),
+            format!(
+                "source={} window_id={window_id:?} bytes={}",
+                stage_source,
+                markdown.len()
+            ),
         ),
         UserEvent::ShowAbout => (None, "ShowAbout", format!("source={stage_source}")),
         UserEvent::OpenDocumentation => {

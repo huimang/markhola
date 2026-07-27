@@ -1,62 +1,80 @@
-use tao::event_loop::ControlFlow;
+use tao::event_loop::{ControlFlow, EventLoopWindowTarget};
 use tao::window::Fullscreen;
 
 use crate::app::{AppLanguage, AppTheme, set_current_language, text};
 use crate::render_assets;
 
-use super::close_actions::close_document_tab;
-use super::document_actions::{create_blank_document, open_document, open_documents_dialog};
+use super::close_actions::close_document_model;
+use super::document_actions::{
+    create_blank_document_model, open_document_model, open_documents_dialog,
+};
 use super::export_actions;
 use super::navigation_actions::{
-    activate_document, close_all_documents, close_current_document, close_other_documents,
-    exit_application, switch_document,
+    activate_document, activate_document_at_index, close_all_documents, close_current_document,
+    close_other_documents, exit_application, switch_document,
 };
 use super::runtime::AppRuntime;
 use super::save_actions::{save_active_document, save_active_document_as};
 use super::shell_events::{handle_shell_ready, open_documentation, recover_shell};
+use super::surface_actions::present_document_in_surface;
 use super::theme_preferences;
 use super::workspace_view::{
     present_workspace, render_about, render_status, sync_native_language_state,
-    sync_native_theme_state, sync_workspace_state,
+    sync_native_theme_state,
 };
 use super::{OpenPathRequest, UserEvent, log_event};
 use crate::app::WebStrings;
 
 pub(super) fn handle_user_event(
     user_event: UserEvent,
+    target: &EventLoopWindowTarget<UserEvent>,
     runtime: &mut AppRuntime,
     control_flow: &mut ControlFlow,
 ) {
     match user_event {
         UserEvent::NewDocument => {
-            create_blank_document(
-                &runtime.window,
-                &runtime.webview,
-                &runtime.native_footer,
-                &mut runtime.workspace,
-            );
+            let document_id = create_blank_document_model(&mut runtime.workspace);
+            if !present_document_in_surface(
+                target,
+                runtime,
+                document_id,
+                text("status.new_document"),
+            ) {
+                runtime.workspace.close_document(document_id);
+            }
         }
-        UserEvent::OpenFile(ctx) => handle_open_file(ctx, runtime),
-        UserEvent::OpenPath(request) => handle_open_path(request, runtime),
+        UserEvent::OpenFile(ctx) => handle_open_file(ctx, target, runtime),
+        UserEvent::OpenPath(request) => handle_open_path(request, target, runtime),
         UserEvent::ActivateDocument(document_id) => activate_document(document_id, runtime),
+        UserEvent::ActivateDocumentAtIndex(index) => activate_document_at_index(index, runtime),
         UserEvent::ActivateNextDocument => switch_document(runtime, true),
         UserEvent::ActivatePreviousDocument => switch_document(runtime, false),
         UserEvent::CloseDocument(document_id) => {
-            close_document_tab(
+            if close_document_model(
                 &runtime.window,
                 &runtime.webview,
-                &runtime.native_footer,
                 &mut runtime.workspace,
                 document_id,
-                text("status.document_closed"),
                 &runtime.asset_access,
-            );
+            ) {
+                super::surface_actions::remove_closed_surface(
+                    runtime,
+                    document_id,
+                    text("status.document_closed"),
+                );
+            }
         }
         UserEvent::CloseCurrentDocument => close_current_document(runtime, control_flow),
         UserEvent::CloseOtherDocuments => close_other_documents(runtime),
         UserEvent::CloseAllDocuments => close_all_documents(runtime),
-        UserEvent::ShellReady => handle_shell_ready(runtime),
-        UserEvent::RecoverShell(url) => recover_shell(url, runtime),
+        UserEvent::ShellReady(window_id) => {
+            activate_event_surface(window_id, runtime);
+            handle_shell_ready(runtime);
+        }
+        UserEvent::RecoverShell(window_id, url) => {
+            activate_event_surface(window_id, runtime);
+            recover_shell(url, runtime);
+        }
         UserEvent::OpenExternal(href) => open_external_link(&href, runtime),
         UserEvent::SaveDocument => {
             save_active_document(
@@ -104,11 +122,25 @@ pub(super) fn handle_user_event(
         ),
         UserEvent::ToggleOutline => toggle_outline(runtime),
         UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
-        UserEvent::EditorChanged(markdown) => editor_changed(markdown, runtime),
+        UserEvent::EditorChanged(window_id, markdown) => {
+            activate_event_surface(window_id, runtime);
+            editor_changed(markdown, runtime);
+        }
         UserEvent::ShowAbout => render_about(&runtime.webview),
         UserEvent::OpenDocumentation => open_documentation(runtime),
         UserEvent::Exit => exit_application(runtime, control_flow),
     }
+}
+
+fn activate_event_surface(window_id: tao::window::WindowId, runtime: &mut AppRuntime) {
+    if runtime.active_window_id() == window_id {
+        return;
+    }
+    super::surface_actions::activate_window_surface(
+        window_id,
+        runtime,
+        text("status.document_switched"),
+    );
 }
 
 fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
@@ -125,8 +157,7 @@ fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
     #[cfg(target_os = "macos")]
     {
         if let Err(error) = super::macos_menu::install(&runtime.proxy) {
-            let message =
-                text("status.failed_rebuild_menu").replace("{error}", &error.to_string());
+            let message = text("status.failed_rebuild_menu").replace("{error}", &error.to_string());
             render_status(&runtime.webview, &message, "error");
             return;
         }
@@ -139,9 +170,20 @@ fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
         let _ = runtime
             .webview
             .evaluate_script(&format!("window.applyAppLanguage({payload});"));
+        for surface in runtime.inactive_surfaces.values() {
+            let _ = surface
+                .webview
+                .evaluate_script(&format!("window.applyAppLanguage({payload});"));
+        }
     }
     let ready = text("status.ready");
     runtime.native_footer.sync(&runtime.workspace, ready);
+    for surface in runtime.inactive_surfaces.values() {
+        let snapshot = surface
+            .document_id
+            .and_then(|document_id| runtime.workspace.document_snapshot(document_id));
+        surface.native_footer.sync_document(snapshot, ready);
+    }
     render_status(&runtime.webview, ready, "info");
 }
 
@@ -152,7 +194,11 @@ fn sync_native_menu_state_after_language_change(runtime: &AppRuntime) {
     sync_native_language_state(runtime.language);
 }
 
-fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
+fn handle_open_file(
+    ctx: super::ActionContext,
+    target: &EventLoopWindowTarget<UserEvent>,
+    runtime: &mut AppRuntime,
+) {
     log_event(
         "user_event.received",
         Some(ctx.event_id),
@@ -163,20 +209,43 @@ fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
         Some(paths) => {
             let mut failures = 0usize;
             for path in paths {
-                let before_active = runtime.workspace.active_document_id();
-                open_document(
-                    &runtime.window,
-                    &runtime.webview,
-                    &runtime.native_footer,
+                match open_document_model(
                     &mut runtime.workspace,
                     &path,
                     Some(ctx.event_id),
                     &runtime.asset_access,
-                );
-                let after_active = runtime.workspace.active_document_id();
-                if after_active == before_active && runtime.workspace.find_by_path(&path).is_none()
-                {
-                    failures += 1;
+                ) {
+                    Ok(result) => {
+                        let document_id = match result {
+                            crate::workspace::WorkspaceOpenResult::OpenedNew(document_id)
+                            | crate::workspace::WorkspaceOpenResult::ActivatedExisting(
+                                document_id,
+                            ) => document_id,
+                        };
+                        let status = if matches!(
+                            result,
+                            crate::workspace::WorkspaceOpenResult::ActivatedExisting(_)
+                        ) {
+                            text("status.already_open")
+                        } else {
+                            text("status.document_loaded")
+                        };
+                        if !present_document_in_surface(target, runtime, document_id, status) {
+                            if matches!(result, crate::workspace::WorkspaceOpenResult::OpenedNew(_))
+                            {
+                                runtime.workspace.close_document(document_id);
+                                super::asset_access::unregister_document(
+                                    &runtime.asset_access,
+                                    document_id,
+                                );
+                            }
+                            failures += 1;
+                        }
+                    }
+                    Err(message) => {
+                        render_status(&runtime.webview, &message, "error");
+                        failures += 1;
+                    }
                 }
             }
             if failures > 0 {
@@ -187,7 +256,11 @@ fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
     }
 }
 
-fn handle_open_path(request: OpenPathRequest, runtime: &mut AppRuntime) {
+fn handle_open_path(
+    request: OpenPathRequest,
+    target: &EventLoopWindowTarget<UserEvent>,
+    runtime: &mut AppRuntime,
+) {
     let OpenPathRequest { ctx, path } = request;
     log_event(
         "user_event.received",
@@ -202,15 +275,36 @@ fn handle_open_path(request: OpenPathRequest, runtime: &mut AppRuntime) {
             .push(OpenPathRequest { ctx, path });
         return;
     }
-    open_document(
-        &runtime.window,
-        &runtime.webview,
-        &runtime.native_footer,
+    match open_document_model(
         &mut runtime.workspace,
         &path,
         Some(ctx.event_id),
         &runtime.asset_access,
-    );
+    ) {
+        Ok(result) => {
+            let document_id = match result {
+                crate::workspace::WorkspaceOpenResult::OpenedNew(document_id)
+                | crate::workspace::WorkspaceOpenResult::ActivatedExisting(document_id) => {
+                    document_id
+                }
+            };
+            let status = if matches!(
+                result,
+                crate::workspace::WorkspaceOpenResult::ActivatedExisting(_)
+            ) {
+                text("status.already_open")
+            } else {
+                text("status.document_loaded")
+            };
+            if !present_document_in_surface(target, runtime, document_id, status)
+                && matches!(result, crate::workspace::WorkspaceOpenResult::OpenedNew(_))
+            {
+                runtime.workspace.close_document(document_id);
+                super::asset_access::unregister_document(&runtime.asset_access, document_id);
+            }
+        }
+        Err(message) => render_status(&runtime.webview, &message, "error"),
+    }
 }
 
 fn toggle_mode(runtime: &mut AppRuntime) {
@@ -234,6 +328,11 @@ fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
     runtime.selected_theme = theme;
     theme_preferences::save_selected_theme(theme);
     runtime.native_footer.set_theme(theme);
+    super::native_tabs::apply_theme(&runtime.window, theme);
+    for surface in runtime.inactive_surfaces.values() {
+        surface.native_footer.set_theme(theme);
+        super::native_tabs::apply_theme(&surface.window, theme);
+    }
     sync_native_theme_state(theme);
     let css = render_assets::load_app_theme_css_for_inline_style(theme.key());
     match serde_json::to_string(&css) {
@@ -244,6 +343,9 @@ fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
                     text("status.failed_apply_theme").replace("{error}", &error.to_string());
                 render_status(&runtime.webview, &message, "error");
                 return;
+            }
+            for surface in runtime.inactive_surfaces.values() {
+                let _ = surface.webview.evaluate_script(&script);
             }
             let theme_name = match theme {
                 AppTheme::Default => text("menu.theme_default"),
@@ -270,10 +372,12 @@ fn update_document_size(size: crate::app::DocumentSize, action: &str, runtime: &
         render_status(&runtime.webview, &message, "error");
         return;
     }
+    for surface in runtime.inactive_surfaces.values() {
+        let _ = surface.webview.evaluate_script(&script);
+    }
     let status = text("status.size_changed")
         .replace("{action}", action)
         .replace("{percent}", &size.percent().to_string());
-    runtime.native_footer.set_status(&status);
     render_status(&runtime.webview, &status, "info");
 }
 
@@ -291,7 +395,6 @@ fn toggle_outline(runtime: &mut AppRuntime) {
         if let Err(error) = runtime.webview.evaluate_script(&script) {
             let status =
                 text("status.failed_toggle_outline").replace("{error}", &error.to_string());
-            runtime.native_footer.set_status(&status);
             render_status(&runtime.webview, &status, "error");
         }
     }
@@ -315,13 +418,7 @@ fn toggle_fullscreen(runtime: &mut AppRuntime) {
 fn editor_changed(markdown: String, runtime: &mut AppRuntime) {
     if let Some(document) = runtime.workspace.active_document_mut() {
         document.update_markdown(markdown);
-        sync_workspace_state(
-            &runtime.window,
-            &runtime.webview,
-            &runtime.native_footer,
-            &runtime.workspace,
-            text("status.unsaved"),
-        );
+        super::surface_actions::sync_active_surface(runtime, text("status.unsaved"), false);
     }
 }
 

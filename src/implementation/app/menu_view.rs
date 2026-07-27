@@ -80,9 +80,6 @@ pub(super) fn add_view_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
         target,
     ));
 
-    unsafe {
-        let _: () = objc2::msg_send![&*view_menu, setDelegate: target];
-    }
     view_menu_item.setSubmenu(Some(&view_menu));
 }
 

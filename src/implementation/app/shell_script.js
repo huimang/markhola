@@ -21,12 +21,6 @@
       const emptyState = document.getElementById("emptyState");
       const previewPane = document.getElementById("previewPane");
       const editorPane = document.getElementById("editorPane");
-      const tabsShell = document.getElementById("tabsShell");
-      const tabsBar = document.getElementById("tabsBar");
-      const tabNavigation = document.getElementById("tabNavigation");
-      const previousTabs = document.getElementById("previousTabs");
-      const nextTabs = document.getElementById("nextTabs");
-      const newDocumentTab = document.getElementById("newDocumentTab");
       const editorLineNumbers = document.getElementById("editorLineNumbers");
       const editor = document.getElementById("editor");
       const content = document.getElementById("content");
@@ -78,11 +72,6 @@
       const applyAppLanguage = (strings) => {
         appStrings = strings;
         document.documentElement.lang = strings.language;
-        tabsBar.setAttribute("aria-label", strings.openDocuments);
-        tabNavigation.setAttribute("aria-label", strings.moveThroughTabs);
-        previousTabs.setAttribute("aria-label", strings.moveTabsBackward);
-        nextTabs.setAttribute("aria-label", strings.moveTabsForward);
-        newDocumentTab.setAttribute("aria-label", strings.newDocument);
         findInput.placeholder = strings.findInDocument;
         findInput.setAttribute("aria-label", strings.findInDocument);
         replaceInput.placeholder = strings.replaceWith;
@@ -106,12 +95,6 @@
         aboutBuildLabel.textContent = strings.build;
         aboutCopy.textContent = strings.copy;
         aboutFooter.textContent = strings.aboutFooter;
-        for (const button of tabsBar.querySelectorAll("[data-close-document]")) {
-          button.setAttribute(
-            "aria-label",
-            `${strings.closeDocument} ${button.dataset.fileName || ""}`.trim()
-          );
-        }
         updateFindCount(
           currentDocumentMode === "writable" ? writableMatches.length : readonlyMatches.length,
           currentDocumentMode === "writable" ? writableActiveIndex : readonlyActiveIndex
@@ -243,47 +226,6 @@
         if (mode !== "readonly") setOutlineOpen(false);
       };
 
-      const updateTabNavigation = () => {
-        const overflowed = tabsBar.scrollWidth > tabsBar.clientWidth + 1;
-        tabNavigation.classList.toggle("hidden", !overflowed);
-        previousTabs.disabled = !overflowed || tabsBar.scrollLeft <= 1;
-        nextTabs.disabled =
-          !overflowed ||
-          tabsBar.scrollLeft + tabsBar.clientWidth >= tabsBar.scrollWidth - 1;
-      };
-
-      const revealActiveTab = () => {
-        const activeTab = tabsBar.querySelector(".document-tab.active");
-        activeTab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-      };
-
-      const renderTabs = (tabs) => {
-        tabsShell.classList.toggle("hidden", !tabs.length);
-        if (!tabs.length) {
-          tabsBar.innerHTML = "";
-          requestAnimationFrame(updateTabNavigation);
-          return;
-        }
-
-        tabsBar.innerHTML = tabs
-          .map((tab) => {
-            const activeClass = tab.active ? " active" : "";
-            const dirty = tab.dirty ? `<span class="document-tab__dirty" aria-hidden="true"></span>` : "";
-            return `
-              <div class="document-tab${activeClass}" role="tab" tabindex="0" aria-selected="${tab.active}" data-document-id="${tab.document_id}" title="${escapeHtml(tab.title)}">
-                <span class="document-tab__name">${escapeHtml(tab.file_name)}</span>
-                ${dirty}
-                <button class="document-tab__close" type="button" data-close-document="${tab.document_id}" data-file-name="${escapeHtml(tab.file_name)}" aria-label="${escapeHtml(appStrings.closeDocument)} ${escapeHtml(tab.file_name)}">&times;</button>
-              </div>
-            `;
-          })
-          .join("");
-        requestAnimationFrame(() => {
-          updateTabNavigation();
-          revealActiveTab();
-        });
-      };
-
       const setOutlineOpen = (open) => {
         outlineOpen = open && currentDocumentMode === "readonly";
         outlinePanel.classList.toggle("hidden", !outlineOpen);
@@ -324,7 +266,6 @@
       };
 
       const applyWorkspaceChrome = (payload) => {
-        renderTabs(payload.tabs || []);
         const active = payload.active_document;
 
         if (!active) {
@@ -917,17 +858,6 @@
       });
 
       editor.addEventListener("scroll", syncEditorScroll);
-      tabsBar.addEventListener("scroll", updateTabNavigation);
-      window.addEventListener("resize", updateTabNavigation);
-      previousTabs.addEventListener("click", () => {
-        tabsBar.scrollBy({ left: -360, behavior: "smooth" });
-      });
-      nextTabs.addEventListener("click", () => {
-        tabsBar.scrollBy({ left: 360, behavior: "smooth" });
-      });
-      newDocumentTab.addEventListener("click", () => {
-        window.ipc.postMessage(JSON.stringify({ kind: "new-document" }));
-      });
       outlineClose.addEventListener("click", () => {
         window.ipc.postMessage(JSON.stringify({ kind: "toggle-outline" }));
       });
@@ -955,16 +885,6 @@
         if (findPanelVisible && event.key === "Escape") {
           event.preventDefault();
           closeFindPanel();
-          return;
-        }
-
-        const focusedTab = event.target.closest?.("[data-document-id]");
-        if (focusedTab && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          const documentId = Number(focusedTab.getAttribute("data-document-id"));
-          if (Number.isFinite(documentId)) {
-            window.ipc.postMessage(JSON.stringify({ kind: "activate-document", documentId }));
-          }
           return;
         }
 
@@ -1038,28 +958,6 @@
           const path = statusAction.getAttribute("data-open-path") || "";
           if (path) {
             window.ipc.postMessage(JSON.stringify({ kind: "open-external", href: path }));
-          }
-          return;
-        }
-
-        const closeButton = event.target.closest("[data-close-document]");
-        if (closeButton) {
-          event.preventDefault();
-          event.stopPropagation();
-          window.ipc.postMessage(
-            JSON.stringify({
-              kind: "close-document",
-              documentId: Number(closeButton.getAttribute("data-close-document"))
-            })
-          );
-          return;
-        }
-
-        const tab = event.target.closest("[data-document-id]");
-        if (tab) {
-          const documentId = Number(tab.getAttribute("data-document-id"));
-          if (Number.isFinite(documentId)) {
-            window.ipc.postMessage(JSON.stringify({ kind: "activate-document", documentId }));
           }
           return;
         }

@@ -10,7 +10,7 @@ mod menu_tab;
 mod menu_target;
 mod menu_view;
 
-pub use self::menu_install::{install, remove_window_tab_items_from_main_menu};
+pub use self::menu_install::install;
 pub use self::menu_state::{
     outline_selected, set_document_output_enabled, set_outline_available, set_outline_selected,
     set_selected_language, set_selected_theme, toggle_outline_selected,

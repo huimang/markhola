@@ -35,6 +35,31 @@ pub(super) fn add_tab_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &A
         target,
     ));
     tab_menu.addItem(&NSMenuItem::separatorItem(mtm));
+    for (index, selector) in [
+        sel!(activateDocumentOne:),
+        sel!(activateDocumentTwo:),
+        sel!(activateDocumentThree:),
+        sel!(activateDocumentFour:),
+        sel!(activateDocumentFive:),
+        sel!(activateDocumentSix:),
+        sel!(activateDocumentSeven:),
+        sel!(activateDocumentEight:),
+        sel!(activateDocumentNine:),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let number = index + 1;
+        tab_menu.addItem(&action(
+            mtm,
+            &format!("{} {number}", text("menu.tab")),
+            Some(selector),
+            &number.to_string(),
+            NSEventModifierFlags::Command,
+            target,
+        ));
+    }
+    tab_menu.addItem(&NSMenuItem::separatorItem(mtm));
     tab_menu.addItem(&action(
         mtm,
         text("menu.close_tab"),

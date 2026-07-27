@@ -48,6 +48,17 @@ impl DocumentWorkspace {
             .find(|document| document.id() == document_id)
     }
 
+    pub fn document_by_id(&self, document_id: u64) -> Option<&ActiveDocument> {
+        self.documents
+            .iter()
+            .find(|document| document.id() == document_id)
+    }
+
+    pub fn document_snapshot(&self, document_id: u64) -> Option<DocumentSnapshot> {
+        self.document_by_id(document_id)
+            .map(ActiveDocument::snapshot)
+    }
+
     pub fn active_document_id(&self) -> Option<u64> {
         self.active_document().map(ActiveDocument::id)
     }

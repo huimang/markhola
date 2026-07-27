@@ -5,6 +5,7 @@ use crate::app::{AppLanguage, AppTheme, text};
 use crate::workspace::DocumentWorkspace;
 
 use super::native_footer::NativeFooter;
+use super::native_tabs;
 use super::{
     APP_AUTHOR, APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_GITHUB_URL, APP_VERSION, StatusPayload,
     WINDOW_TITLE, WorkspacePresentation, macos_menu,
@@ -19,6 +20,7 @@ pub(super) fn present_workspace(
     full_render: bool,
 ) {
     update_window_title(window, workspace.active_window_title().as_deref());
+    sync_native_window_state(window, workspace);
     sync_native_menu_state(workspace);
     native_footer.sync(workspace, status);
     if full_render {
@@ -58,6 +60,7 @@ pub(super) fn sync_workspace_state(
     status: &str,
 ) {
     update_window_title(window, workspace.active_window_title().as_deref());
+    sync_native_window_state(window, workspace);
     native_footer.sync(workspace, status);
     evaluate_workspace_script(webview, "window.updateWorkspaceState", workspace, status);
 }
@@ -103,6 +106,13 @@ fn render_workspace(webview: &WebView, workspace: &DocumentWorkspace, status: &s
 
 fn update_window_title(window: &Window, title: Option<&str>) {
     window.set_title(title.unwrap_or(WINDOW_TITLE));
+}
+
+fn sync_native_window_state(window: &Window, workspace: &DocumentWorkspace) {
+    let dirty = workspace
+        .active_document()
+        .is_some_and(|document| document.is_dirty());
+    native_tabs::set_document_edited(window, dirty);
 }
 
 fn workspace_presentation(workspace: &DocumentWorkspace, status: &str) -> WorkspacePresentation {

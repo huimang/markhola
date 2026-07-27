@@ -1,22 +1,29 @@
 use crate::app::text;
 use tao::event_loop::ControlFlow;
 
-use super::close_actions::{close_document_tab, close_document_tabs, resolve_all_pending_changes};
+use super::close_actions::{
+    close_document_model, close_document_models, resolve_all_pending_changes,
+};
+use super::native_tabs;
 use super::runtime::AppRuntime;
-use super::workspace_view::{render_status, sync_workspace_state};
+use super::surface_actions::activate_document_surface;
+use super::surface_actions::{remove_closed_surface, reset_to_empty, sync_active_surface};
+use super::workspace_view::render_status;
 
 pub(super) fn activate_document(document_id: u64, runtime: &mut AppRuntime) {
-    if runtime.workspace.activate_document(document_id) {
-        sync_workspace_state(
-            &runtime.window,
-            &runtime.webview,
-            &runtime.native_footer,
-            &runtime.workspace,
-            text("status.document_switched"),
-        );
-    } else {
+    if !activate_document_surface(document_id, runtime, text("status.document_switched")) {
         render_status(&runtime.webview, text("status.missing_tab"), "error");
     }
+}
+
+pub(super) fn activate_document_at_index(index: usize, runtime: &mut AppRuntime) {
+    let Some(document_id) = native_tabs::visible_document_ids(runtime)
+        .get(index)
+        .copied()
+    else {
+        return;
+    };
+    activate_document(document_id, runtime);
 }
 
 pub(super) fn switch_document(runtime: &mut AppRuntime, next: bool) {
@@ -31,27 +38,23 @@ pub(super) fn switch_document(runtime: &mut AppRuntime, next: bool) {
         } else {
             text("status.previous_tab")
         };
-        sync_workspace_state(
-            &runtime.window,
-            &runtime.webview,
-            &runtime.native_footer,
-            &runtime.workspace,
-            message,
-        );
+        if let Some(document_id) = runtime.workspace.active_document_id() {
+            activate_document_surface(document_id, runtime, message);
+        }
     }
 }
 
 pub(super) fn close_current_document(runtime: &mut AppRuntime, control_flow: &mut ControlFlow) {
     if let Some(document_id) = runtime.workspace.active_document_id() {
-        close_document_tab(
+        if close_document_model(
             &runtime.window,
             &runtime.webview,
-            &runtime.native_footer,
             &mut runtime.workspace,
             document_id,
-            text("status.document_closed"),
             &runtime.asset_access,
-        );
+        ) {
+            remove_closed_surface(runtime, document_id, text("status.document_closed"));
+        }
     } else {
         *control_flow = ControlFlow::Exit;
     }
@@ -63,15 +66,18 @@ pub(super) fn close_other_documents(runtime: &mut AppRuntime) {
         if document_ids.is_empty() {
             render_status(&runtime.webview, text("status.no_other_tabs"), "info");
         } else {
-            close_document_tabs(
+            if close_document_models(
                 &runtime.window,
                 &runtime.webview,
-                &runtime.native_footer,
                 &mut runtime.workspace,
                 &document_ids,
-                text("status.other_tabs_closed"),
                 &runtime.asset_access,
-            );
+            ) {
+                for document_id in document_ids {
+                    let _ = runtime.remove_inactive_surface_for_document(document_id);
+                }
+                sync_active_surface(runtime, text("status.other_tabs_closed"), false);
+            }
         }
     } else {
         render_status(&runtime.webview, text("status.no_document"), "info");
@@ -83,15 +89,15 @@ pub(super) fn close_all_documents(runtime: &mut AppRuntime) {
     if document_ids.is_empty() {
         render_status(&runtime.webview, text("status.no_document"), "info");
     } else {
-        close_document_tabs(
+        if close_document_models(
             &runtime.window,
             &runtime.webview,
-            &runtime.native_footer,
             &mut runtime.workspace,
             &document_ids,
-            text("status.all_tabs_closed"),
             &runtime.asset_access,
-        );
+        ) {
+            reset_to_empty(runtime, text("status.all_tabs_closed"));
+        }
     }
 }
 

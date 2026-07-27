@@ -2,6 +2,7 @@ use tao::window::Window;
 use wry::WebView;
 
 use crate::app::{AppTheme, text};
+use crate::document::DocumentSnapshot;
 use crate::workspace::DocumentWorkspace;
 
 #[cfg(target_os = "macos")]
@@ -21,12 +22,11 @@ use tao::platform::macos::WindowExtMacOS;
 #[cfg(target_os = "macos")]
 use wry::WebViewExtMacOS;
 
-const FOOTER_HEIGHT: f64 = 42.0;
+const FOOTER_HEIGHT: f64 = 34.0;
 const FOOTER_PADDING_X: f64 = 16.0;
-const FOOTER_LABEL_Y: f64 = 11.0;
+const FOOTER_LABEL_Y: f64 = 7.0;
 const FOOTER_LABEL_HEIGHT: f64 = 18.0;
 const FOOTER_GAP: f64 = 10.0;
-const FOOTER_STATUS_WIDTH: f64 = 168.0;
 const FOOTER_MODE_WIDTH: f64 = 76.0;
 const FOOTER_LINES_WIDTH: f64 = 78.0;
 const FOOTER_WORDS_WIDTH: f64 = 82.0;
@@ -43,7 +43,6 @@ struct NativeFooterHandle {
     words_field: Retained<NSTextField>,
     lines_field: Retained<NSTextField>,
     mode_field: Retained<NSTextField>,
-    status_field: Retained<NSTextField>,
 }
 
 impl NativeFooter {
@@ -72,21 +71,13 @@ impl NativeFooter {
             let words_field = footer_label(mtm, "");
             let lines_field = footer_label(mtm, "");
             let mode_field = footer_label(mtm, "");
-            let status_field = footer_label(mtm, "");
 
-            apply_footer_fonts(&[
-                &path_field,
-                &words_field,
-                &lines_field,
-                &mode_field,
-                &status_field,
-            ]);
+            apply_footer_fonts(&[&path_field, &words_field, &lines_field, &mode_field]);
 
             footer_view.addSubview(&path_field);
             footer_view.addSubview(&words_field);
             footer_view.addSubview(&lines_field);
             footer_view.addSubview(&mode_field);
-            footer_view.addSubview(&status_field);
             content_view.addSubview(&footer_view);
 
             let handle = NativeFooterHandle {
@@ -95,7 +86,6 @@ impl NativeFooter {
                 words_field,
                 lines_field,
                 mode_field,
-                status_field,
             };
 
             let footer = Self {
@@ -119,15 +109,14 @@ impl NativeFooter {
             let Some(handle) = &self.handle else {
                 return;
             };
-            let (background, primary, secondary) = footer_theme_colors(theme);
+            let (background, foreground) = footer_theme_colors(theme);
             if let Some(layer) = handle.footer_view.layer() {
                 layer.setBackgroundColor(Some(&background.CGColor()));
             }
-            handle.path_field.setTextColor(Some(&secondary));
-            handle.words_field.setTextColor(Some(&primary));
-            handle.lines_field.setTextColor(Some(&primary));
-            handle.mode_field.setTextColor(Some(&primary));
-            handle.status_field.setTextColor(Some(&secondary));
+            handle.path_field.setTextColor(Some(&foreground));
+            handle.words_field.setTextColor(Some(&foreground));
+            handle.lines_field.setTextColor(Some(&foreground));
+            handle.mode_field.setTextColor(Some(&foreground));
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -156,8 +145,7 @@ impl NativeFooter {
                 NSSize::new(width, footer_height),
             ));
 
-            let status_x = width - FOOTER_PADDING_X - FOOTER_STATUS_WIDTH;
-            let mode_x = status_x - FOOTER_GAP - FOOTER_MODE_WIDTH;
+            let mode_x = width - FOOTER_PADDING_X - FOOTER_MODE_WIDTH;
             let lines_x = mode_x - FOOTER_GAP - FOOTER_LINES_WIDTH;
             let words_x = lines_x - FOOTER_GAP - FOOTER_WORDS_WIDTH;
             let path_width = (words_x - FOOTER_GAP - FOOTER_PADDING_X).max(0.0);
@@ -177,10 +165,6 @@ impl NativeFooter {
                 NSPoint::new(mode_x, FOOTER_LABEL_Y),
                 NSSize::new(FOOTER_MODE_WIDTH, FOOTER_LABEL_HEIGHT),
             ));
-            handle.status_field.setFrame(NSRect::new(
-                NSPoint::new(status_x, FOOTER_LABEL_Y),
-                NSSize::new(FOOTER_STATUS_WIDTH, FOOTER_LABEL_HEIGHT),
-            ));
             let webview_handle = webview.webview();
             webview_handle.setFrame(NSRect::new(
                 NSPoint::new(0.0, footer_height),
@@ -194,14 +178,18 @@ impl NativeFooter {
         }
     }
 
-    pub(super) fn sync(&self, workspace: &DocumentWorkspace, status: &str) {
+    pub(super) fn sync(&self, workspace: &DocumentWorkspace, _status: &str) {
+        self.sync_document(workspace.active_document_snapshot(), _status);
+    }
+
+    pub(super) fn sync_document(&self, document: Option<DocumentSnapshot>, _status: &str) {
         #[cfg(target_os = "macos")]
         unsafe {
             let Some(handle) = &self.handle else {
                 return;
             };
 
-            if let Some(active) = workspace.active_document_snapshot() {
+            if let Some(active) = document {
                 set_label_text(&handle.path_field, &active.file_path);
                 set_label_text(
                     &handle.words_field,
@@ -217,43 +205,25 @@ impl NativeFooter {
                     text("footer.writable")
                 };
                 set_label_text(&handle.mode_field, mode);
-                set_label_text(&handle.status_field, status);
                 set_hidden(&handle.path_field, false);
                 set_hidden(&handle.words_field, false);
                 set_hidden(&handle.lines_field, false);
                 set_hidden(&handle.mode_field, false);
-                set_hidden(&handle.status_field, false);
             } else {
                 set_label_text(&handle.path_field, "");
                 set_label_text(&handle.words_field, "");
                 set_label_text(&handle.lines_field, "");
                 set_label_text(&handle.mode_field, "");
-                set_label_text(&handle.status_field, "");
                 set_hidden(&handle.path_field, true);
                 set_hidden(&handle.words_field, true);
                 set_hidden(&handle.lines_field, true);
                 set_hidden(&handle.mode_field, true);
-                set_hidden(&handle.status_field, true);
             }
         }
 
         #[cfg(not(target_os = "macos"))]
         {
-            let _ = (workspace, status);
-        }
-    }
-
-    pub(super) fn set_status(&self, status: &str) {
-        #[cfg(target_os = "macos")]
-        if let Some(handle) = &self.handle {
-            unsafe {
-                set_label_text(&handle.status_field, status);
-            }
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = status;
+            let _ = (document, _status);
         }
     }
 }
@@ -269,25 +239,11 @@ unsafe fn footer_label(mtm: MainThreadMarker, value: &str) -> Retained<NSTextFie
 }
 
 #[cfg(target_os = "macos")]
-fn footer_theme_colors(
-    theme: AppTheme,
-) -> (Retained<NSColor>, Retained<NSColor>, Retained<NSColor>) {
+fn footer_theme_colors(theme: AppTheme) -> (Retained<NSColor>, Retained<NSColor>) {
     match theme {
-        AppTheme::Default => (
-            rgb_color(255, 255, 255),
-            rgb_color(43, 36, 29),
-            rgb_color(111, 98, 88),
-        ),
-        AppTheme::Dark => (
-            rgb_color(13, 17, 23),
-            rgb_color(230, 237, 243),
-            rgb_color(139, 148, 158),
-        ),
-        AppTheme::Light => (
-            rgb_color(238, 243, 248),
-            rgb_color(32, 48, 65),
-            rgb_color(93, 114, 136),
-        ),
+        AppTheme::Default => (rgb_color(248, 250, 252), rgb_color(71, 85, 105)),
+        AppTheme::Dark => (rgb_color(30, 41, 59), rgb_color(148, 163, 184)),
+        AppTheme::Light => (rgb_color(226, 232, 240), rgb_color(71, 85, 105)),
     }
 }
 

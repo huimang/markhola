@@ -1,15 +1,17 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use tao::event_loop::EventLoopProxy;
 use tao::keyboard::ModifiersState;
-use tao::window::Window;
+use tao::window::{Window, WindowId};
 use wry::WebView;
 
 use crate::app::{AppLanguage, AppTheme, DocumentSize};
 use crate::workspace::DocumentWorkspace;
 
 use super::asset_access::AssetAccessRegistry;
+use super::document_surface::DocumentSurface;
 use super::native_footer::NativeFooter;
 use super::{OpenPathRequest, UserEvent};
 
@@ -43,6 +45,8 @@ pub(super) struct AppRuntime {
     pub(super) language: AppLanguage,
     pub(super) document_size: DocumentSize,
     pub(super) native_footer: NativeFooter,
+    pub(super) active_document_id: Option<u64>,
+    pub(super) inactive_surfaces: HashMap<WindowId, DocumentSurface>,
 }
 
 impl AppRuntime {
@@ -69,6 +73,83 @@ impl AppRuntime {
             language,
             document_size,
             native_footer,
+            active_document_id: None,
+            inactive_surfaces: HashMap::new(),
         }
+    }
+
+    pub(super) fn active_window_id(&self) -> WindowId {
+        self.window.id()
+    }
+
+    pub(super) fn document_id_for_window(&self, window_id: WindowId) -> Option<u64> {
+        if self.window.id() == window_id {
+            self.active_document_id
+        } else {
+            self.inactive_surfaces
+                .get(&window_id)
+                .and_then(|surface| surface.document_id)
+        }
+    }
+
+    pub(super) fn window_id_for_document(&self, document_id: u64) -> Option<WindowId> {
+        if self.active_document_id == Some(document_id) {
+            return Some(self.window.id());
+        }
+        self.inactive_surfaces
+            .values()
+            .find(|surface| surface.document_id == Some(document_id))
+            .map(DocumentSurface::window_id)
+    }
+
+    pub(super) fn insert_surface(&mut self, surface: DocumentSurface) {
+        self.inactive_surfaces.insert(surface.window_id(), surface);
+    }
+
+    pub(super) fn activate_surface(&mut self, window_id: WindowId) -> bool {
+        if self.window.id() == window_id {
+            return true;
+        }
+        let Some(surface) = self.inactive_surfaces.remove(&window_id) else {
+            return false;
+        };
+
+        let DocumentSurface {
+            window,
+            webview,
+            modifiers,
+            shell,
+            native_footer,
+            document_id,
+        } = surface;
+        let previous = DocumentSurface {
+            window: std::mem::replace(&mut self.window, window),
+            webview: std::mem::replace(&mut self.webview, webview),
+            modifiers: std::mem::replace(&mut self.modifiers, modifiers),
+            shell: std::mem::replace(&mut self.shell, shell),
+            native_footer: std::mem::replace(&mut self.native_footer, native_footer),
+            document_id: std::mem::replace(&mut self.active_document_id, document_id),
+        };
+        self.inactive_surfaces
+            .insert(previous.window_id(), previous);
+        true
+    }
+
+    pub(super) fn remove_inactive_surface_for_document(
+        &mut self,
+        document_id: u64,
+    ) -> Option<DocumentSurface> {
+        let window_id = self
+            .inactive_surfaces
+            .iter()
+            .find_map(|(window_id, surface)| {
+                (surface.document_id == Some(document_id)).then_some(*window_id)
+            })?;
+        self.inactive_surfaces.remove(&window_id)
+    }
+
+    pub(super) fn reset_to_empty_surface(&mut self) {
+        self.active_document_id = None;
+        self.inactive_surfaces.clear();
     }
 }
