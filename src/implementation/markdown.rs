@@ -5,8 +5,7 @@ use std::sync::OnceLock;
 
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::Theme;
-use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
+use syntect::highlighting::{Style, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 use syntect::util::LinesWithEndings;
 
@@ -501,9 +500,7 @@ fn highlight_code(language: Option<&str>, source: &str) -> HighlightedCodeBlock 
         let line_html = highlighter
             .highlight_line(line, &assets.syntax_set)
             .ok()
-            .and_then(|regions| {
-                styled_line_to_highlighted_html(&regions, IncludeBackground::No).ok()
-            })
+            .map(|regions| render_semantic_regions(&regions))
             .unwrap_or_else(|| escape_html(trim_line_ending(line)));
         lines_html.push(render_code_line(&line_html));
     }
@@ -517,6 +514,28 @@ fn highlight_code(language: Option<&str>, source: &str) -> HighlightedCodeBlock 
         line_count: lines_html.len(),
         lines_html,
     }
+}
+
+fn render_semantic_regions(regions: &[(Style, &str)]) -> String {
+    let last_index = regions.len().saturating_sub(1);
+    regions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, (style, text))| {
+            let text = if index == last_index {
+                trim_line_ending(text)
+            } else {
+                text
+            };
+            (!text.is_empty()).then(|| {
+                format!(
+                    "<span class=\"code-syntax code-syntax--{}\">{}</span>",
+                    syntax_theme::semantic_class(style.foreground),
+                    escape_html(text)
+                )
+            })
+        })
+        .collect()
 }
 
 fn resolve_language<'a>(

@@ -22,13 +22,18 @@
   --accent: var(--markhola-violet);
   --accent-strong: var(--markhola-green);
   --table-header-text: var(--text);
-  --code-surface: #24213a;
-  --code-gutter: #302b51;
-  --code-text: var(--markhola-violet-tint);
-  --code-line-number: var(--markhola-violet-mid);
-  --code-divider: var(--markhola-violet);
-  --code-badge-background: var(--markhola-green);
-  --code-badge-text: var(--markhola-violet-tint);
+  --code-surface: #F1F0F7;
+  --code-gutter: #E8E6F0;
+  --code-text: #514B64;
+  --code-line-number: #68627A;
+  --code-divider: #857E99;
+  --code-badge-background: #287B68;
+  --code-badge-text: #F1F0F7;
+  --code-syntax-keyword: #6657E8;
+  --code-syntax-string: #287B68;
+  --code-syntax-comment: #6F687B;
+  --code-syntax-constant: #855272;
+  --code-syntax-entity: #5F5682;
   --warn: #b45309;
   --danger: #b91c1c;
   --shadow: 0 24px 60px rgba(69, 48, 29, 0.12);
@@ -621,6 +626,28 @@ body.workspace-empty #modeState {
 .markdown-body .code-block__line {
   display: block;
   line-height: var(--code-line-height);
+}
+
+.markdown-body .code-syntax--keyword {
+  color: var(--code-syntax-keyword);
+  font-weight: 400;
+}
+
+.markdown-body .code-syntax--string {
+  color: var(--code-syntax-string);
+}
+
+.markdown-body .code-syntax--comment {
+  color: var(--code-syntax-comment);
+  font-style: italic;
+}
+
+.markdown-body .code-syntax--constant {
+  color: var(--code-syntax-constant);
+}
+
+.markdown-body .code-syntax--entity {
+  color: var(--code-syntax-entity);
 }
 
 .markdown-body .mermaid-block {

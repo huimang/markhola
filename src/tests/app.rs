@@ -156,7 +156,7 @@ fn app_themes_share_the_markhola_brand_palette() {
 
         assert!(html.contains(".markdown-body thead"));
         assert!(html.contains("background: var(--markhola-green-tint)"));
-        assert!(html.contains("--code-surface: #24213a"));
+        assert!(html.contains("--code-surface: #"));
         assert!(html.contains("background: var(--code-gutter)"));
         assert!(html.contains("color: var(--code-line-number)"));
         assert!(!html.contains("--brand-violet"));
@@ -240,6 +240,60 @@ fn app_themes_use_the_semantic_danger_color_for_mermaid_errors() {
         assert!(html.contains(
             ".markdown-body .mermaid-block__error {\n  margin: 0;\n  padding: 12px 16px 16px;\n  color: var(--danger);"
         ));
+    }
+}
+
+#[test]
+fn code_palettes_use_the_confirmed_low_stimulation_colors() {
+    let default = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+    let dark = app_shell_html(
+        AppTheme::Dark,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+
+    for declaration in [
+        "--code-surface: #F1F0F7",
+        "--code-gutter: #E8E6F0",
+        "--code-text: #514B64",
+        "--code-line-number: #68627A",
+        "--code-divider: #857E99",
+        "--code-badge-background: #287B68",
+        "--code-badge-text: #F1F0F7",
+        "--code-syntax-keyword: #6657E8",
+        "--code-syntax-string: #287B68",
+        "--code-syntax-comment: #6F687B",
+        "--code-syntax-constant: #855272",
+        "--code-syntax-entity: #5F5682",
+    ] {
+        assert!(default.contains(declaration), "missing {declaration}");
+    }
+    for declaration in [
+        "--code-surface: #2D2A3A",
+        "--code-gutter: #343044",
+        "--code-text: #C5C0D3",
+        "--code-line-number: #A49EB5",
+        "--code-divider: #827A98",
+        "--code-badge-background: #376E62",
+        "--code-badge-text: #D8F0E9",
+        "--code-syntax-keyword: #AFA7ED",
+        "--code-syntax-string: #83C9B4",
+        "--code-syntax-comment: #9B94A8",
+        "--code-syntax-constant: #D0A7BF",
+        "--code-syntax-entity: #B8B0CA",
+    ] {
+        assert!(dark.contains(declaration), "missing {declaration}");
+    }
+    for html in [&default, &dark] {
+        assert!(html.contains(".code-syntax--keyword {\n  color:"));
+        assert!(html.contains("font-weight: 400;"));
+        assert!(html.contains(".code-syntax--comment {\n  color:"));
+        assert!(html.contains("font-style: italic;"));
+        assert!(!html.contains("--code-surface: #24213a"));
     }
 }
 
