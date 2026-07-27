@@ -5,7 +5,8 @@ use objc2::{MainThreadMarker, MainThreadOnly};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAutoresizingMaskOptions, NSColor, NSUserInterfaceItemIdentification, NSView, NSWindow,
+    NSAutoresizingMaskOptions, NSColor, NSUserInterfaceItemIdentification, NSWindow,
+    NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView,
     NSWindowButton, NSWindowOrderingMode, NSWindowTabbingMode,
 };
 #[cfg(target_os = "macos")]
@@ -120,10 +121,10 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
         if let Some(appearance) = NSAppearance::appearanceNamed(appearance_name) {
             ns_window.setAppearance(Some(&appearance));
         }
-        let (tab_rgb, titlebar_rgb) = match theme {
-            AppTheme::Default => ((234, 249, 245), (23, 184, 144)),
-            AppTheme::Light => ((234, 249, 245), (234, 249, 245)),
-            AppTheme::Dark => ((36, 33, 58), (36, 33, 58)),
+        let (tab_rgb, titlebar_tint_rgb, titlebar_tint_alpha) = match theme {
+            AppTheme::Default => ((234, 249, 245), (226, 232, 240), 0.34),
+            AppTheme::Light => ((234, 249, 245), (226, 232, 240), 0.34),
+            AppTheme::Dark => ((36, 33, 58), (30, 41, 59), 0.22),
         };
         let tab_color = NSColor::colorWithSRGBRed_green_blue_alpha(
             tab_rgb.0 as f64 / 255.0,
@@ -133,15 +134,15 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
         );
         ns_window.setBackgroundColor(Some(&tab_color));
 
-        let titlebar_color = NSColor::colorWithSRGBRed_green_blue_alpha(
-            titlebar_rgb.0 as f64 / 255.0,
-            titlebar_rgb.1 as f64 / 255.0,
-            titlebar_rgb.2 as f64 / 255.0,
-            1.0,
+        let titlebar_tint = NSColor::colorWithSRGBRed_green_blue_alpha(
+            titlebar_tint_rgb.0 as f64 / 255.0,
+            titlebar_tint_rgb.1 as f64 / 255.0,
+            titlebar_tint_rgb.2 as f64 / 255.0,
+            titlebar_tint_alpha,
         );
-        if let Some(titlebar_background) = titlebar_background_view(ns_window) {
-            if let Some(layer) = titlebar_background.layer() {
-                layer.setBackgroundColor(Some(&titlebar_color.CGColor()));
+        if let Some(titlebar_effect) = titlebar_effect_view(ns_window) {
+            if let Some(layer) = titlebar_effect.layer() {
+                layer.setBackgroundColor(Some(&titlebar_tint.CGColor()));
             }
         }
     }
@@ -150,7 +151,7 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
 }
 
 #[cfg(target_os = "macos")]
-unsafe fn titlebar_background_view(ns_window: &NSWindow) -> Option<Retained<NSView>> {
+unsafe fn titlebar_effect_view(ns_window: &NSWindow) -> Option<Retained<NSVisualEffectView>> {
     let titlebar_view = unsafe {
         ns_window
             .standardWindowButton(NSWindowButton::CloseButton)?
@@ -158,24 +159,28 @@ unsafe fn titlebar_background_view(ns_window: &NSWindow) -> Option<Retained<NSVi
     };
     let titlebar_container = unsafe { titlebar_view.superview()? };
 
-    if let Some(background) = titlebar_container.subviews().iter().find(|view| {
+    if let Some(effect) = titlebar_container.subviews().iter().find(|view| {
         view.identifier()
             .is_some_and(|identifier| identifier.to_string() == TITLEBAR_BACKGROUND_IDENTIFIER)
     }) {
-        return Some(background);
+        return effect.downcast::<NSVisualEffectView>().ok();
     }
 
     let mtm = MainThreadMarker::new()?;
-    let background = NSView::initWithFrame(NSView::alloc(mtm), titlebar_view.frame());
-    background.setIdentifier(Some(&NSString::from_str(TITLEBAR_BACKGROUND_IDENTIFIER)));
-    background.setWantsLayer(true);
-    background.setAutoresizingMask(
+    let effect =
+        NSVisualEffectView::initWithFrame(NSVisualEffectView::alloc(mtm), titlebar_view.frame());
+    effect.setIdentifier(Some(&NSString::from_str(TITLEBAR_BACKGROUND_IDENTIFIER)));
+    effect.setMaterial(NSVisualEffectMaterial::Titlebar);
+    effect.setBlendingMode(NSVisualEffectBlendingMode::WithinWindow);
+    effect.setState(NSVisualEffectState::FollowsWindowActiveState);
+    effect.setWantsLayer(true);
+    effect.setAutoresizingMask(
         NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMinYMargin,
     );
     titlebar_container.addSubview_positioned_relativeTo(
-        &background,
+        &effect,
         NSWindowOrderingMode::Below,
         Some(&titlebar_view),
     );
-    Some(background)
+    Some(effect)
 }

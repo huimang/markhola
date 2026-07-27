@@ -25,7 +25,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Print the current document from `File > Print`
 - Switch app shell themes from `View > Theme > Default / Dark / Light`
 - Use Green Subtle `#FAFEFD` instead of pale yellow for the Default theme background
-- Use MarkHola Green `#17B890` for the Default title bar, Green Tint `#EAF9F5` for native tabs, and Green Subtle `#FAFEFD` for the document surface
+- Use a subtle Gray Tint title-bar material, Green Tint `#EAF9F5` for native tabs, and Green Subtle `#FAFEFD` for the document surface
 - Reopen the app with the previously selected shell theme still active
 - Use shared Violet, Green, and Gray color scales across native tabs, document surfaces, the native footer, links, Outline, tables, and fenced code highlighting
 - Adjust document text from `View > Size > Zoom In / Zoom Out / Reset`

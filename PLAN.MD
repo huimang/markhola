@@ -181,7 +181,7 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Keep open, save, close, unsaved-state, theme, font-size, Outline, and footer behavior working after the tab replacement
    - Extend both brand scales with Violet Subtle `#F9F8FF` and Green Subtle `#FAFEFD`
    - Add a third shared Gray scale for neutral application surfaces alongside the Violet and Green scales
-   - Use MarkHola Green for the Default title bar, Green Tint for native tabs, and Green Subtle for the document background so the three surfaces remain visually distinct
+   - Use a subtle Gray Tint title-bar material, Green Tint for native tabs, and Green Subtle for the document background so the three surfaces remain visually distinct
    - Reduce the native bottom status bar height to 34 px while keeping its labels vertically aligned
    - Use the Gray scale for the native footer, keep all footer labels on the same lower-brightness foreground color, and remove the rightmost status column entirely
 
