@@ -1,4 +1,4 @@
-use crate::app::{AppLanguage, AppTheme, DocumentSize};
+use crate::app::{AppLanguage, DocumentSize, ThemePreference};
 
 const SELECTED_THEME_KEY: &str = "selectedTheme";
 const DOCUMENT_SIZE_KEY: &str = "documentSizePercent";
@@ -35,34 +35,34 @@ pub(super) fn save_app_language(language: AppLanguage) {
 pub(super) fn save_app_language(_language: AppLanguage) {}
 
 #[cfg(target_os = "macos")]
-pub(super) fn load_selected_theme() -> AppTheme {
+pub(super) fn load_theme_preference() -> ThemePreference {
     use objc2_foundation::{NSUserDefaults, ns_string};
 
     let defaults = NSUserDefaults::standardUserDefaults();
     defaults
         .stringForKey(ns_string!(SELECTED_THEME_KEY))
-        .and_then(|value| AppTheme::from_key(value.to_string().as_str()))
-        .unwrap_or(AppTheme::Default)
+        .and_then(|value| ThemePreference::from_stored_key(value.to_string().as_str()))
+        .unwrap_or(ThemePreference::System)
 }
 
 #[cfg(not(target_os = "macos"))]
-pub(super) fn load_selected_theme() -> AppTheme {
-    AppTheme::Default
+pub(super) fn load_theme_preference() -> ThemePreference {
+    ThemePreference::System
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn save_selected_theme(theme: AppTheme) {
+pub(super) fn save_theme_preference(preference: ThemePreference) {
     use objc2_foundation::{NSString, NSUserDefaults, ns_string};
 
     let defaults = NSUserDefaults::standardUserDefaults();
-    let value = NSString::from_str(theme.key());
+    let value = NSString::from_str(preference.key());
     unsafe {
         defaults.setObject_forKey(Some(&*value), ns_string!(SELECTED_THEME_KEY));
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-pub(super) fn save_selected_theme(_theme: AppTheme) {}
+pub(super) fn save_theme_preference(_preference: ThemePreference) {}
 
 #[cfg(target_os = "macos")]
 pub(super) fn load_document_size() -> DocumentSize {

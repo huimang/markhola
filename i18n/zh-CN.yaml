@@ -31,7 +31,7 @@ menu:
   theme: "主题"
   theme_default: "默认"
   theme_dark: "深色"
-  theme_light: "浅色"
+  theme_system: "跟随系统"
   size: "字号"
   zoom_in: "放大"
   zoom_out: "缩小"

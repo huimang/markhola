@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tao::window::WindowId;
 
-use crate::app::{AppLanguage, AppTheme};
+use crate::app::{AppLanguage, ThemePreference};
 use crate::document::{DocumentSnapshot, DocumentTabSnapshot};
 
 #[derive(Clone, Debug)]
@@ -29,7 +29,7 @@ pub(crate) enum UserEvent {
     PrintDocument,
     OpenFind,
     ToggleMode,
-    SelectTheme(AppTheme),
+    SelectTheme(ThemePreference),
     SelectLanguage(AppLanguage),
     IncreaseDocumentSize,
     DecreaseDocumentSize,

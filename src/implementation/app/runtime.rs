@@ -7,7 +7,7 @@ use tao::keyboard::ModifiersState;
 use tao::window::{Window, WindowId};
 use wry::WebView;
 
-use crate::app::{AppLanguage, AppTheme, DocumentSize};
+use crate::app::{AppLanguage, AppTheme, DocumentSize, ThemePreference};
 use crate::workspace::DocumentWorkspace;
 
 use super::asset_access::AssetAccessRegistry;
@@ -42,6 +42,7 @@ pub(super) struct AppRuntime {
     pub(super) shell: ShellRuntime,
     pub(super) asset_access: AssetAccessRegistry,
     pub(super) selected_theme: AppTheme,
+    pub(super) theme_preference: ThemePreference,
     pub(super) language: AppLanguage,
     pub(super) document_size: DocumentSize,
     pub(super) native_footer: NativeFooter,
@@ -58,6 +59,7 @@ impl AppRuntime {
         asset_access: AssetAccessRegistry,
         native_footer: NativeFooter,
         selected_theme: AppTheme,
+        theme_preference: ThemePreference,
         language: AppLanguage,
         document_size: DocumentSize,
     ) -> Self {
@@ -70,6 +72,7 @@ impl AppRuntime {
             shell: ShellRuntime::new(suppress_blank_recovery),
             asset_access,
             selected_theme,
+            theme_preference,
             language,
             document_size,
             native_footer,

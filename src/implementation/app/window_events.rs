@@ -59,6 +59,9 @@ pub(super) fn handle_window_event(
                 .native_footer
                 .relayout(&runtime.window, &runtime.webview);
         }
+        WindowEvent::ThemeChanged(theme) => {
+            super::theme_actions::system_theme_changed(theme, runtime);
+        }
         _ => {}
     }
 }

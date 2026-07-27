@@ -15,6 +15,7 @@ mod save_actions;
 mod shell_events;
 mod shortcuts;
 mod surface_actions;
+mod theme_actions;
 mod theme_preferences;
 mod user_events;
 mod window_events;
@@ -40,7 +41,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let (event_loop, mut runtime) = bootstrap::build_runtime()?;
     workspace_view::sync_native_menu_state(&runtime.workspace);
-    workspace_view::sync_native_theme_state(runtime.selected_theme);
+    workspace_view::sync_native_theme_state(runtime.theme_preference);
     workspace_view::sync_native_language_state(runtime.language);
 
     event_loop.run(move |event, target, control_flow| {

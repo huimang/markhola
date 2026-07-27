@@ -4,7 +4,7 @@ use objc2::{DefinedClass, MainThreadOnly, define_class};
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol};
 use tao::event_loop::EventLoopProxy;
 
-use crate::app::{AppLanguage, AppTheme};
+use crate::app::{AppLanguage, ThemePreference};
 use crate::app::{UserEvent, dispatch_user_event, log_event, new_action_context};
 
 #[derive(Debug)]
@@ -51,12 +51,12 @@ unsafe impl NSObjectProtocol for MenuTarget {}
         fn open_find_panel(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::OpenFind, "openFindPanel:"); }
         #[unsafe(method(toggleDocumentMode:))]
         fn toggle_document_mode(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ToggleMode, "toggleDocumentMode:"); }
+        #[unsafe(method(selectSystemTheme:))]
+        fn select_system_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(ThemePreference::System), "selectSystemTheme:"); }
         #[unsafe(method(selectDefaultTheme:))]
-        fn select_default_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Default), "selectDefaultTheme:"); }
+        fn select_default_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(ThemePreference::Default), "selectDefaultTheme:"); }
         #[unsafe(method(selectDarkTheme:))]
-        fn select_dark_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Dark), "selectDarkTheme:"); }
-        #[unsafe(method(selectLightTheme:))]
-        fn select_light_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(AppTheme::Light), "selectLightTheme:"); }
+        fn select_dark_theme(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectTheme(ThemePreference::Dark), "selectDarkTheme:"); }
         #[unsafe(method(selectEnglishLanguage:))]
         fn select_english_language(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SelectLanguage(AppLanguage::English), "selectEnglishLanguage:"); }
         #[unsafe(method(selectSimplifiedChineseLanguage:))]

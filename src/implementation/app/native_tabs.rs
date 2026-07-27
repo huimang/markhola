@@ -156,7 +156,6 @@ pub(super) fn apply_theme(window: &Window, theme: AppTheme) {
         }
         let (tab_rgb, titlebar_tint_rgb, titlebar_tint_alpha) = match theme {
             AppTheme::Default => ((234, 249, 245), (226, 232, 240), 0.34),
-            AppTheme::Light => ((234, 249, 245), (226, 232, 240), 0.34),
             AppTheme::Dark => ((36, 33, 58), (30, 41, 59), 0.22),
         };
         let tab_color = NSColor::colorWithSRGBRed_green_blue_alpha(

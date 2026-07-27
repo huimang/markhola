@@ -48,7 +48,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
     let proxy = event_loop.create_proxy();
     let suppress_blank_recovery = Arc::new(AtomicBool::new(true));
     let asset_access = new_registry();
-    let selected_theme = theme_preferences::load_selected_theme();
+    let theme_preference = theme_preferences::load_theme_preference();
     let language = theme_preferences::load_app_language();
     set_current_language(language);
     let document_size = theme_preferences::load_document_size();
@@ -58,6 +58,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         .with_inner_size(LogicalSize::new(1120.0, 760.0))
         .with_min_inner_size(LogicalSize::new(800.0, 560.0))
         .build(&event_loop)?;
+    let selected_theme = theme_preference.resolve(window.theme());
     native_tabs::configure(&window, selected_theme);
     let webview = build_webview(
         &window,
@@ -81,6 +82,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         asset_access,
         native_footer,
         selected_theme,
+        theme_preference,
         language,
         document_size,
     );

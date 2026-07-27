@@ -1,7 +1,7 @@
 use tao::window::Window;
 use wry::WebView;
 
-use crate::app::{AppLanguage, AppTheme, text};
+use crate::app::{AppLanguage, ThemePreference, text};
 use crate::workspace::DocumentWorkspace;
 
 use super::native_footer::NativeFooter;
@@ -42,9 +42,9 @@ pub(super) fn sync_native_menu_state(workspace: &DocumentWorkspace) {
     }
 }
 
-pub(super) fn sync_native_theme_state(theme: AppTheme) {
+pub(super) fn sync_native_theme_state(preference: ThemePreference) {
     #[cfg(target_os = "macos")]
-    macos_menu::set_selected_theme(theme);
+    macos_menu::set_selected_theme(preference);
 }
 
 pub(super) fn sync_native_language_state(language: AppLanguage) {

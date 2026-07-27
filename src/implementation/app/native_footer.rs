@@ -227,7 +227,6 @@ fn footer_theme_colors(theme: AppTheme) -> (Retained<NSColor>, Retained<NSColor>
     match theme {
         AppTheme::Default => (rgb_color(248, 250, 252), rgb_color(71, 85, 105)),
         AppTheme::Dark => (rgb_color(30, 41, 59), rgb_color(148, 163, 184)),
-        AppTheme::Light => (rgb_color(226, 232, 240), rgb_color(71, 85, 105)),
     }
 }
 

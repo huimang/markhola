@@ -31,7 +31,7 @@ menu:
   theme: "Theme"
   theme_default: "Default"
   theme_dark: "Dark"
-  theme_light: "Light"
+  theme_system: "Follow System"
   size: "Size"
   zoom_in: "Zoom In"
   zoom_out: "Zoom Out"

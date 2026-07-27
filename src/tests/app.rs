@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
-use crate::app::{AppLanguage, AppTheme, DocumentSize};
+use crate::app::{AppLanguage, AppTheme, DocumentSize, ThemePreference};
 use crate::workspace::DocumentWorkspace;
 
 use super::implementation::{
@@ -116,12 +116,12 @@ fn app_shell_embeds_the_requested_language_catalog() {
 #[test]
 fn app_shell_uses_requested_theme_css() {
     let html = app_shell_html(
-        AppTheme::Light,
+        AppTheme::Dark,
         AppLanguage::English,
         DocumentSize::default(),
     );
 
-    assert!(html.contains("#eef3f8"));
+    assert!(html.contains("#0d1117"));
     assert!(html.contains("id=\"appThemeStyle\""));
 }
 
@@ -219,9 +219,7 @@ fn default_theme_separates_titlebar_tabs_and_document_surface() {
         native_tabs
             .contains("AppTheme::Default => ((234, 249, 245), (226, 232, 240), 0.34)")
     );
-    assert!(
-        native_tabs.contains("AppTheme::Light => ((234, 249, 245), (226, 232, 240), 0.34)")
-    );
+    assert!(!native_tabs.contains("AppTheme::Light"));
     assert!(native_tabs.contains("ns_window.setBackgroundColor(Some(&tab_color))"));
     assert!(native_tabs.contains("NSWindowButton::CloseButton"));
     assert!(native_tabs.contains("titlebar_effect_view(ns_window)"));
@@ -455,7 +453,7 @@ fn app_theme_keys_are_stable() {
         .map(|theme| theme.key())
         .collect::<Vec<_>>();
 
-    assert_eq!(summary, vec!["default", "dark", "light"]);
+    assert_eq!(summary, vec!["default", "dark"]);
 }
 
 #[test]
@@ -466,6 +464,39 @@ fn app_theme_round_trips_from_stable_key() {
 
     assert_eq!(AppTheme::from_key("unknown"), None);
     assert_eq!(AppTheme::from_key("github"), None);
+    assert_eq!(AppTheme::from_key("light"), None);
+}
+
+#[test]
+fn theme_preferences_follow_system_and_migrate_legacy_light() {
+    assert_eq!(
+        ThemePreference::System.resolve(tao::window::Theme::Light),
+        AppTheme::Default
+    );
+    assert_eq!(
+        ThemePreference::System.resolve(tao::window::Theme::Dark),
+        AppTheme::Dark
+    );
+    assert_eq!(
+        ThemePreference::from_stored_key("light"),
+        Some(ThemePreference::Default)
+    );
+    assert_eq!(
+        ThemePreference::ALL
+            .iter()
+            .map(|preference| preference.key())
+            .collect::<Vec<_>>(),
+        vec!["system", "default", "dark"]
+    );
+    assert_eq!(ThemePreference::from_stored_key("unknown"), None);
+
+    let menu = include_str!("../implementation/app/menu_view.rs");
+    let events = include_str!("../implementation/app/window_events.rs");
+    let actions = include_str!("../implementation/app/theme_actions.rs");
+    assert!(menu.contains("ThemePreference::System => text(\"menu.theme_system\")"));
+    assert!(!menu.contains("selectLightTheme:"));
+    assert!(events.contains("WindowEvent::ThemeChanged(theme)"));
+    assert!(actions.contains("runtime.theme_preference != ThemePreference::System"));
 }
 
 #[test]

@@ -1,8 +1,7 @@
 use tao::event_loop::{ControlFlow, EventLoopWindowTarget};
 use tao::window::Fullscreen;
 
-use crate::app::{AppLanguage, AppTheme, set_current_language, text};
-use crate::render_assets;
+use crate::app::{AppLanguage, set_current_language, text};
 
 use super::close_actions::close_document_model;
 use super::document_actions::{
@@ -103,7 +102,9 @@ pub(super) fn handle_user_event(
             export_actions::open_find_panel(&runtime.webview, &runtime.workspace)
         }
         UserEvent::ToggleMode => toggle_mode(runtime),
-        UserEvent::SelectTheme(theme) => select_theme(theme, runtime),
+        UserEvent::SelectTheme(preference) => {
+            super::theme_actions::select_theme(preference, runtime)
+        }
         UserEvent::SelectLanguage(language) => select_language(language, runtime),
         UserEvent::IncreaseDocumentSize => update_document_size(
             runtime.document_size.increase(),
@@ -190,7 +191,7 @@ fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
 #[cfg(target_os = "macos")]
 fn sync_native_menu_state_after_language_change(runtime: &AppRuntime) {
     super::workspace_view::sync_native_menu_state(&runtime.workspace);
-    sync_native_theme_state(runtime.selected_theme);
+    sync_native_theme_state(runtime.theme_preference);
     sync_native_language_state(runtime.language);
 }
 
@@ -321,45 +322,6 @@ fn toggle_mode(runtime: &mut AppRuntime) {
             true,
         ),
         None => render_status(&runtime.webview, text("status.no_document"), "error"),
-    }
-}
-
-fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
-    runtime.selected_theme = theme;
-    theme_preferences::save_selected_theme(theme);
-    runtime.native_footer.set_theme(theme);
-    super::native_tabs::apply_theme(&runtime.window, theme);
-    for surface in runtime.inactive_surfaces.values() {
-        surface.native_footer.set_theme(theme);
-        super::native_tabs::apply_theme(&surface.window, theme);
-    }
-    sync_native_theme_state(theme);
-    let css = render_assets::load_app_theme_css_for_inline_style(theme.key());
-    match serde_json::to_string(&css) {
-        Ok(serialized_css) => {
-            let script = format!("window.applyAppTheme({serialized_css});");
-            if let Err(error) = runtime.webview.evaluate_script(&script) {
-                let message =
-                    text("status.failed_apply_theme").replace("{error}", &error.to_string());
-                render_status(&runtime.webview, &message, "error");
-                return;
-            }
-            for surface in runtime.inactive_surfaces.values() {
-                let _ = surface.webview.evaluate_script(&script);
-            }
-            let theme_name = match theme {
-                AppTheme::Default => text("menu.theme_default"),
-                AppTheme::Dark => text("menu.theme_dark"),
-                AppTheme::Light => text("menu.theme_light"),
-            };
-            let message = text("status.theme_switched").replace("{theme}", theme_name);
-            render_status(&runtime.webview, &message, "info");
-        }
-        Err(error) => {
-            let message =
-                text("status.failed_serialize_theme").replace("{error}", &error.to_string());
-            render_status(&runtime.webview, &message, "error");
-        }
     }
 }
 

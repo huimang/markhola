@@ -15,7 +15,7 @@ mod tests;
 #[path = "../implementation/app/web_localization.rs"]
 mod web_localization;
 
-pub(crate) use self::app_theme::AppTheme;
+pub(crate) use self::app_theme::{AppTheme, ThemePreference};
 pub use self::implementation::run;
 pub(crate) use self::interface::*;
 pub(crate) use self::web_localization::WebStrings;

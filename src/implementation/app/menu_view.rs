@@ -4,7 +4,7 @@ use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use objc2_foundation::{NSString, ns_string};
 
-use crate::app::{AppLanguage, AppTheme, text};
+use crate::app::{AppLanguage, ThemePreference, text};
 
 use super::menu_file_items::action;
 use super::menu_state::{
@@ -107,16 +107,16 @@ fn build_theme_menu(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSMen
     let title = NSString::from_str(text("menu.theme"));
     let theme_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
 
-    for theme in AppTheme::ALL {
+    for preference in ThemePreference::ALL {
         let item = action(
             mtm,
-            theme_label(theme),
-            Some(selector_for_theme(theme)),
+            theme_label(preference),
+            Some(selector_for_theme(preference)),
             "",
             NSEventModifierFlags::empty(),
             target,
         );
-        remember_theme_item(slot_for_theme(theme), &item);
+        remember_theme_item(slot_for_theme(preference), &item);
         theme_menu.addItem(&item);
     }
 
@@ -141,27 +141,27 @@ fn build_language_menu(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NS
     menu
 }
 
-fn theme_label(theme: AppTheme) -> &'static str {
-    match theme {
-        AppTheme::Default => text("menu.theme_default"),
-        AppTheme::Dark => text("menu.theme_dark"),
-        AppTheme::Light => text("menu.theme_light"),
+fn theme_label(preference: ThemePreference) -> &'static str {
+    match preference {
+        ThemePreference::System => text("menu.theme_system"),
+        ThemePreference::Default => text("menu.theme_default"),
+        ThemePreference::Dark => text("menu.theme_dark"),
     }
 }
 
-fn slot_for_theme(theme: AppTheme) -> ThemeMenuSlot {
-    match theme {
-        AppTheme::Default => ThemeMenuSlot::Default,
-        AppTheme::Dark => ThemeMenuSlot::Dark,
-        AppTheme::Light => ThemeMenuSlot::Light,
+fn slot_for_theme(preference: ThemePreference) -> ThemeMenuSlot {
+    match preference {
+        ThemePreference::System => ThemeMenuSlot::System,
+        ThemePreference::Default => ThemeMenuSlot::Default,
+        ThemePreference::Dark => ThemeMenuSlot::Dark,
     }
 }
 
-fn selector_for_theme(theme: AppTheme) -> objc2::runtime::Sel {
-    match theme {
-        AppTheme::Default => sel!(selectDefaultTheme:),
-        AppTheme::Dark => sel!(selectDarkTheme:),
-        AppTheme::Light => sel!(selectLightTheme:),
+fn selector_for_theme(preference: ThemePreference) -> objc2::runtime::Sel {
+    match preference {
+        ThemePreference::System => sel!(selectSystemTheme:),
+        ThemePreference::Default => sel!(selectDefaultTheme:),
+        ThemePreference::Dark => sel!(selectDarkTheme:),
     }
 }
 

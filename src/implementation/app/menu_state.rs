@@ -3,16 +3,16 @@ use std::cell::RefCell;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSControlStateValueOff, NSControlStateValueOn, NSMenuItem};
 
-use crate::app::{AppLanguage, AppTheme};
+use crate::app::{AppLanguage, ThemePreference};
 
 thread_local! {
     static EXPORT_PDF_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static EXPORT_HTML_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static SAVE_AS_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static PRINT_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
+    static SYSTEM_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static DEFAULT_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static DARK_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
-    static LIGHT_THEME_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static ENGLISH_LANGUAGE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static CHINESE_LANGUAGE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
     static OUTLINE_ITEM: RefCell<Option<Retained<NSMenuItem>>> = const { RefCell::new(None) };
@@ -20,9 +20,9 @@ thread_local! {
 
 #[derive(Clone, Copy)]
 pub(super) enum ThemeMenuSlot {
+    System,
     Default,
     Dark,
-    Light,
 }
 
 #[derive(Clone, Copy)]
@@ -63,15 +63,15 @@ pub fn set_document_output_enabled(enabled: bool) {
     for_each_output_item(|item| item.setEnabled(enabled));
 }
 
-pub fn set_selected_theme(theme: AppTheme) {
+pub fn set_selected_theme(preference: ThemePreference) {
     for slot in [
+        ThemeMenuSlot::System,
         ThemeMenuSlot::Default,
         ThemeMenuSlot::Dark,
-        ThemeMenuSlot::Light,
     ] {
         theme_item_slot(slot).with(|state| {
             if let Some(item) = state.borrow().as_deref() {
-                item.setState(if theme_for_slot(slot) == theme {
+                item.setState(if theme_for_slot(slot) == preference {
                     NSControlStateValueOn
                 } else {
                     NSControlStateValueOff
@@ -160,17 +160,17 @@ fn theme_item_slot(
     slot: ThemeMenuSlot,
 ) -> &'static std::thread::LocalKey<RefCell<Option<Retained<NSMenuItem>>>> {
     match slot {
+        ThemeMenuSlot::System => &SYSTEM_THEME_ITEM,
         ThemeMenuSlot::Default => &DEFAULT_THEME_ITEM,
         ThemeMenuSlot::Dark => &DARK_THEME_ITEM,
-        ThemeMenuSlot::Light => &LIGHT_THEME_ITEM,
     }
 }
 
-fn theme_for_slot(slot: ThemeMenuSlot) -> AppTheme {
+fn theme_for_slot(slot: ThemeMenuSlot) -> ThemePreference {
     match slot {
-        ThemeMenuSlot::Default => AppTheme::Default,
-        ThemeMenuSlot::Dark => AppTheme::Dark,
-        ThemeMenuSlot::Light => AppTheme::Light,
+        ThemeMenuSlot::System => ThemePreference::System,
+        ThemeMenuSlot::Default => ThemePreference::Default,
+        ThemeMenuSlot::Dark => ThemePreference::Dark,
     }
 }
 

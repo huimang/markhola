@@ -86,12 +86,12 @@ scripts/release_publish_workflow.md
 14. Theme resource regression
    Open `examples/theme-showcase.md`.
    Expected: `View` appears before `Help`.
-   Expected: `View > Theme` exposes `Default`, `Dark`, and `Light`.
+   Expected: `View > Theme` exposes `Follow System`, `Default`, and `Dark`.
+   Expected: `Follow System` maps macOS Light to Default and macOS Dark to Dark.
    Expected: switching themes updates the running app immediately in readonly mode.
    Expected: switching themes updates the running app immediately in writable mode.
    Expected: packaged app contains `Contents/Resources/themes/default/layout.css`.
    Expected: packaged app contains `Contents/Resources/themes/dark/layout.css`.
-   Expected: packaged app contains `Contents/Resources/themes/light/layout.css`.
    Expected: packaged app contains `Contents/Resources/help/Documentation.md`.
    Expected: each supported Help language file is present in `Contents/Resources/help`.
 
