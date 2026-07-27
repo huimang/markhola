@@ -349,6 +349,16 @@ fn view_menu_owns_the_checked_outline_toggle() {
 }
 
 #[test]
+fn app_themes_use_the_wider_document_reading_width() {
+    for theme in AppTheme::ALL {
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
+
+        assert!(html.contains(".markdown-body {\n  max-width: 960px;"));
+        assert!(!html.contains(".markdown-body {\n  max-width: 860px;"));
+    }
+}
+
+#[test]
 fn app_shell_removes_failed_mermaid_render_artifacts() {
     let html = app_shell_html(
         AppTheme::Default,
