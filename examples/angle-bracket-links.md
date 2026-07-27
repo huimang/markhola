@@ -5,7 +5,7 @@ Use this document to verify the `v0.7.9` angle-bracket shorthand links.
 ## Rendered links
 
 - <README.md>
-- <docs/v0.7.9-angle-bracket-links-design.md>
+- <docs/visual-design-guidelines.md>
 - <https://example.com>
 
 ## Inline code should stay literal

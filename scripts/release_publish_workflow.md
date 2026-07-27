@@ -121,3 +121,6 @@ For each release, keep a short verification record with:
 - the sandbox validation result
 - the key behaviors verified
 - the GitHub release URL after publish
+
+Store this record at `drafts/release-validation-v<version>.md`. Release validation records are local
+working evidence and must not be staged or committed.

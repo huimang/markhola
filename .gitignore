@@ -8,3 +8,4 @@ tech-notes/
 *.lock
 tmp/
 .idea/
+/drafts/

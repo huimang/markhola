@@ -92,7 +92,7 @@ When implementing a new feature or a user-requested change in this repository, f
 20. During release validation, do not assume the active `MarkHola` window belongs to the latest build when multiple local app copies exist. First verify the actual process path or startup log of the running app.
 21. If `/Applications/MarkHola.app` or another local copy may conflict with the candidate artifact, isolate or stop the conflicting app before validating the DMG candidate.
 22. When the UI result conflicts with runtime logs, treat that as a release-validation blocker and resolve the target-artifact mismatch before continuing.
-23. Keep a short validation record for each release that includes the candidate DMG path, copied validation app path, tested process path, and the key runtime evidence used to prove the correct artifact was validated.
+23. Keep a short validation record for each release under `drafts/` that includes the candidate DMG path, copied validation app path, tested process path, and the key runtime evidence used to prove the correct artifact was validated. Release validation records are local drafts and must not be committed.
 
 For version tracking:
 
@@ -165,10 +165,45 @@ For a technical evaluation or visual prototype:
 
 Before adding another step, ask whether it materially improves the user's ability to make the current decision. If it does not, leave it as an optional follow-up instead of implementing it.
 
-## 11. Keep `docs/` Documents in Chinese
+## 11. Separate Repository Documentation From Development Drafts
 
-Write new documents under `docs/` in Chinese so the user can review technical and test directions quickly.
+Keep permanent repository documentation under `docs/` and commit it. Write new tracked repository
+documentation in English by default, including long-term design principles, development guidance,
+and code comments.
 
-When updating an existing `docs/` document for active development, keep the updated content in Chinese. File names and technical identifiers may remain in English when that preserves stable references or matches the implementation.
+Use Chinese for Help documents that are specifically intended for Chinese-speaking end users. A
+localized Chinese Help document may coexist with an English source or another localized Help version.
 
-Do not rewrite unrelated historical documents only to change their language unless the user explicitly requests it.
+Keep version-scoped technical designs, test plans, release validation records, exploratory notes,
+and other working documents under `drafts/`. The entire `drafts/` directory must remain ignored by
+Git and must not be staged or committed.
+
+`PLAN.MD` is the exception: keep the canonical product and version plan at the repository root,
+track it in Git, and commit it with relevant planning updates. Never move `PLAN.MD` into `drafts/`.
+
+Drafts may use the language that is most efficient for the current collaboration because they are
+not repository documentation. Do not move a draft into `docs/` merely to preserve it; promote only
+content that has become a permanent English repository reference or a localized Help document.
+
+Do not rewrite unrelated historical documents only to change their language unless the user
+explicitly requests it.
+
+## 12. Follow the Visual Design Guidelines
+
+Before changing theme colors, syntax highlighting, code blocks, Markdown reading surfaces, or other
+color or visual-experience styles, read and follow `docs/visual-design-guidelines.md`.
+
+For affected foreground/background pairs:
+
+- calculate contrast instead of judging color values by appearance alone
+- keep 14 px code text around `6:1–8:1`
+- keep line numbers and secondary text around `4.5:1–5.5:1`
+- keep required non-text separators and state indicators at least `3:1`
+- keep language badges and other small text at least `4.5:1`
+- validate both Default and Dark with real rendering
+
+Meeting a minimum contrast threshold does not make higher contrast automatically better. Avoid
+unnecessary luminance jumps, near-white text on large dark surfaces, pure-black code backgrounds,
+and excessive saturation or simultaneous color/weight emphasis. If visual comfort conflicts with
+minimum accessibility, preserve the accessibility minimum and consider a separate increased-contrast
+variant rather than weakening the default below the minimum.
