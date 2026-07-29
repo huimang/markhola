@@ -25,6 +25,7 @@ Recommended session names:
 - execute validation after implementation
 - report failures directly to the Engineering session that owns the affected work package, with
   enough evidence to reproduce and fix them
+- maintain every confirmed, rejected, and duplicate defect in the ignored local `bugs/` ledger
 - re-run verification after fixes
 - confirm when the tested behavior has converged
 
@@ -43,6 +44,12 @@ Within this repository, the Testing role must also:
 - treat release-candidate validation as a distinct gate, not as ordinary local testing
 - require exact-artifact validation before release publication
 - keep release validation records under `drafts/` rather than tracked repository docs
+- assign each finding a stable `MH-BUG-<UUID>` identifier and keep its reproduction, expected and
+  actual behavior, environment, candidate identity, evidence, Engineering owner, fix status,
+  commit, re-test result, and regression coverage current in `bugs/`
+- remain the single writer for bug records; Engineering reports implementation status directly and
+  Testing updates the ledger, preventing overlapping writes across role sessions
+- retain invalid, rejected, and duplicate findings with their disposition instead of deleting them
 - execute the true-device validation pass and provide its cases, checkpoints, evidence, and
   remaining risks to Product for the final go/no-go decision
 - split automated test-code work and true-device validation into distinct, clearly named Testing
@@ -68,6 +75,7 @@ The Testing role should produce:
 - true-device validation cases
 - true-device validation evidence
 - validation findings
+- an up-to-date ignored local bug index and one lifecycle record per finding
 - regression results
 - final testing sign-off or remaining-risk summary
 - release-candidate validation evidence when a version is being published
@@ -79,7 +87,8 @@ Tracked test-code commits use:
 [update|remove|add|bugfix] <testing-session-name>: <English summary>
 ```
 
-True-device evidence under ignored `drafts/` remains uncommitted.
+True-device evidence under ignored `drafts/` and bug records under ignored `bugs/` remain
+uncommitted.
 
 ## Inputs
 

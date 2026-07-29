@@ -48,6 +48,13 @@ should split them into clearly named sessions such as `testing-unit-cases` and
 sessions own the exact-candidate manual evidence. Both report confirmed defects directly to the
 Engineering session that owns the affected work package.
 
+Testing is the single owner of the ignored local `bugs/` ledger. Every finding receives a stable
+`MH-BUG-<UUID>` identifier and retains reproduction steps, expected and actual behavior, candidate
+identity, evidence, owner, implementation status, fix commit, re-test result, and regression
+coverage. Engineering sends status and fix handoffs directly to Testing rather than editing the
+ledger concurrently. Rejected and duplicate findings remain recorded for later regression and
+retrospective analysis.
+
 Architect should actively assess whether the confirmed work can be split into independent packages
 that run concurrently. Use additional role-scoped sessions when parallel execution materially
 shortens the critical path, but define one owner, a disjoint write scope, acceptance criteria, and
@@ -234,6 +241,8 @@ Testing implements the automated test code derived from accepted cases as soon a
 contracts are stable. Once the implementation or candidate is ready, Testing executes the planned
 automated, regression, exact-artifact, and true-device validation. Findings go directly to the
 Engineering session that owns the affected work package, with enough detail for reproduction.
+Testing creates or updates the corresponding ignored `bugs/MH-BUG-<UUID>.md` lifecycle record before
+handoff and keeps the central bug index current through fix, re-test, closure, and retrospective.
 
 If the delivered candidate and validation target are already clear, Testing should continue with
 validation or checklist preparation directly rather than stopping at receipt-only confirmation.
