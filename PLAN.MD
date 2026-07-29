@@ -238,25 +238,10 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Run the macOS app on Apple Intel in addition to Apple Silicon
    - Keep the existing macOS document, export, menu, and packaging behavior aligned across both chip families
 
-### v0.9.1
-1. Add Windows 11 support
-   - Run MarkHola on Windows 11 with the same core Markdown reading flow as macOS
-   - Keep readonly and writable document behavior aligned with the existing product scope
-   - Preserve the currently supported Markdown rendering set on Windows as far as the chosen WebView stack allows
-   - Support opening local Markdown files, editing, saving, and basic document navigation on Windows
-   - Provide Windows-specific packaging and installer output instead of reusing macOS-only release artifacts
-   - Exclude Apple-only packaging resources and build steps from the Windows release flow
-
-### v0.9.2
-1. Add platform-aware packaging slimming
-   - Split platform-specific build, packaging, and release dependencies so each target platform only ships what it actually needs
-   - Remove Apple-only packaging assets, libraries, and release steps from Windows artifacts
-   - Prevent Windows-only packaging assets, libraries, and release steps from being pulled into macOS artifacts
-   - Keep common Markdown, rendering, and document logic shared while isolating platform-exclusive runtime and packaging code
-   - Reduce installer and application bundle size by target-aware dependency selection, conditional compilation, and packaging-resource pruning
-
 ### v1.0.0
-1. Platform: Apple Intel、Apple M、Windows 11
+Start this milestone immediately after v0.9.0 is successfully published; do not schedule v0.9.1 or v0.9.2 work in between.
+
+1. Platform: Apple Intel and Apple Silicon
 2. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
    - If the current document has unsaved changes, prompt the user to choose one of:
@@ -282,7 +267,7 @@ This is another markdown reader and exporter software.Written by AI, free are th
 
 ### v1.0.1
 1. Update `README.md`, bundled Help, examples, validation records, and release workflow for the 1.0 release
-2. Support macOS and Windows release packaging and validation
+2. Support macOS release packaging and validation across Apple Intel and Apple Silicon
 3. Support document font-size changes
    - Support `Command +` and `Command -` to increase or decrease document font size
    - Treat document font size as a typography setting for the current reading and editing experience
@@ -295,6 +280,21 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Use system trackpad pinch gestures to zoom the document view itself instead of changing the saved document font-size preference
    - Treat document-view zoom as a viewport-scale behavior that can enlarge rendered content such as images, tables, formulas, and diagrams together
    - Keep document-view zoom separate from the saved document font-size setting
+
+### Post-v1.0.0 (version TBD)
+1. Add Windows 11 support
+   - Run MarkHola on Windows 11 with the same core Markdown reading flow as macOS
+   - Keep readonly and writable document behavior aligned with the existing product scope
+   - Preserve the currently supported Markdown rendering set on Windows as far as the chosen WebView stack allows
+   - Support opening local Markdown files, editing, saving, and basic document navigation on Windows
+   - Provide Windows-specific packaging and installer output instead of reusing macOS-only release artifacts
+   - Exclude Apple-only packaging resources and build steps from the Windows release flow
+2. Add platform-aware packaging slimming after Windows support exists
+   - Split platform-specific build, packaging, and release dependencies so each target platform only ships what it actually needs
+   - Remove Apple-only packaging assets, libraries, and release steps from Windows artifacts
+   - Prevent Windows-only packaging assets, libraries, and release steps from being pulled into macOS artifacts
+   - Keep common Markdown, rendering, and document logic shared while isolating platform-exclusive runtime and packaging code
+   - Reduce installer and application bundle size by target-aware dependency selection, conditional compilation, and packaging-resource pruning
 
 ### v1.1.0
 1. Add MarkHola CLI capabilities for AI-facing automation
