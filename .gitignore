@@ -10,3 +10,15 @@ tmp/
 .idea/
 /drafts/
 /im/
+*.app/
+*.dmg
+*.pdf
+*.pkg
+*.iso
+*.sparseimage
+*.zip
+*.tar
+*.tgz
+*.gz
+*.7z
+*.rar

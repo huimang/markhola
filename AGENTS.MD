@@ -78,6 +78,23 @@ Before creating a commit, confirm that ignored build outputs, packaging artifact
 
 If a path is meant to stay out of version control, keep it untracked unless the user explicitly asks to change the ignore rule first.
 
+### Staged artifact size gate
+
+Install the tracked repository hook with `scripts/install_git_hooks.sh`. The hook runs
+`scripts/check_git_staged_files.sh` against staged Git blobs before every commit.
+
+The gate must:
+
+- reject DMG, PDF, PKG, ISO, sparse image, App bundle, and common archive artifacts
+- reject staged PNG, JPG, JPEG, GIF, WebP, or SVG files larger than `2 MiB`
+- reject any other staged blob larger than `5 MiB`
+- inspect staged index content so partially staged files are checked correctly
+- report every violation in one run
+
+Do not bypass this gate with `--no-verify` or an environment-variable override. If a larger or
+currently forbidden artifact is genuinely required, change the tracked policy explicitly and have
+the exception reviewed before committing it.
+
 ## 8. Follow the Standard Delivery Flow
 
 When implementing a new feature or a user-requested change in this repository, follow this workflow:

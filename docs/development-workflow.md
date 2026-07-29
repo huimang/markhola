@@ -108,6 +108,23 @@ owned write scope. Product does not submit design, implementation, test, or work
 Architect reviews the resulting history, integration order, and final release-commit readiness
 without replacing another role's independent commit.
 
+### Repository storage guard
+
+Every local checkout should install the tracked Git hook with:
+
+```bash
+scripts/install_git_hooks.sh
+```
+
+Before each commit, `scripts/check_git_staged_files.sh` inspects the staged Git blobs. It rejects
+release artifacts and common archives, images larger than `2 MiB`, and other files larger than
+`5 MiB`. The index is authoritative so partially staged content is checked rather than the current
+working-tree file.
+
+Do not bypass the hook. A legitimate exception requires an explicit tracked policy change and
+Architect review. Ignored build output, release candidates, validation PDFs, screenshots, and local
+evidence remain outside Git.
+
 ## 4. Release/publish tasks
 
 Use release/publish tasks when the user asks to package, validate, tag, upload, or publish a
