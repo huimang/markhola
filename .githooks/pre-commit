@@ -1,0 +1,3 @@
+#!/bin/zsh
+
+exec "$(git rev-parse --show-toplevel)/scripts/check_git_staged_files.sh"
