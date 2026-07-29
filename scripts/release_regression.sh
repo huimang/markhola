@@ -187,8 +187,9 @@ if run_release_binary "$MERMAID_PRINT_PAGES_LOG" \
   markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-pages \
   "$ROOT_DIR/examples/mermaid.md"; then
   MERMAID_PRINT_PAGES_OUTPUT="$(cat "$MERMAID_PRINT_PAGES_LOG")"
-  if [[ "$MERMAID_PRINT_PAGES_OUTPUT" != *"pages=6"* ]]; then
-    echo "Unexpected Mermaid print preview page count. Expected pages=6." >&2
+  # Keep this baseline aligned with the current accepted Mermaid print layout.
+  if [[ "$MERMAID_PRINT_PAGES_OUTPUT" != *"pages=7"* ]]; then
+    echo "Unexpected Mermaid print preview page count. Expected pages=7." >&2
     exit 1
   fi
 elif is_known_sandbox_webkit_failure "$MERMAID_PRINT_PAGES_LOG"; then

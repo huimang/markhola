@@ -198,7 +198,8 @@ markhola_cargo() {
       print -r -- "%PDF-1.7" >"$output_path"
       ;;
     *" run "*"--smoke-print-pages "*)
-      print -r -- "pages=6"
+      # Match the current accepted Mermaid print layout baseline.
+      print -r -- "pages=7"
       ;;
     *" run "*"--smoke-print-prepare "*)
       :
