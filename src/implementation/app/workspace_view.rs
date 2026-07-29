@@ -7,8 +7,8 @@ use crate::workspace::DocumentWorkspace;
 use super::native_footer::NativeFooter;
 use super::native_tabs;
 use super::{
-    APP_AUTHOR, APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_GITHUB_URL, APP_VERSION, StatusPayload,
-    WINDOW_TITLE, WorkspacePresentation, macos_menu,
+    APP_AUTHOR, APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_GITHUB_URL, APP_VERSION,
+    ErrorStatusPayload, ExportSuccessPayload, WINDOW_TITLE, WorkspacePresentation, macos_menu,
 };
 
 pub(super) fn present_workspace(
@@ -65,25 +65,26 @@ pub(super) fn sync_workspace_state(
     evaluate_workspace_script(webview, "window.updateWorkspaceState", workspace, status);
 }
 
-pub(super) fn render_status(webview: &WebView, message: &str, level: &str) {
-    render_status_with_action(webview, message, level, None, None);
+pub(super) fn render_error_status(webview: &WebView, message: &str) {
+    let payload = ErrorStatusPayload { message };
+    if let Ok(serialized) = serde_json::to_string(&payload) {
+        let _ = webview.evaluate_script(&format!("window.showErrorStatus({serialized});"));
+    }
 }
 
-pub(super) fn render_status_with_action(
+pub(super) fn render_export_success(
     webview: &WebView,
     message: &str,
-    level: &str,
-    action_path: Option<&str>,
-    action_label: Option<&str>,
+    output_path: &std::path::Path,
+    action_label: &str,
 ) {
-    let payload = StatusPayload {
+    let payload = ExportSuccessPayload {
         message,
-        level,
-        action_path,
+        output_path: output_path.display().to_string(),
         action_label,
     };
     if let Ok(serialized) = serde_json::to_string(&payload) {
-        let _ = webview.evaluate_script(&format!("window.showStatus({serialized});"));
+        let _ = webview.evaluate_script(&format!("window.showExportSuccess({serialized});"));
     }
 }
 
@@ -136,12 +137,12 @@ fn evaluate_workspace_script(
         Err(error) => {
             let message =
                 text("status.failed_serialize_workspace").replace("{error}", &error.to_string());
-            render_status(webview, &message, "error");
+            render_error_status(webview, &message);
             return;
         }
     };
     if let Err(error) = webview.evaluate_script(&format!("{function_name}({serialized});")) {
         let message = text("status.webview_error").replace("{error}", &error.to_string());
-        render_status(webview, &message, "error");
+        render_error_status(webview, &message);
     }
 }

@@ -68,6 +68,7 @@
       let writableMatches = [];
       let outlineOpen = false;
       let writableActiveIndex = -1;
+      let statusDismissTimer = null;
 
       const applyAppLanguage = (strings) => {
         appStrings = strings;
@@ -257,19 +258,28 @@
         }
       };
 
-      const resetWorkspaceChrome = (statusMessage) => {
+      const resetWorkspaceChrome = () => {
         document.body.classList.add("workspace-empty");
         document.title = "MarkHola";
         documentBase.setAttribute("href", "");
         showPaneForMode(null);
-        window.showStatus({ message: statusMessage || appStrings.ready, level: "info" });
+        if (status.dataset.kind === "export-success") {
+          status.replaceChildren();
+          status.dataset.visible = "false";
+          delete status.dataset.kind;
+          delete status.dataset.level;
+          if (statusDismissTimer) {
+            clearTimeout(statusDismissTimer);
+            statusDismissTimer = null;
+          }
+        }
       };
 
       const applyWorkspaceChrome = (payload) => {
         const active = payload.active_document;
 
         if (!active) {
-          resetWorkspaceChrome(payload.status_message);
+          resetWorkspaceChrome();
           return;
         }
 
@@ -277,7 +287,6 @@
         document.title = `${active.file_name}${active.dirty ? " *" : ""} - MarkHola`;
         documentBase.setAttribute("href", active.base_url);
         showPaneForMode(active.mode);
-        window.showStatus({ message: payload.status_message, level: active.dirty ? "warning" : "info" });
       };
 
       const escapeHtml = (value) =>
@@ -308,6 +317,9 @@
         document.getElementById(`d${renderId}`)?.remove();
       };
 
+      const normalizeMermaidSourceForRender = (source) =>
+        source.replaceAll("\\n", "<br/>");
+
       const renderMermaidDiagrams = async () => {
         ensureMermaidInitialized();
         if (!window.mermaid) return;
@@ -328,8 +340,9 @@
           }
 
           const renderId = `mermaid-diagram-${index}-${Date.now()}`;
+          const renderSource = normalizeMermaidSourceForRender(source);
           try {
-            const { svg } = await window.mermaid.render(renderId, source);
+            const { svg } = await window.mermaid.render(renderId, renderSource);
             diagramNode.innerHTML = svg;
             statusNode?.classList.add("hidden");
           } catch (error) {
@@ -494,7 +507,7 @@
 
       const openFindPanel = () => {
         if (!hasActiveDocument()) {
-          window.showStatus({ message: appStrings.noDocumentError, level: "error" });
+          window.showErrorStatus({ message: appStrings.noDocumentError });
           return;
         }
 
@@ -952,10 +965,10 @@
       });
 
       document.addEventListener("click", (event) => {
-        const statusAction = event.target.closest("[data-open-path]");
-        if (statusAction) {
+        const exportAction = event.target.closest("[data-export-open-path]");
+        if (exportAction) {
           event.preventDefault();
-          const path = statusAction.getAttribute("data-open-path") || "";
+          const path = exportAction.getAttribute("data-export-open-path") || "";
           if (path) {
             window.ipc.postMessage(JSON.stringify({ kind: "open-external", href: path }));
           }
@@ -1016,15 +1029,36 @@
         true
       );
 
-      window.showStatus = (payload) => {
-        const actionPath = payload.action_path || "";
-        const actionLabel = payload.action_label || "";
-        if (actionPath && actionLabel) {
-          status.innerHTML = `${escapeHtml(payload.message)} <a href=\"#\" class=\"status__action\" data-open-path=\"${escapeHtml(actionPath)}\">${escapeHtml(actionLabel)}</a>`;
-        } else {
-          status.textContent = payload.message;
+      const showTransientStatus = (kind) => {
+        if (statusDismissTimer) {
+          clearTimeout(statusDismissTimer);
         }
-        status.dataset.level = payload.level || "info";
+        status.dataset.kind = kind;
+        status.dataset.visible = "true";
+        statusDismissTimer = setTimeout(() => {
+          status.replaceChildren();
+          status.dataset.visible = "false";
+          delete status.dataset.kind;
+          delete status.dataset.level;
+          statusDismissTimer = null;
+        }, 8000);
+      };
+
+      window.showErrorStatus = (payload) => {
+        status.textContent = payload.message;
+        status.dataset.level = "error";
+        showTransientStatus("error");
+      };
+
+      window.showExportSuccess = (payload) => {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "status__action";
+        action.setAttribute("data-export-open-path", payload.output_path);
+        action.textContent = payload.action_label;
+        status.replaceChildren(document.createTextNode(`${payload.message} `), action);
+        status.dataset.level = "success";
+        showTransientStatus("export-success");
       };
 
       const applyWorkspacePayload = (payload, forceRefresh) => {

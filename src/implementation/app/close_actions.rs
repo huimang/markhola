@@ -9,7 +9,7 @@ use crate::workspace::DocumentWorkspace;
 use super::PendingChangesAction;
 use super::asset_access::{AssetAccessRegistry, unregister_document};
 use super::save_actions::save_document;
-use super::workspace_view::render_status;
+use super::workspace_view::render_error_status;
 
 pub(super) fn resolve_all_pending_changes(
     window: &Window,
@@ -40,7 +40,7 @@ pub(super) fn close_document_model(
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     let Some(document) = workspace.document_by_id_mut(document_id) else {
-        render_status(webview, text("status.missing_tab"), "error");
+        render_error_status(webview, text("status.missing_tab"));
         return false;
     };
     if !resolve_document_pending_changes(window, webview, document) {
@@ -85,15 +85,12 @@ pub(super) fn resolve_document_pending_changes(
         PendingChangesAction::Save => match save_document(document) {
             Ok(()) => true,
             Err(message) => {
-                render_status(webview, &message, "error");
+                render_error_status(webview, &message);
                 false
             }
         },
         PendingChangesAction::Discard => true,
-        PendingChangesAction::Cancel => {
-            render_status(webview, text("status.action_cancelled"), "info");
-            false
-        }
+        PendingChangesAction::Cancel => false,
     }
 }
 

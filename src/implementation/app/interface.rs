@@ -24,6 +24,6 @@ pub(crate) use self::interface_logging::log_event;
 #[allow(unused_imports)]
 pub(crate) use self::interface_logging::{append_log_line, debug_log, primary_debug_log_path};
 pub(crate) use self::interface_types::{
-    ActionContext, OpenPathRequest, PendingChangesAction, StatusPayload, UserEvent,
-    WorkspacePresentation,
+    ActionContext, ErrorStatusPayload, ExportSuccessPayload, OpenPathRequest, PendingChangesAction,
+    UserEvent, WorkspacePresentation,
 };

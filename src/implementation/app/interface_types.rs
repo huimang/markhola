@@ -50,11 +50,15 @@ pub(crate) enum PendingChangesAction {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct StatusPayload<'a> {
+pub(crate) struct ErrorStatusPayload<'a> {
     pub(crate) message: &'a str,
-    pub(crate) level: &'a str,
-    pub(crate) action_path: Option<&'a str>,
-    pub(crate) action_label: Option<&'a str>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct ExportSuccessPayload<'a> {
+    pub(crate) message: &'a str,
+    pub(crate) output_path: String,
+    pub(crate) action_label: &'a str,
 }
 
 #[derive(Clone, Debug, Serialize)]

@@ -74,8 +74,6 @@ status:
   no_other_tabs: "没有其他可关闭的标签页。"
   missing_tab: "文档标签页已不存在。"
   action_cancelled: "已取消操作。"
-  export_cancelled: "已取消导出。"
-  print_requested: "已打开打印面板。"
   documentation_missing: "未找到文档文件。"
   already_open: "文档已打开，已切换到对应标签页。"
   some_open_failed: "部分文件打开失败。"

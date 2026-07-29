@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 
 use super::document_actions::reload_workspace_documents_from_disk;
 use super::runtime::AppRuntime;
-use super::workspace_view::{present_workspace, render_status};
+use super::workspace_view::{present_workspace, render_error_status};
 use super::{UserEvent, dispatch_user_event, log_event};
 use crate::app::text;
 
@@ -66,7 +66,7 @@ pub(super) fn recover_shell(url: String, runtime: &mut AppRuntime) {
             .suppress_blank_recovery
             .store(false, Ordering::SeqCst);
         let message = text("status.failed_recover_view").replace("{error}", &error.to_string());
-        render_status(&runtime.webview, &message, "error");
+        render_error_status(&runtime.webview, &message);
     }
 }
 
@@ -80,10 +80,6 @@ pub(super) fn open_documentation(runtime: &mut AppRuntime) {
                 UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
             );
         }
-        None => render_status(
-            &runtime.webview,
-            text("status.documentation_missing"),
-            "error",
-        ),
+        None => render_error_status(&runtime.webview, text("status.documentation_missing")),
     }
 }

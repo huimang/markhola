@@ -50,6 +50,10 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(html.contains("math math-display"));
     assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
     assert!(html.contains("removeMermaidRenderArtifact(renderId)"));
+    assert!(html.contains("const normalizeMermaidSourceForRender = (source) =>"));
+    assert!(html.contains(r#"source.replaceAll("\\n", "<br/>")"#));
+    assert!(html.contains("window.mermaid.render(renderId, renderSource)"));
+    assert!(html.contains("escapeHtml(source)"));
     assert!(html.contains(&export_footer_text()));
     assert!(!html.contains("<div class=\"tabs-bar\""));
     assert!(!html.contains("<div class=\"editor-pane\""));

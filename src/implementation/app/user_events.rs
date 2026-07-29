@@ -18,7 +18,7 @@ use super::shell_events::{handle_shell_ready, open_documentation, recover_shell}
 use super::surface_actions::present_document_in_surface;
 use super::theme_preferences;
 use super::workspace_view::{
-    present_workspace, render_about, render_status, sync_native_language_state,
+    present_workspace, render_about, render_error_status, sync_native_language_state,
     sync_native_theme_state,
 };
 use super::{OpenPathRequest, UserEvent, log_event};
@@ -106,21 +106,15 @@ pub(super) fn handle_user_event(
             super::theme_actions::select_theme(preference, runtime)
         }
         UserEvent::SelectLanguage(language) => select_language(language, runtime),
-        UserEvent::IncreaseDocumentSize => update_document_size(
-            runtime.document_size.increase(),
-            text("status.size_increased_action"),
-            runtime,
-        ),
-        UserEvent::DecreaseDocumentSize => update_document_size(
-            runtime.document_size.decrease(),
-            text("status.size_decreased_action"),
-            runtime,
-        ),
-        UserEvent::ResetDocumentSize => update_document_size(
-            crate::app::DocumentSize::default(),
-            text("status.size_reset_action"),
-            runtime,
-        ),
+        UserEvent::IncreaseDocumentSize => {
+            update_document_size(runtime.document_size.increase(), runtime)
+        }
+        UserEvent::DecreaseDocumentSize => {
+            update_document_size(runtime.document_size.decrease(), runtime)
+        }
+        UserEvent::ResetDocumentSize => {
+            update_document_size(crate::app::DocumentSize::default(), runtime)
+        }
         UserEvent::ToggleOutline => toggle_outline(runtime),
         UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
         UserEvent::EditorChanged(window_id, markdown) => {
@@ -159,7 +153,7 @@ fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
     {
         if let Err(error) = super::macos_menu::install(&runtime.proxy) {
             let message = text("status.failed_rebuild_menu").replace("{error}", &error.to_string());
-            render_status(&runtime.webview, &message, "error");
+            render_error_status(&runtime.webview, &message);
             return;
         }
         sync_native_menu_state_after_language_change(runtime);
@@ -185,7 +179,6 @@ fn select_language(language: AppLanguage, runtime: &mut AppRuntime) {
             .and_then(|document_id| runtime.workspace.document_snapshot(document_id));
         surface.native_footer.sync_document(snapshot, ready);
     }
-    render_status(&runtime.webview, ready, "info");
 }
 
 #[cfg(target_os = "macos")]
@@ -244,16 +237,16 @@ fn handle_open_file(
                         }
                     }
                     Err(message) => {
-                        render_status(&runtime.webview, &message, "error");
+                        render_error_status(&runtime.webview, &message);
                         failures += 1;
                     }
                 }
             }
             if failures > 0 {
-                render_status(&runtime.webview, text("status.some_open_failed"), "error");
+                render_error_status(&runtime.webview, text("status.some_open_failed"));
             }
         }
-        None => render_status(&runtime.webview, text("status.open_cancelled"), "info"),
+        None => {}
     }
 }
 
@@ -304,7 +297,7 @@ fn handle_open_path(
                 super::asset_access::unregister_document(&runtime.asset_access, document_id);
             }
         }
-        Err(message) => render_status(&runtime.webview, &message, "error"),
+        Err(message) => render_error_status(&runtime.webview, &message),
     }
 }
 
@@ -321,26 +314,22 @@ fn toggle_mode(runtime: &mut AppRuntime) {
             text("status.ready"),
             true,
         ),
-        None => render_status(&runtime.webview, text("status.no_document"), "error"),
+        None => render_error_status(&runtime.webview, text("status.no_document")),
     }
 }
 
-fn update_document_size(size: crate::app::DocumentSize, action: &str, runtime: &mut AppRuntime) {
+fn update_document_size(size: crate::app::DocumentSize, runtime: &mut AppRuntime) {
     runtime.document_size = size;
     theme_preferences::save_document_size(size);
     let script = format!("window.applyDocumentSize({});", size.percent());
     if let Err(error) = runtime.webview.evaluate_script(&script) {
         let message = text("status.failed_apply_size").replace("{error}", &error.to_string());
-        render_status(&runtime.webview, &message, "error");
+        render_error_status(&runtime.webview, &message);
         return;
     }
     for surface in runtime.inactive_surfaces.values() {
         let _ = surface.webview.evaluate_script(&script);
     }
-    let status = text("status.size_changed")
-        .replace("{action}", action)
-        .replace("{percent}", &size.percent().to_string());
-    render_status(&runtime.webview, &status, "info");
 }
 
 fn toggle_outline(runtime: &mut AppRuntime) {
@@ -357,7 +346,7 @@ fn toggle_outline(runtime: &mut AppRuntime) {
         if let Err(error) = runtime.webview.evaluate_script(&script) {
             let status =
                 text("status.failed_toggle_outline").replace("{error}", &error.to_string());
-            render_status(&runtime.webview, &status, "error");
+            render_error_status(&runtime.webview, &status);
         }
     }
 }
@@ -369,12 +358,6 @@ fn toggle_fullscreen(runtime: &mut AppRuntime) {
         Some(Fullscreen::Borderless(None))
     };
     runtime.window.set_fullscreen(next_state);
-    let message = if runtime.window.fullscreen().is_some() {
-        text("status.entered_fullscreen")
-    } else {
-        text("status.exited_fullscreen")
-    };
-    render_status(&runtime.webview, message, "info");
 }
 
 fn editor_changed(markdown: String, runtime: &mut AppRuntime) {
@@ -393,6 +376,6 @@ fn open_external_link(href: &str, runtime: &AppRuntime) {
             format!("error={error}"),
         );
         let message = text("status.failed_open_link").replace("{error}", &error.to_string());
-        render_status(&runtime.webview, &message, "error");
+        render_error_status(&runtime.webview, &message);
     }
 }

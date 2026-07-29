@@ -6,7 +6,7 @@ use crate::app::UserEvent;
 use super::bootstrap::build_document_surface;
 use super::native_tabs;
 use super::runtime::AppRuntime;
-use super::workspace_view::{present_workspace, render_status};
+use super::workspace_view::{present_workspace, render_error_status};
 
 pub(super) fn present_document_in_surface(
     target: &EventLoopWindowTarget<UserEvent>,
@@ -37,7 +37,7 @@ pub(super) fn present_document_in_surface(
         Ok(surface) => surface,
         Err(error) => {
             let message = format!("Failed to create native document tab: {error}");
-            render_status(&runtime.webview, &message, "error");
+            render_error_status(&runtime.webview, &message);
             return false;
         }
     };

@@ -59,7 +59,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         .with_min_inner_size(LogicalSize::new(800.0, 560.0))
         .build(&event_loop)?;
     let selected_theme = theme_preference.resolve(window.theme());
-    native_tabs::configure(&window, selected_theme);
+    native_tabs::configure_main_window(&window, selected_theme, &proxy);
     let webview = build_webview(
         &window,
         &proxy,
@@ -105,7 +105,7 @@ pub(super) fn build_document_surface(
         .with_inner_size(LogicalSize::new(1120.0, 760.0))
         .with_min_inner_size(LogicalSize::new(800.0, 560.0))
         .build(target)?;
-    native_tabs::configure(&window, selected_theme);
+    native_tabs::configure_document_window(&window, selected_theme);
     let webview = build_webview(
         &window,
         proxy,

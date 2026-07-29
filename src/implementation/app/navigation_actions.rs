@@ -8,11 +8,11 @@ use super::native_tabs;
 use super::runtime::AppRuntime;
 use super::surface_actions::activate_document_surface;
 use super::surface_actions::{remove_closed_surface, reset_to_empty, sync_active_surface};
-use super::workspace_view::render_status;
+use super::workspace_view::render_error_status;
 
 pub(super) fn activate_document(document_id: u64, runtime: &mut AppRuntime) {
     if !activate_document_surface(document_id, runtime, text("status.document_switched")) {
-        render_status(&runtime.webview, text("status.missing_tab"), "error");
+        render_error_status(&runtime.webview, text("status.missing_tab"));
     }
 }
 
@@ -63,9 +63,7 @@ pub(super) fn close_current_document(runtime: &mut AppRuntime, control_flow: &mu
 pub(super) fn close_other_documents(runtime: &mut AppRuntime) {
     if let Some(active_document_id) = runtime.workspace.active_document_id() {
         let document_ids = runtime.workspace.other_document_ids(active_document_id);
-        if document_ids.is_empty() {
-            render_status(&runtime.webview, text("status.no_other_tabs"), "info");
-        } else {
+        if !document_ids.is_empty() {
             if close_document_models(
                 &runtime.window,
                 &runtime.webview,
@@ -79,16 +77,12 @@ pub(super) fn close_other_documents(runtime: &mut AppRuntime) {
                 sync_active_surface(runtime, text("status.other_tabs_closed"), false);
             }
         }
-    } else {
-        render_status(&runtime.webview, text("status.no_document"), "info");
     }
 }
 
 pub(super) fn close_all_documents(runtime: &mut AppRuntime) {
     let document_ids = runtime.workspace.document_ids();
-    if document_ids.is_empty() {
-        render_status(&runtime.webview, text("status.no_document"), "info");
-    } else {
+    if !document_ids.is_empty() {
         if close_document_models(
             &runtime.window,
             &runtime.webview,

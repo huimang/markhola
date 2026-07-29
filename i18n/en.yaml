@@ -74,8 +74,6 @@ status:
   no_other_tabs: "No other tabs to close."
   missing_tab: "Document tab no longer exists."
   action_cancelled: "Action cancelled."
-  export_cancelled: "Export cancelled."
-  print_requested: "Print panel requested."
   documentation_missing: "Documentation file not found."
   already_open: "Document already opened. Switched to tab."
   some_open_failed: "Some files failed to open."

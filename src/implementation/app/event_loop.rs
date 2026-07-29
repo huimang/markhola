@@ -4,7 +4,7 @@ use url::Url;
 
 use super::runtime::AppRuntime;
 use super::window_events::handle_window_event;
-use super::workspace_view::render_status;
+use super::workspace_view::render_error_status;
 use super::{UserEvent, log_event};
 use crate::app::text;
 
@@ -20,7 +20,6 @@ pub(super) fn handle_event(
         Event::NewEvents(cause) => {
             if cause == StartCause::Init {
                 log_event("event_loop.init", None, "event loop init", "");
-                render_status(&runtime.webview, text("status.ready_open_hint"), "info");
             }
         }
         Event::Opened { urls } => handle_opened_urls(urls, runtime),
@@ -49,7 +48,7 @@ fn handle_opened_urls(urls: Vec<url::Url>, runtime: &mut AppRuntime) {
             "no valid file paths resolved from Event::Opened",
             "",
         );
-        render_status(&runtime.webview, text("status.invalid_path"), "error");
+        render_error_status(&runtime.webview, text("status.invalid_path"));
         return;
     }
 

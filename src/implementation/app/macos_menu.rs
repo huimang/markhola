@@ -11,6 +11,7 @@ mod menu_target;
 mod menu_view;
 
 pub use self::menu_install::install;
+pub(crate) use self::menu_target::target_ref;
 pub use self::menu_state::{
     outline_selected, set_document_output_enabled, set_outline_available, set_outline_selected,
     set_selected_language, set_selected_theme, toggle_outline_selected,

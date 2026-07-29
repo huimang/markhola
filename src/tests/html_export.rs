@@ -22,5 +22,9 @@ fn exported_html_contains_rendered_content_and_runtime_assets() {
     assert!(html.contains("window.mermaid"));
     assert!(html.contains("document.getElementById(`d${renderId}`)?.remove()"));
     assert!(html.contains("removeMermaidRenderArtifact(renderId)"));
+    assert!(html.contains("const normalizeMermaidSourceForRender = (source) =>"));
+    assert!(html.contains(r#"source.replaceAll("\\n", "<br/>")"#));
+    assert!(html.contains("window.mermaid.render(renderId, renderSource)"));
+    assert!(html.contains("escapeHtml(source)"));
     assert!(html.contains("overflow: auto;"));
 }

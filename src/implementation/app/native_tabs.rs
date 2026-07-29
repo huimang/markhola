@@ -1,7 +1,7 @@
 #[cfg(target_os = "macos")]
 use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
-use objc2::{MainThreadMarker, MainThreadOnly};
+use objc2::{MainThreadMarker, MainThreadOnly, sel};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
@@ -11,19 +11,45 @@ use objc2_app_kit::{
 };
 #[cfg(target_os = "macos")]
 use objc2_foundation::NSString;
+use tao::event_loop::EventLoopProxy;
 #[cfg(target_os = "macos")]
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::Window;
 use tao::window::WindowId;
 
 use super::runtime::AppRuntime;
-use crate::app::AppTheme;
+use crate::app::{AppTheme, UserEvent};
 
 const TABBING_IDENTIFIER: &str = "com.markhola.document-tabs";
 #[cfg(target_os = "macos")]
 const TITLEBAR_BACKGROUND_IDENTIFIER: &str = "com.markhola.titlebar-background";
 
-pub(super) fn configure(window: &Window, theme: AppTheme) {
+pub(super) fn configure_main_window(
+    window: &Window,
+    theme: AppTheme,
+    proxy: &EventLoopProxy<UserEvent>,
+) {
+    configure_window_chrome(window, theme);
+    #[cfg(target_os = "macos")]
+    unsafe {
+        let ns_window = &*(window.ns_window() as *mut NSWindow);
+        if let (Some(mtm), Some(close_button)) = (
+            MainThreadMarker::new(),
+            ns_window.standardWindowButton(NSWindowButton::CloseButton),
+        ) {
+            close_button.setTarget(Some(super::macos_menu::target_ref(mtm, proxy.clone())));
+            close_button.setAction(Some(sel!(exitApplication:)));
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = proxy;
+}
+
+pub(super) fn configure_document_window(window: &Window, theme: AppTheme) {
+    configure_window_chrome(window, theme);
+}
+
+fn configure_window_chrome(window: &Window, theme: AppTheme) {
     #[cfg(target_os = "macos")]
     {
         window.set_allows_automatic_window_tabbing(false);

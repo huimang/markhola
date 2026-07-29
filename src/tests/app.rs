@@ -453,6 +453,86 @@ fn app_shell_removes_failed_mermaid_render_artifacts() {
 }
 
 #[test]
+fn app_shell_normalizes_escaped_mermaid_line_breaks_for_render_only() {
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+
+    assert!(html.contains("const normalizeMermaidSourceForRender = (source) =>"));
+    assert!(html.contains(r#"source.replaceAll("\\n", "<br/>")"#));
+    assert!(html.contains("window.mermaid.render(renderId, renderSource)"));
+    assert!(html.contains("escapeHtml(source)"));
+}
+
+#[test]
+fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silent() {
+    let html = app_shell_html(
+        AppTheme::Default,
+        AppLanguage::English,
+        DocumentSize::default(),
+    );
+    let view_source = include_str!("../implementation/app/workspace_view.rs");
+    let interface_source = include_str!("../implementation/app/interface_types.rs");
+    let export_source = include_str!("../implementation/app/export_actions.rs");
+
+    assert!(html.contains("window.showErrorStatus = (payload) =>"));
+    assert!(html.contains("window.showExportSuccess = (payload) =>"));
+    assert!(!html.contains("window.showStatus"));
+    assert!(!html.contains("payload.level"));
+    assert!(html.contains("status.dataset.kind === \"export-success\""));
+    assert!(html.contains("showTransientStatus(\"error\")"));
+    assert!(html.contains("showTransientStatus(\"export-success\")"));
+    assert!(html.contains("status.dataset.visible = \"true\""));
+    assert!(html.contains("status.dataset.visible = \"false\""));
+    assert!(html.contains("}, 8000);"));
+    assert!(html.contains(".shell-status[data-visible=\"true\"]"));
+    assert!(html.contains(".shell-status[data-level=\"error\"]"));
+    assert!(html.contains(".shell-status[data-level=\"success\"]"));
+    assert!(html.contains("status__action"));
+    assert!(html.contains("data-export-open-path"));
+    assert!(!view_source.contains("render_status_with_action"));
+    assert!(!view_source.contains("render_status("));
+    assert!(view_source.contains("render_error_status"));
+    assert!(view_source.contains("render_export_success"));
+    assert!(view_source.contains("window.showErrorStatus"));
+    assert!(view_source.contains("window.showExportSuccess"));
+    assert!(interface_source.contains("struct ErrorStatusPayload"));
+    assert!(interface_source.contains("struct ExportSuccessPayload"));
+    assert!(!interface_source.contains("struct StatusPayload"));
+    assert!(!interface_source.contains("pub(crate) level:"));
+    assert!(export_source.contains("Ok(PdfExportOutcome::Exported(path)) => render_export_success("));
+    assert!(export_source.contains("Ok(PdfExportOutcome::Cancelled) => {}"));
+    assert!(export_source.contains("Ok(HtmlExportOutcome::Exported(path)) => render_export_success("));
+    assert!(export_source.contains("Ok(HtmlExportOutcome::Cancelled) => {}"));
+    assert!(export_source.contains("Err(message) => render_error_status(webview, &message)"));
+}
+
+#[test]
+fn main_window_close_quits_while_tab_close_remains_document_scoped() {
+    let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
+    let tabs_source = include_str!("../implementation/app/native_tabs.rs");
+    let window_events_source = include_str!("../implementation/app/window_events.rs");
+    let document_window_configuration = tabs_source
+        .split("pub(super) fn configure_document_window")
+        .nth(1)
+        .unwrap()
+        .split("fn configure_window_chrome")
+        .next()
+        .unwrap();
+
+    assert!(bootstrap_source.contains("native_tabs::configure_main_window("));
+    assert!(bootstrap_source.contains("native_tabs::configure_document_window("));
+    assert!(!bootstrap_source.contains("native_tabs::configure("));
+    assert!(tabs_source.contains("standardWindowButton(NSWindowButton::CloseButton)"));
+    assert!(tabs_source.contains("sel!(exitApplication:)"));
+    assert!(!document_window_configuration.contains("exitApplication:"));
+    assert!(window_events_source.contains("close_current_document"));
+    assert!(!window_events_source.contains("WindowEvent::CloseRequested => UserEvent::Exit"));
+}
+
+#[test]
 fn native_footer_uses_the_compact_v080_height() {
     let source = include_str!("../implementation/app/native_footer.rs");
 

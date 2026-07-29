@@ -180,6 +180,9 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         document.getElementById(`d${renderId}`)?.remove();
       };
 
+      const normalizeMermaidSourceForRender = (source) =>
+        source.replaceAll("\\n", "<br/>");
+
       const renderMermaidDiagrams = async () => {
         ensureMermaidInitialized();
         if (!window.mermaid) return;
@@ -200,8 +203,9 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
           }
 
           const renderId = `markhola-export-mermaid-${index}-${Date.now()}`;
+          const renderSource = normalizeMermaidSourceForRender(source);
           try {
-            const { svg } = await window.mermaid.render(renderId, source);
+            const { svg } = await window.mermaid.render(renderId, renderSource);
             diagramNode.innerHTML = svg;
             statusNode?.classList.add("hidden");
           } catch (error) {

@@ -11,7 +11,7 @@ use crate::workspace::DocumentWorkspace;
 
 use super::asset_access::{AssetAccessRegistry, register_document};
 use super::native_footer::NativeFooter;
-use super::workspace_view::{render_status, sync_workspace_state};
+use super::workspace_view::{render_error_status, sync_workspace_state};
 
 pub(super) fn save_document(document: &mut ActiveDocument) -> Result<(), String> {
     if document.is_draft() {
@@ -38,11 +38,11 @@ pub(super) fn save_active_document(
     }
 
     let Some(document) = workspace.active_document_mut() else {
-        render_status(webview, text("status.no_document_to_save"), "error");
+        render_error_status(webview, text("status.no_document_to_save"));
         return false;
     };
     if let Err(message) = save_document(document) {
-        render_status(webview, &message, "error");
+        render_error_status(webview, &message);
         return false;
     }
     sync_workspace_state(
@@ -63,37 +63,36 @@ pub(super) fn save_active_document_as(
     asset_access: &AssetAccessRegistry,
 ) -> bool {
     let Some(document) = workspace.active_document() else {
-        render_status(webview, text("status.no_document_to_save"), "error");
+        render_error_status(webview, text("status.no_document_to_save"));
         return false;
     };
 
     let snapshot = SaveAsSnapshot::from_document(document);
     let Some(path) = choose_save_as_path(&snapshot) else {
-        render_status(webview, text("status.save_as_cancelled"), "info");
         return false;
     };
     if workspace
         .find_by_path_excluding(&path, snapshot.document_id)
         .is_some()
     {
-        render_status(webview, text("status.save_target_open"), "error");
+        render_error_status(webview, text("status.save_target_open"));
         return false;
     }
     if let Err(error) = file_io::save_markdown(&path, &snapshot.markdown) {
-        render_status(webview, &error, "error");
+        render_error_status(webview, &error);
         return false;
     }
     let Ok(base_url) = file_io::directory_base_url(&path) else {
-        render_status(webview, text("status.invalid_file_url"), "error");
+        render_error_status(webview, text("status.invalid_file_url"));
         return false;
     };
     if let Err(error) = register_document(asset_access, snapshot.document_id, &path) {
         let message = text("status.failed_local_assets").replace("{error}", &error.to_string());
-        render_status(webview, &message, "error");
+        render_error_status(webview, &message);
         return false;
     }
     let Some(document) = workspace.active_document_mut() else {
-        render_status(webview, text("status.no_document_to_save"), "error");
+        render_error_status(webview, text("status.no_document_to_save"));
         return false;
     };
     document.replace_file_path(path, base_url);

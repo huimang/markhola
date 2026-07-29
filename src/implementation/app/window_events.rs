@@ -4,7 +4,6 @@ use tao::window::WindowId;
 
 use super::runtime::AppRuntime;
 use super::shortcuts::handle_command_shortcut;
-use super::workspace_view::render_status;
 use super::{UserEvent, dispatch_user_event, log_event, new_action_context};
 use crate::app::text;
 
@@ -31,14 +30,6 @@ pub(super) fn handle_window_event(
             if event.state == ElementState::Released && runtime.modifiers.super_key() {
                 handle_command_shortcut(&runtime.proxy, event.physical_key);
             }
-        }
-        WindowEvent::HoveredFile(path) => {
-            let message =
-                text("status.drop_to_open").replace("{path}", &path.display().to_string());
-            render_status(&runtime.webview, &message, "info");
-        }
-        WindowEvent::HoveredFileCancelled => {
-            render_status(&runtime.webview, text("status.ready_open_hint"), "info");
         }
         WindowEvent::DroppedFile(path) => {
             let ctx = new_action_context("window-dropped-file");

@@ -153,10 +153,13 @@ fn example_languages_keeps_mainstream_highlight_blocks() {
 
 #[test]
 fn example_mermaid_keeps_mermaid_render_containers() {
-    let html = render_html(include_str!("../../examples/mermaid.md"));
+    let source = include_str!("../../examples/mermaid.md");
+    let html = render_html(source);
 
     assert!(html.contains("class=\"mermaid-block\""));
     assert!(html.contains("class=\"mermaid-block__diagram\""));
+    assert!(source.contains(r#"A[First line\nSecond line]"#));
+    assert!(html.contains(r#"First line\nSecond line"#));
 }
 
 #[test]
