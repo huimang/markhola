@@ -143,6 +143,28 @@ print -r -- "bundle executable" >"$BANNED_REPO/$APP_PATH"
 git -C "$BANNED_REPO" add .
 expect_failure banned-artifacts-and-app "$BANNED_REPO" "${BANNED_PATHS[@]}"
 
+UPPERCASE_REPO="$(new_repo uppercase-extensions)"
+UPPERCASE_DMG_PATH="uppercase artifact.DMG"
+UPPERCASE_PNG_PATH="uppercase oversized.PNG"
+print -r -- "artifact" >"$UPPERCASE_REPO/$UPPERCASE_DMG_PATH"
+make_file "$UPPERCASE_REPO/$UPPERCASE_PNG_PATH" "$((IMAGE_LIMIT + 1))"
+git -C "$UPPERCASE_REPO" add .
+expect_failure uppercase-extensions "$UPPERCASE_REPO" \
+  "$UPPERCASE_DMG_PATH" "$UPPERCASE_PNG_PATH"
+
+RENAME_REPO="$(new_repo renamed-target-paths)"
+print -r -- "safe source" >"$RENAME_REPO/safe-artifact.txt"
+print -r -- "safe source" >"$RENAME_REPO/safe-bundle.txt"
+git -C "$RENAME_REPO" add .
+git -C "$RENAME_REPO" commit -qm "Add safe source files"
+RENAMED_DMG_PATH="renamed artifact.dmg"
+RENAMED_APP_PATH="Renamed Output.app/Contents/data"
+git -C "$RENAME_REPO" mv safe-artifact.txt "$RENAMED_DMG_PATH"
+mkdir -p "$RENAME_REPO/${RENAMED_APP_PATH:h}"
+git -C "$RENAME_REPO" mv safe-bundle.txt "$RENAMED_APP_PATH"
+expect_failure renamed-target-paths "$RENAME_REPO" \
+  "$RENAMED_DMG_PATH" "$RENAMED_APP_PATH"
+
 DELETION_REPO="$(new_repo staged-deletions-allowed)"
 make_file "$DELETION_REPO/legacy-large.bin" "$((OTHER_LIMIT + 1))"
 print -r -- "legacy artifact" >"$DELETION_REPO/legacy.dmg"
