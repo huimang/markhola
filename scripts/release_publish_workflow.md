@@ -42,6 +42,18 @@ This should leave you with a packaged release candidate at:
 dist/MarkHola-<version>.dmg
 ```
 
+For `v0.9.0` and later macOS releases, the packaged app must be a single Universal 2 bundle:
+
+```bash
+./scripts/verify_macos_architectures.sh \
+  --app dist/MarkHola.app \
+  --universal
+```
+
+The check must prove that the main executable contains only `arm64` and `x86_64`, both slices use
+the macOS 14.0 deployment target, `LSMinimumSystemVersion` is 14.0, no incompatible helper Mach-O is
+bundled, and the final assembled App signature remains valid.
+
 ## 2. Run pre-publish sandbox validation
 
 Before creating or publishing the GitHub release, validate the packaged app in a macOS sandbox environment.
@@ -63,6 +75,15 @@ Recommended sandbox validation flow:
 11. Save the file and confirm the file changed on disk
 12. Switch back to readonly mode and verify rendered output
 13. If the release includes `[toc]`, verify the generated table of contents updates after save
+
+For a Universal 2 release, also capture the actual running architecture:
+
+- Apple Silicon native launch must report `aarch64`
+- Intel native launch must report `x86_64`
+- when Product authorizes the Rosetta fallback, force the exact candidate's x86_64 slice and record
+  `sysctl.proc_translated=1`, the candidate process path, and startup logs reporting `x86_64`
+- Rosetta evidence must retain the documented Intel hardware, GPU, WebKit, PDFKit, and window-system
+  residual risks
 
 Hard rule:
 
@@ -109,6 +130,8 @@ Publish the release only after confirming all of the following:
 - every packaged `Help > Documentation` language matches the target version and user-visible release
   scope
 - the Git tag points at the intended final release commit
+- the GitHub Release contains only one `MarkHola-<version>.dmg` installation asset
+- the downloaded release asset has the same SHA-256 as the frozen validated candidate
 
 ## 5. Keep evidence
 
@@ -120,6 +143,9 @@ For each release, keep a short verification record with:
 - the tested version
 - the sandbox validation result
 - the key behaviors verified
+- the App slice list and per-slice deployment target
+- the actual native and Intel/Rosetta process architectures
+- whether Developer ID signing, DMG signing, notarization, staple, and validate ran or were skipped
 - the GitHub release URL after publish
 
 Store this record at `drafts/release-validation-v<version>.md`. Release validation records are local

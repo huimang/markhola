@@ -1,6 +1,6 @@
 # MarkHola 文档
 
-Current version: `v0.8.2`
+Current version: `v0.9.0`
 
 ## MarkHola 是什么
 
@@ -18,6 +18,7 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - 渲染 Mermaid（包括字面 `\n` 换行）、公式、表格、链接、图片和高亮代码
 - 将当前文档导出为 PDF 或 HTML，成功后显示导出路径与“打开”操作，并支持打印
 - 点击主窗口左上角红色关闭按钮退出 MarkHola，标签页关闭命令仍只关闭当前文档
+- Apple Silicon 与运行 macOS 14.0 或更高版本的 Intel Mac 使用同一个 Universal 2 应用
 
 ## 菜单
 
@@ -71,3 +72,4 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - 渲染后的 Markdown 链接不显示下划线。
 - 默认与深色主题使用各自的护眼代码色板。
 - 默认空白状态不显示状态提示；PDF 或 HTML 导出成功后显示输出路径与“打开”操作。
+- MarkHola 通过同一个 Universal 2 应用支持 Apple Silicon，以及运行 macOS 14.0 或更高版本的 Intel Mac。

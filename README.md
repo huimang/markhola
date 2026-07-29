@@ -6,7 +6,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.8.2`
+- `v0.9.0`
 
 ## Features
 
@@ -67,10 +67,12 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Open Markdown files from Finder on macOS
 - Open external links in the default browser
 - macOS app bundle and DMG packaging
+- One Universal 2 macOS app and DMG for Apple Silicon and Intel
 
 ## Platform
 
-- macOS on Apple Silicon
+- macOS 14.0 or later on Apple Silicon
+- macOS 14.0 or later on Apple Intel
 
 ## Tech Stack
 
@@ -135,6 +137,28 @@ Create the macOS app bundle and DMG:
 
 ```bash
 ./scripts/package_dmg.sh
+```
+
+The macOS build scripts require `rustup` with the fixed Rust `1.95.0` toolchain and both
+`aarch64-apple-darwin` and `x86_64-apple-darwin` targets declared by `rust-toolchain.toml`.
+The build preflight reports the exact installation command when any prerequisite is missing.
+
+Create a fast host-architecture app for local development:
+
+```bash
+./scripts/build_app.sh
+```
+
+Create and verify the Universal 2 app without packaging:
+
+```bash
+./scripts/build_app.sh --universal
+```
+
+Run the standalone Universal 2 architecture-gate tests:
+
+```bash
+./scripts/test_verify_macos_architectures.sh
 ```
 
 Release order for GitHub publishing:

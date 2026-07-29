@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/scripts/macos_toolchain.sh"
 WITH_PACKAGE=0
 APP_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
 
@@ -17,6 +18,11 @@ for argument in "$@"; do
       ;;
   esac
 done
+
+markhola_prepare_rust_toolchain
+
+echo "==> Running Universal 2 architecture gate tests"
+"$ROOT_DIR/scripts/test_verify_macos_architectures.sh"
 
 require_file() {
   local path="$1"
@@ -73,10 +79,19 @@ is_known_sandbox_webkit_failure() {
 }
 
 echo "==> Running automated regression tests"
-cargo test --manifest-path "$ROOT_DIR/Cargo.toml"
+markhola_cargo test --locked --manifest-path "$ROOT_DIR/Cargo.toml"
+
+echo "==> Running x86_64 automated regression tests"
+markhola_cargo test \
+  --locked \
+  --manifest-path "$ROOT_DIR/Cargo.toml" \
+  --target x86_64-apple-darwin
 
 echo "==> Building release binary"
-cargo build --release --manifest-path "$ROOT_DIR/Cargo.toml"
+markhola_cargo build \
+  --release \
+  --locked \
+  --manifest-path "$ROOT_DIR/Cargo.toml"
 
 echo "==> Verifying required regression fixtures"
 require_file "examples/basic.md"
@@ -101,7 +116,7 @@ SMOKE_EXPORT_PATH="$ROOT_DIR/dist/pdf-export-smoke.pdf"
 SMOKE_EXPORT_LOG="$ROOT_DIR/dist/pdf-export-smoke.log"
 rm -f "$SMOKE_EXPORT_PATH"
 if ! run_release_binary "$SMOKE_EXPORT_LOG" \
-  cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export \
+  markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export \
   "$ROOT_DIR/examples/basic.md" \
   "$SMOKE_EXPORT_PATH"; then
   if is_known_sandbox_webkit_failure "$SMOKE_EXPORT_LOG"; then
@@ -119,7 +134,7 @@ MERMAID_EXPORT_PATH="$ROOT_DIR/dist/mermaid-export-smoke.pdf"
 MERMAID_EXPORT_LOG="$ROOT_DIR/dist/mermaid-export-smoke.log"
 rm -f "$MERMAID_EXPORT_PATH"
 if ! run_release_binary "$MERMAID_EXPORT_LOG" \
-  cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export \
+  markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export \
   "$ROOT_DIR/examples/mermaid.md" \
   "$MERMAID_EXPORT_PATH"; then
   if is_known_sandbox_webkit_failure "$MERMAID_EXPORT_LOG"; then
@@ -135,7 +150,7 @@ fi
 echo "==> Running HTML export smoke test"
 HTML_EXPORT_PATH="$ROOT_DIR/dist/html-export-smoke.html"
 rm -f "$HTML_EXPORT_PATH"
-cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export-html \
+markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-export-html \
   "$ROOT_DIR/examples/basic.md" \
   "$HTML_EXPORT_PATH"
 require_file "dist/html-export-smoke.html"
@@ -148,7 +163,7 @@ echo "==> Running print preparation smoke test"
 PRINT_PREPARE_BASIC_LOG="$ROOT_DIR/dist/print-prepare-basic.log"
 PRINT_PREPARE_MERMAID_LOG="$ROOT_DIR/dist/print-prepare-mermaid.log"
 if ! run_release_binary "$PRINT_PREPARE_BASIC_LOG" \
-  cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-prepare \
+  markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-prepare \
   "$ROOT_DIR/examples/basic.md"; then
   if is_known_sandbox_webkit_failure "$PRINT_PREPARE_BASIC_LOG"; then
     echo "Warning: skipped blocking basic print prepare smoke due to known sandboxed WKWebView JavaScript limitation." >&2
@@ -157,7 +172,7 @@ if ! run_release_binary "$PRINT_PREPARE_BASIC_LOG" \
   fi
 fi
 if ! run_release_binary "$PRINT_PREPARE_MERMAID_LOG" \
-  cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-prepare \
+  markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-prepare \
   "$ROOT_DIR/examples/mermaid.md"; then
   if is_known_sandbox_webkit_failure "$PRINT_PREPARE_MERMAID_LOG"; then
     echo "Warning: skipped blocking Mermaid print prepare smoke due to known sandboxed WKWebView JavaScript limitation." >&2
@@ -169,7 +184,7 @@ fi
 echo "==> Verifying Mermaid print preview page count"
 MERMAID_PRINT_PAGES_LOG="$ROOT_DIR/dist/mermaid-print-pages.log"
 if run_release_binary "$MERMAID_PRINT_PAGES_LOG" \
-  cargo run --release --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-pages \
+  markhola_cargo run --release --locked --bin markhola --manifest-path "$ROOT_DIR/Cargo.toml" -- --smoke-print-pages \
   "$ROOT_DIR/examples/mermaid.md"; then
   MERMAID_PRINT_PAGES_OUTPUT="$(cat "$MERMAID_PRINT_PAGES_LOG")"
   if [[ "$MERMAID_PRINT_PAGES_OUTPUT" != *"pages=6"* ]]; then
@@ -191,6 +206,9 @@ if [[ "$WITH_PACKAGE" -eq 1 ]]; then
   require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.md"
   require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.zh-CN.md"
   require_file "dist/MarkHola-${APP_VERSION}.dmg"
+  "$ROOT_DIR/scripts/verify_macos_architectures.sh" \
+    --app "$ROOT_DIR/dist/MarkHola.app" \
+    --universal
 fi
 
 echo "==> Automated regression checks passed"

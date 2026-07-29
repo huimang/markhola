@@ -1,6 +1,6 @@
 # MarkHola Documentation
 
-Current version: `v0.8.2`
+Current version: `v0.9.0`
 
 ## What is MarkHola
 
@@ -18,6 +18,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Render Mermaid, including literal `\n` line breaks, math, tables, links, images, and highlighted code
 - Export the current document to PDF or HTML, receive a successful-export prompt with an `Open` action, and print it
 - Quit MarkHola with the main window's red close button while keeping tab-close commands document-scoped
+- Install the same Universal 2 app on Apple Silicon or an Intel Mac running macOS 14.0 or later
 
 ## Menus
 
@@ -71,3 +72,4 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Rendered Markdown links do not use underlines.
 - Default and Dark use separate visually comfortable code palettes.
 - The default empty state does not show a status prompt; successful PDF and HTML exports show the output path and an `Open` action.
+- MarkHola supports Apple Silicon and Intel Macs running macOS 14.0 or later through one Universal 2 app.
