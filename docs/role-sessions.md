@@ -15,6 +15,8 @@ These rules apply to every role session:
 - keep session names explicitly tied to the role
 - when multiple sessions of the same role exist, keep the role prefix and add a scoped suffix
 - use handoffs instead of blending multiple primary roles into one session
+- use the repository IM log for explicit cross-session messaging when session-to-session handoff
+  text must be persisted
 
 Recommended role-first session names:
 
@@ -30,7 +32,41 @@ Scoped examples:
 - `engineering-v0.8.2`
 - `testing-release-v0.8.2`
 
-## 2. Product session
+## 2. Cross-session IM mechanism
+
+Use the `im/` directory as the shared cross-session message area.
+
+Rules:
+
+- create one Markdown file per day
+- the filename must use the date in `YYYYMMDD.md` format
+- for 2026-07-29, the file is `im/20260729.md`
+- append messages in chronological order
+- each role session should read newly appended messages that mention its role
+- after completing a requested action, the receiving role should append a completion reply
+
+Message format:
+
+```text
+[2026/07/29 20:34:24] product: @architect 请把当前git内的文档提交按git提交流程提交commit
+[2026/07/29 20:36:34] architect: @product 已经操作完毕
+```
+
+Required fields:
+
+- timestamp in `[YYYY/MM/DD HH:MM:SS]`
+- sender role name
+- optional `@role` mention for the intended recipient
+- the message body
+
+Recommended usage:
+
+- Product uses the IM file to dispatch role work explicitly
+- Architect, Engineering, and Testing monitor new `@role` messages addressed to them
+- completion, blockers, and handoff results are appended as new messages rather than editing old
+  ones
+
+## 3. Product session
 
 ### Recommended names
 
@@ -89,7 +125,7 @@ orchestration.
 - receive technical readiness from Architect
 - receive validation status from Testing
 
-## 3. Architect session
+## 4. Architect session
 
 ### Recommended names
 
@@ -138,7 +174,7 @@ interfaces, guide implementation structure, and decide when technical quality ha
 - hand behavior boundaries and risks to Testing
 - hand technical readiness and remaining risks to Product
 
-## 4. Engineering session
+## 5. Engineering session
 
 ### Recommended names
 
@@ -187,7 +223,7 @@ results for verification and release preparation.
 - hand updated code and commit structure to Architect
 - hand rebuilt candidates to Product for final true-device acceptance
 
-## 5. Testing session
+## 6. Testing session
 
 ### Recommended names
 
@@ -237,7 +273,7 @@ behavior, and provide release-candidate evidence and product-facing true-device 
 - hand validation status and remaining risks to Architect
 - hand true-device acceptance checklists and evidence context to Product
 
-## 6. Session routing quick guide
+## 7. Session routing quick guide
 
 Use this routing rule when deciding where work belongs:
 
@@ -248,7 +284,7 @@ Use this routing rule when deciding where work belongs:
 | code changes, fixes, builds, implementation updates | Engineering |
 | cases, validation, regression, candidate evidence, verification support | Testing |
 
-## 7. Product dispatch decision table
+## 8. Product dispatch decision table
 
 Use this table when the Product session is deciding which role session should act next.
 
@@ -267,7 +303,7 @@ Use this table when the Product session is deciding which role session should ac
 | Accepted work is ready to be committed into Git | Architect | Final Git submission ownership belongs to Architect. |
 | Final true-device product acceptance passed, and the release candidate is ready | Product | Product owns the final publish decision. |
 
-## 8. Product pause and resume rules
+## 9. Product pause and resume rules
 
 The Product session may pause a role session when:
 
