@@ -59,6 +59,11 @@ When multiple Testing sessions run concurrently, use a dedicated `testing-bug-tr
 the sole ledger writer. Other Testing sessions deliver findings and re-test evidence to that
 session and keep their own write scopes limited to test code or device evidence.
 
+Full GUI validation must not take control of the user's active desktop. Run it in an isolated
+macOS VM, a dedicated Mac runner, or an explicit host-idle validation window provided by the user.
+Docker and non-macOS CI may execute headless tests and static gates but cannot produce release
+evidence for AppKit, WKWebView, PDFKit, DMG behavior, Rosetta, or Intel-native execution.
+
 Architect should actively assess whether the confirmed work can be split into independent packages
 that run concurrently. Use additional role-scoped sessions when parallel execution materially
 shortens the critical path, but define one owner, a disjoint write scope, acceptance criteria, and
@@ -281,6 +286,8 @@ or rebuilt candidate. Engineering provides the frozen artifact, its identity evi
 implementation notes needed for efficient checking. Testing sends each finding directly to the
 responsible Engineering session, then re-validates the fix. Product receives Testing's completed
 evidence and remaining-risk summary and retains the final product and release go/no-go decision.
+The GUI portion runs only in an approved isolated macOS environment or a user-provided host-idle
+window; headless checks should be completed separately without occupying the active desktop.
 
 ### Step 10 — Architect prepares final technical acceptance
 

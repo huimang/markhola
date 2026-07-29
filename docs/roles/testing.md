@@ -54,6 +54,10 @@ Within this repository, the Testing role must also:
 - retain invalid, rejected, and duplicate findings with their disposition instead of deleting them
 - execute the true-device validation pass and provide its cases, checkpoints, evidence, and
   remaining risks to Product for the final go/no-go decision
+- do not run or control a full GUI validation matrix on the user's active desktop; use an isolated
+  macOS VM or dedicated Mac runner, or an explicit host-idle validation window provided by the user
+- use Docker and non-macOS CI only for unit, script, static, and other headless gates; never treat
+  them as AppKit, WKWebView, PDFKit, DMG, Rosetta, or Intel-native release evidence
 - split automated test-code work and true-device validation into distinct, clearly named Testing
   sessions when they can run in parallel without sharing a write scope
 
@@ -140,6 +144,8 @@ Before release publication, the Testing role should verify that:
 - conflicting local app copies did not invalidate the result
 - the packaged app can perform the minimum required validation flow
 - UI observations and runtime evidence do not conflict
+- GUI evidence was captured in an approved isolated macOS environment or an explicit host-idle
+  validation window without taking control of the user's active desktop
 
 Testing owns true-device execution and its evidence. Product owns the final product and release
 go/no-go decision based on that evidence.
