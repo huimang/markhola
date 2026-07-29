@@ -207,3 +207,28 @@ unnecessary luminance jumps, near-white text on large dark surfaces, pure-black 
 and excessive saturation or simultaneous color/weight emphasis. If visual comfort conflicts with
 minimum accessibility, preserve the accessibility minimum and consider a separate increased-contrast
 variant rather than weakening the default below the minimum.
+
+## 13. Separate Planning Tasks From Implementation Tasks
+
+Keep `AGENTS.md` short and use it as an index for workflow rules.
+
+For detailed task-boundary, task-switching, and repository-state guardrail rules, follow
+`docs/development-workflow.md`.
+
+For role responsibilities and cross-role execution order, follow:
+
+- `docs/roles/product.md`
+- `docs/roles/architect.md`
+- `docs/roles/engineering.md`
+- `docs/roles/testing.md`
+- `docs/role-collaboration-flow.md`
+
+Minimum requirements here:
+
+- determine whether the current task is planning-only, implementation, or release/publish before
+  acting
+- if the task is planning-only, do not change implementation state
+- do not let a brief phrase such as “start”, “continue”, or “begin implementation” silently
+  override an already established planning-only task boundary
+- in implementation tasks, follow the standard delivery flow in this document together with
+  `docs/development-workflow.md`
