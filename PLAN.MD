@@ -241,38 +241,46 @@ This is another markdown reader and exporter software.Written by AI, free are th
 ### v1.0.0
 Start this milestone immediately after v0.9.0 is successfully published; do not schedule v0.9.1 or v0.9.2 work in between.
 
-1. Platform: Apple Intel and Apple Silicon
-2. Detect external Markdown file changes while a document is open
+1. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
    - If the current document has unsaved changes, prompt the user to choose one of:
      - Reload the latest on-disk content directly
      - Save the current in-memory content to a temporary file, then load the latest on-disk content
      - Keep the current document unchanged
+   - Store conflict-recovery copies under the Apple-provided application temporary directory, not
+     inside the installed or signed application bundle
+   - Show the exact temporary-copy path to the user and do not present it as a durable backup
+   - Avoid repeating the same prompt until the on-disk file changes again
    - When saving, compare the on-disk file content or file version against the version originally loaded for editing
    - If the file changed on disk during editing, prompt the user to choose one of:
      - Overwrite the current on-disk file with the editor content
      - Save the current editor content to a temporary file, then load the latest on-disk content
      - Keep the current document unchanged
-3. Add large-view support for diagrams and other oversized rendered content
-   - Allow Mermaid diagrams and similar rendered blocks to be opened in a larger reading view when the normal document layout is too small
-   - Make large diagrams readable without requiring permanent document font-size changes
+2. Add large-view support for images and Mermaid diagrams
+   - Allow image and Mermaid blocks to be opened in an overlay when the normal document layout is
+     too small
+   - Support zooming and panning inside the overlay
+   - Make large images and diagrams readable without requiring permanent document font-size changes
    - Keep the original document content unchanged while entering and leaving the larger viewing mode
    - Keep this capability separate from document font-size changes and document-view zoom
    - Treat this as a block-focused viewing mode for oversized rendered content rather than a global document scaling action
-4. Add a dedicated Settings page for MarkHola configuration
+3. Add a dedicated Settings page for MarkHola configuration
    - Provide one configuration entry for the user to manage app settings instead of scattering them only across menus
-   - Cover at least theme, document font size, and interface language in the first version
+   - Cover theme, document font size, and interface language in the first version
+   - Support `Command +` and `Command -` to increase or decrease document font size
+   - Treat document font size as a typography setting for the current reading and editing experience
+   - Let font-size changes affect text-centric layout such as paragraphs, headings, lists,
+     blockquotes, code blocks, and spacing
+   - Allow the visible document reading area to respond with proportional layout adjustments, but
+     do not treat font-size changes as full document zoom
    - Keep the page style consistent with MarkHola's existing visual language
    - Allow the Settings page to become the shared entry point for future configuration items
 
-### v1.0.1
-1. Update `README.md`, bundled Help, examples, validation records, and release workflow for the 1.0 release
-2. Support macOS release packaging and validation across Apple Intel and Apple Silicon
-3. Support document font-size changes
-   - Support `Command +` and `Command -` to increase or decrease document font size
-   - Treat document font size as a typography setting for the current reading and editing experience
-   - Let font-size changes affect text-centric layout such as paragraphs, headings, lists, blockquotes, code blocks, and spacing
-   - Allow the visible document reading area to respond with proportional layout adjustments when font size changes, but do not treat font-size changes as full document zoom
+4. Align the 1.0 release documentation and validation surface
+   - Update `README.md`, bundled Help, examples, validation records, and release workflow before
+     publishing v1.0.0
+   - Keep the existing Apple Intel and Apple Silicon support as a compatibility baseline rather than
+     treating it as new v1.0.0 feature scope
 
 ### v1.0.2
 1. Add document-view zoom for reading
