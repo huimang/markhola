@@ -55,6 +55,10 @@ coverage. Engineering sends status and fix handoffs directly to Testing rather t
 ledger concurrently. Rejected and duplicate findings remain recorded for later regression and
 retrospective analysis.
 
+When multiple Testing sessions run concurrently, use a dedicated `testing-bug-triage` session as
+the sole ledger writer. Other Testing sessions deliver findings and re-test evidence to that
+session and keep their own write scopes limited to test code or device evidence.
+
 Architect should actively assess whether the confirmed work can be split into independent packages
 that run concurrently. Use additional role-scoped sessions when parallel execution materially
 shortens the critical path, but define one owner, a disjoint write scope, acceptance criteria, and

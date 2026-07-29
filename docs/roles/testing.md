@@ -49,6 +49,8 @@ Within this repository, the Testing role must also:
   commit, re-test result, and regression coverage current in `bugs/`
 - remain the single writer for bug records; Engineering reports implementation status directly and
   Testing updates the ledger, preventing overlapping writes across role sessions
+- when multiple Testing sessions are active, assign `testing-bug-triage` as the sole `bugs/` writer;
+  unit and device sessions deliver findings and re-test results to it instead of editing the ledger
 - retain invalid, rejected, and duplicate findings with their disposition instead of deleting them
 - execute the true-device validation pass and provide its cases, checkpoints, evidence, and
   remaining risks to Product for the final go/no-go decision
