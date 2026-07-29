@@ -3,7 +3,9 @@ mod syntax_theme;
 
 use std::sync::OnceLock;
 
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
+use pulldown_cmark::{
+    CodeBlockKind, CowStr, Event, HeadingLevel, Options, Parser, Tag, TagEnd, html,
+};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, Theme};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -12,6 +14,13 @@ use syntect::util::LinesWithEndings;
 const TOC_PLACEHOLDER: &str = "<markhola-toc></markhola-toc>";
 
 pub fn render_html(markdown: &str) -> String {
+    render_html_with_image_resolver(markdown, |_| None)
+}
+
+pub(crate) fn render_html_with_image_resolver(
+    markdown: &str,
+    resolve_image: impl Fn(&str) -> Option<String>,
+) -> String {
     let markdown = preprocess_angle_bracket_links(markdown);
     let (markdown, has_toc_placeholder) = preprocess_toc(&markdown);
 
@@ -21,7 +30,25 @@ pub fn render_html(markdown: &str) -> String {
     options.insert(Options::ENABLE_TASKLISTS);
     options.insert(Options::ENABLE_MATH);
 
-    let parser = Parser::new_ext(&markdown, options);
+    let parser = Parser::new_ext(&markdown, options).map(|event| match event {
+        Event::Start(Tag::Image {
+            link_type,
+            dest_url,
+            title,
+            id,
+        }) => {
+            let destination = resolve_image(dest_url.as_ref())
+                .map(|resolved| CowStr::Boxed(resolved.into_boxed_str()))
+                .unwrap_or(dest_url);
+            Event::Start(Tag::Image {
+                link_type,
+                dest_url: destination,
+                title,
+                id,
+            })
+        }
+        other => other,
+    });
     let mut html_output = String::new();
     let mut regular_events = Vec::new();
     let mut events = parser.into_iter();

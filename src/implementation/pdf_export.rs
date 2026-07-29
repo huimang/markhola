@@ -28,6 +28,9 @@ use crate::file_io;
 use crate::markdown;
 use crate::render_assets;
 
+#[path = "pdf_export/export_assets.rs"]
+mod export_assets;
+
 pub(crate) const APP_NAME: &str = "MarkHola";
 pub(crate) const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const EXPORT_WEBVIEW_WIDTH: f64 = 816.0;
@@ -405,7 +408,7 @@ pub(crate) struct ExportMeasurement {
 
 #[allow(dead_code)]
 pub(crate) fn render_document_pdf_data(document: &ActiveDocument) -> Result<Vec<u8>, String> {
-    let rendered_document_html = markdown::render_html(document.markdown());
+    let rendered_document_html = render_export_document_html(document);
     let html = build_export_html(document, &rendered_document_html);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let pdf_data = render_pdf_data(document, &html, preparation_mode)?;
@@ -423,7 +426,7 @@ pub(crate) fn prepare_printable_webview_with_measurement(
     document: &ActiveDocument,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
     let started_at = Instant::now();
-    let rendered_document_html = markdown::render_html(document.markdown());
+    let rendered_document_html = render_export_document_html(document);
     let html = build_export_html(document, &rendered_document_html);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let webview = prepare_webview(document, &html, preparation_mode)?;
@@ -462,7 +465,7 @@ pub fn export_document(document: &ActiveDocument) -> Result<PdfExportOutcome, St
         );
         return Ok(PdfExportOutcome::Cancelled);
     };
-    let rendered_document_html = markdown::render_html(document.markdown());
+    let rendered_document_html = render_export_document_html(document);
     let html = build_export_html(document, &rendered_document_html);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     log_event(
@@ -506,7 +509,7 @@ pub fn export_markdown_file_to_path(input_path: &Path, output_path: &Path) -> Re
     let markdown = file_io::load_markdown(&input_path)?;
     let base_url = file_io::directory_base_url(&input_path)?;
     let document = ActiveDocument::open_with_id(1, input_path.clone(), markdown, base_url);
-    let rendered_document_html = markdown::render_html(document.markdown());
+    let rendered_document_html = render_export_document_html(&document);
     let html = build_export_html(&document, &rendered_document_html);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     write_export(&document, output_path, &html, preparation_mode)
@@ -1154,6 +1157,12 @@ pub(crate) fn build_export_html(document: &ActiveDocument, rendered_html: &str) 
             &render_assets::mathjax_runtime_for_inline_script(),
         )
         .replace("__DOCUMENT_HTML__", rendered_html)
+}
+
+fn render_export_document_html(document: &ActiveDocument) -> String {
+    markdown::render_html_with_image_resolver(document.markdown(), |destination| {
+        export_assets::local_image_data_url(document, destination)
+    })
 }
 
 pub(crate) fn export_footer_text() -> String {
