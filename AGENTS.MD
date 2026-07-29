@@ -42,17 +42,33 @@ Future ideas can be listed as optional follow-up items, but they must be clearly
 
 ## 6. Use Incremental Git Commits
 
-When code changes are ready, prefer committing them incrementally by feature instead of batching many unrelated updates into one commit.
+When code changes form a small but complete and independently understandable unit, commit them
+promptly instead of waiting to batch many unrelated updates at the end of the task.
 
 For user-visible work, each independently understandable feature should normally have its own commit.
 
 Do not combine multiple user-visible features into one implementation commit unless the user explicitly agrees to that batching.
 
-Commit messages should:
+Product, Engineering, Testing, and Architect sessions commit only files within their owned write
+scope. Product commits confirmed `PLAN.MD` and product-planning packages; pure coordination without
+tracked changes needs no commit. The Architect still reviews final history quality, integration
+order, and release-commit readiness without replacing another role's independent commit.
 
-- be written in English
-- be a single sentence
-- summarize the change clearly and directly
+Commit messages must use this format:
+
+```text
+[update|remove|add|bugfix] <session-name>: <English summary>
+```
+
+Choose exactly one operation, use the actual responsibility-oriented session name, and summarize
+the complete change clearly and directly. Examples:
+
+```text
+[bugfix] engineering-release-candidate: Validate helper deployment targets
+[add] testing-unit-cases: Cover Universal helper deployment target failures
+[update] architect: Align role commit ownership rules
+[update] product: Reorder post-release milestones
+```
 
 ## 7. Respect `.gitignore`
 
@@ -84,7 +100,9 @@ When implementing a new feature or a user-requested change in this repository, f
     - one-off build: `scripts/build_app.sh`
     - auto-build on file changes: `scripts/dev_watch_app.sh`
 14. When a fix is user-visible and needs manual verification (e.g. drag/drop, menus, webview navigation/rendering), include rebuilding `dist/MarkHola.app` via `scripts/build_app.sh` as a required step before declaring the work done.
-15. When the user explicitly asks to commit a version, split the implementation history by small feature first, and keep each user-visible feature in its own English one-sentence commit whenever practical.
+15. Commit each small complete work package promptly using
+    `[update|remove|add|bugfix] <session-name>: <English summary>`; when the user explicitly asks to
+    commit a version, verify that each user-visible feature remains independently understandable.
 16. After the feature commits, place documentation, packaging, validation, or release-summary adjustments in later commits instead of folding them back into the feature commits unless they are inseparable from a specific feature.
 17. Before uploading or publishing a GitHub release, run sandbox validation against the exact DMG candidate that will be released. The sandbox flow must at minimum verify opening a Markdown file, editing it, saving it, and checking the target release feature in the packaged app.
 18. Only publish the GitHub release after the sandbox validation passes. If validation fails, do not upload or publish the DMG.

@@ -21,6 +21,15 @@ Recommended session names:
 - understand product intent and business expectations well enough to design technology that serves
   the real workflow
 - define implementation boundaries and task breakdown
+- proactively evaluate whether independent work packages can run in parallel, and delegate them to
+  additional role-scoped sessions when doing so shortens the critical path
+- assign each parallel work package a single owner, a disjoint write scope, explicit acceptance
+  criteria, and a clear integration point
+- split automated test-code work and true-device validation into separate Testing sessions when
+  doing so shortens the critical path, and route each finding directly to the Engineering owner of
+  the affected work package
+- keep tightly coupled operations such as candidate assembly, signing, packaging, and artifact
+  freezing under one owner when parallel execution would create conflicts or invalidate evidence
 - identify architectural risks, dependency risks, and migration risks
 - define required extension points, performance expectations, and compatibility considerations
 - ensure terminology stays accurate, unambiguous, and consistently used across design and code
@@ -29,12 +38,14 @@ Recommended session names:
 - review code structure before final submission
 - understand Git history-shaping and change-integration operations well enough to control how work
   is combined, split, moved, and submitted
-- take responsibility for the final Git submission of accepted work, including commit grouping and
-  commit-message quality
+- take responsibility for final Git submission review, including commit grouping, commit-message
+  quality, integration order, and release-commit readiness
 - provide improvement feedback on architecture, layering, maintainability, design patterns,
   extensibility, and performance
 - insist on clean code, meaningful comments, and maintainable structure instead of merely
   functionally correct delivery
+- prioritize code standards, architecture, design-pattern fitness, and formal review; perform only
+  targeted risk-based verification instead of duplicating Testing's full case or true-device matrix
 - decide when code quality has converged enough to move toward final submission
 
 ## Repository-specific workflow requirements
@@ -49,10 +60,18 @@ Within this repository, the Architect role must also:
 - ensure user-visible work has a matching example direction before coding starts
 - perform technical review before code is considered ready for final submission
 - prepare final code-submission readiness only after Testing convergence
-- execute the final Git commit step for accepted work instead of leaving submission ownership
-  ambiguous
+- ensure Testing owns automated test implementation and true-device execution, while Architect
+  retains critical technical evidence spot-checks needed for sign-off
+- execute any final integration or release commit needed for accepted work instead of leaving final
+  submission ownership ambiguous
+- promptly commit each small, complete Architect-owned design, process, review-support, or
+  integration package using the repository commit-message format
+- verify that Product, Engineering, and Testing commits use the actual session name, an allowed
+  operation, and a small complete scope before final integration
 - ensure technical documentation is actually written, updated, and kept aligned with the accepted
   design
+- revisit the parallelization decision as implementation progresses instead of assuming the initial
+  task split remains optimal
 
 ## Required capabilities
 
@@ -67,7 +86,9 @@ Within this repository, the Architect role must also:
 - business capability modeling
 - workflow-oriented technical planning
 - decomposition of work into implementable tasks
+- safe parallel-work planning and conflict-aware delegation
 - code review
+- code-style and repository-convention review
 - terminology discipline
 - interface constraint design
 - performance and maintainability analysis
@@ -79,6 +100,7 @@ The Architect role should produce or approve:
 
 - technical design documents
 - implementation task decomposition
+- parallel-work ownership, write-scope, and integration guidance
 - architecture constraints and review feedback
 - the handoff package that Testing uses to design the test plan
 - final technical sign-off before code submission preparation
@@ -142,6 +164,7 @@ Before code is treated as ready for submission, the Architect role should verify
   maintainability
 - the commit structure is reasonably atomic and the commit messages accurately reflect the delivered
   changes
+- each commit uses `[update|remove|add|bugfix] <session-name>: <English summary>`
 - the integration path and history-shaping approach are appropriate for the change being submitted
 
 ## Review focus

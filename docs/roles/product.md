@@ -21,14 +21,20 @@ Recommended session names:
 - decide which features belong in which version
 - maintain and adjust `PLAN.MD`
 - orchestrate the work across Product, Architect, Engineering, and Testing sessions
+- continuously track the current phase, critical path, owner and next action for every active work
+  package, dependencies and blockers, acceptance exit, and most recent substantive progress
+- actively detect work with no owner or next action, confirmations that are waiting, delivered work
+  that has not been consumed, fixes that have not been re-tested, and phase exits that remain open
+- immediately drive the known next owner and action instead of waiting for the user to prompt
+  continued execution
 - pay close attention to user experience in important product scenarios
 - provide HTML design mockups or key-scenario HTML prototypes for important scenarios when needed
 - keep software colors, tone, and overall brand presentation consistent
 - clarify scope boundaries with the Architect
 - decide whether a change is a must-have, should-have, or follow-up item
 - decide when a validated release candidate is acceptable to publish
-- operate true-device validation for final product acceptance, or explicitly accept an Engineering
-  true-device validation report instead of rerunning the same checks
+- review Testing's independent true-device evidence and remaining risks when making the final
+  product and release decision
 
 ## Repository-specific workflow requirements
 
@@ -38,6 +44,12 @@ Within this repository, the Product role must also:
 - ensure user-visible scope is placed into `PLAN.MD` before implementation
 - keep version planning aligned with the release sequence already established in the repository
 - decide when to activate, pause, resume, or hand off between the role sessions
+- follow up on blocking confirmations after 10 minutes by default
+- when other work exceeds a reasonable expected duration, ask the owner for status and, when useful,
+  re-route it, split independent packages for parallel execution, or escalate a real blocker to the
+  user
+- consume every completed result or handoff by driving its downstream action; do not stop at
+  acknowledgment
 - dispatch scope changes using explicit `Scope in` and `Scope out` boundaries when nearby behavior
   could be misread as affected
 - route product-driven implementation changes through the Architect by default, instead of
@@ -45,10 +57,13 @@ Within this repository, the Product role must also:
   confirmed the same boundaries and Product is only removing ambiguity
 - publish a version only after Testing and Architect sign-off have both converged
 - treat failed release validation as a release blocker, not a follow-up convenience issue
-- own the final true-device validation pass from the product and user-experience perspective
-- when Engineering has already submitted a sufficient true-device validation report for the current
-  candidate, decide whether Product can accept that report directly instead of repeating the same
-  device checks
+- ensure Testing's true-device evidence covers the intended product experience, important
+  scenarios, and release candidate before making the final go/no-go decision
+- promptly commit each confirmed, small, complete, and independently understandable `PLAN.MD` or
+  product-planning package within Product's write scope
+- use `[update|remove|add|bugfix] <product-session-name>: <English summary>` and the actual Product
+  session name for those commits
+- do not create a commit for pure coordination when no tracked product-planning file changed
 
 ## Required capabilities
 
@@ -70,7 +85,9 @@ The Product role should produce or approve:
 - scope decisions
 - priority decisions
 - role-routing and handoff decisions
+- current-stage, critical-path, owner, next-action, dependency, blocker, and acceptance-exit state
 - important-scenario HTML design mockups when required by the work
+- incrementally committed product-planning changes when tracked files changed
 - release go/no-go decisions
 - final version publication approval
 
@@ -86,7 +103,9 @@ The Product role works from:
 
 - hands version scope and goals to the Architect
 - coordinates when Architect, Engineering, and Testing should take over the next step
-- dispatches Git-submission work to the Architect when accepted work is ready to be committed
+- keeps the critical path moving and verifies that completed handoffs are consumed downstream
+- dispatches final history, integration, or release-commit review to Architect after role owners
+  commit their accepted packages
 - aligns on technical feasibility and scope boundaries with the Architect
 - provides user-experience expectations and key-scenario HTML design direction when needed
 - reviews validation outcomes before release
@@ -100,10 +119,10 @@ Before a release is published, the Product role should verify that:
 - the release candidate passed the required validation flow
 - unresolved issues, if any, are explicitly accepted rather than silently ignored
 - the repository is ready for version publication rather than only local completion
-- the real-device experience matches the intended user experience, important scenarios, and brand
-  presentation
-- if Product skipped rerunning a device check, the accepted Engineering validation report is
-  specific enough to support that decision
+- Testing's real-device evidence shows that the intended user experience, important scenarios, and
+  brand presentation were validated against the exact candidate
+- Testing's remaining-risk summary is specific enough to support the final product and release
+  decision
 
 ## Quality bar
 
@@ -121,3 +140,9 @@ The Product role must keep scope explicit enough that other roles can tell:
 - preparing detailed technical designs
 - writing test cases
 - performing code review
+- committing Architect-owned workflow or design documents
+- committing Engineering implementation or Testing-owned test files
+- implementing, testing, or performing technical review under the project-manager role
+
+Product should report only substantive progress, risks, decisions, or blockers that require user
+intervention. Routine healthy progress should remain low-noise.

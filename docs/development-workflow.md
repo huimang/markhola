@@ -20,6 +20,10 @@ workflow as role-neutral.
 When role-based collaboration is used, each primary role should run in its own dedicated session as
 defined in `docs/role-collaboration-flow.md`.
 
+Product continuously tracks the active phase and critical path. A completed package is not treated
+as closed until its downstream owner has consumed the handoff and the relevant acceptance exit is
+either passed or explicitly blocked.
+
 ## 1. Task types
 
 Every task must be treated as one of these modes before work begins:
@@ -85,6 +89,24 @@ Before coding:
 - expanding scope beyond the confirmed request
 - skipping the documented delivery flow
 - pulling future-version work into the current version without user approval
+
+### Incremental commit rule
+
+Product, Engineering, Testing, and Architect should commit an owned work package as soon as it is a
+small, complete, validated, and independently understandable unit. Do not wait until the end of a
+long task to batch unrelated packages. Product applies this rule to confirmed `PLAN.MD` and product
+planning changes; pure coordination without tracked changes needs no commit.
+
+Use:
+
+```text
+[update|remove|add|bugfix] <session-name>: <English summary>
+```
+
+The session name must be the actual responsibility-oriented task name. Each role commits only its
+owned write scope. Product does not submit design, implementation, test, or workflow documentation.
+Architect reviews the resulting history, integration order, and final release-commit readiness
+without replacing another role's independent commit.
 
 ## 4. Release/publish tasks
 

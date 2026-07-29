@@ -8,7 +8,8 @@ MarkHola version change.
 - Product — owns version scope, cross-role orchestration, and release publication
 - Architect — owns technical design, technical review, and final code-quality convergence
 - Engineering — owns implementation and fixes
-- Testing — owns test coverage, validation design, and re-validation
+- Testing — owns test coverage, automated test code, validation execution, true-device testing, and
+  re-validation
 
 ## 2. Session model
 
@@ -36,6 +37,24 @@ for example:
 - `engineering-editor`
 - `testing-release-v0.8.2`
 
+For concurrent Engineering sessions, prefer responsibility-oriented names such as
+`engineering-release-candidate` and `engineering-universal-audit` so ownership is visible from the
+session list. Use `engineering-1`, `engineering-2`, and similar numeric suffixes only when the work
+cannot be summarized with a stable scope name.
+
+When test-code implementation and true-device validation can proceed independently, Architect
+should split them into clearly named sessions such as `testing-unit-cases` and
+`testing-device-validation`. Test-code sessions own only test files and fixtures; true-device
+sessions own the exact-candidate manual evidence. Both report confirmed defects directly to the
+Engineering session that owns the affected work package.
+
+Architect should actively assess whether the confirmed work can be split into independent packages
+that run concurrently. Use additional role-scoped sessions when parallel execution materially
+shortens the critical path, but define one owner, a disjoint write scope, acceptance criteria, and
+an integration point for every package. Do not parallelize a tightly coupled chain when concurrent
+changes could conflict or invalidate shared evidence; release-candidate assembly, signing,
+packaging, and artifact freezing should normally retain one owner.
+
 The role identity of a session should remain stable throughout the work. Do not silently switch a
 session from one primary role to another.
 
@@ -43,15 +62,33 @@ The Product session is the default coordinator for the role sessions. Product de
 session should act next and when work should be handed off across roles. Use the dispatch rules in
 `docs/role-sessions.md` when deciding the next session.
 
-All new cross-session IM messages must include a UUID message ID as defined in
-`docs/role-sessions.md`. Role sessions should use that message ID, not only timestamp text, as the
-primary key for deciding whether an IM instruction has already been handled.
+Product continuously maintains the current phase, critical path, package owner, next action,
+dependencies and blockers, acceptance exit, and last substantive progress. It actively detects
+ownerless work, missing next actions, waiting confirmations, unconsumed handoffs, fixes awaiting
+re-test, and unclosed phase exits. When the next owner and action are clear, Product drives them
+immediately instead of waiting for the user.
 
-If a rule or coordination notice applies to every role session, send it with `@all`. Scheduled IM
-watchers should reduce from every 10 seconds to every 5 minutes after 5 minutes without any newly
-appended message. As soon as a watcher reads any new appended message, it should immediately
-restore to every 10 seconds and restart its 5-minute idle countdown from that message-receipt
-time.
+Blocking confirmations use a default 10-minute follow-up. Other work that exceeds a reasonable
+expected duration should trigger a direct status check and, when useful, re-routing, safe parallel
+decomposition, or escalation to the user. Product must preserve role boundaries: project management
+does not authorize Product to implement, test, or perform Architect review. Routine healthy
+progress remains low-noise; Product reports substantive progress, risks, decisions, or blockers
+requiring user intervention.
+
+All cross-session messages must include a UUID message ID as defined in `docs/role-sessions.md`.
+Role sessions should use that message ID as the primary deduplication key.
+
+If a rule or coordination notice applies to every role session, deliver it directly to every mapped
+role session except the sender.
+
+Cross-session delivery is direct-first. Product, Architect, Engineering, and Testing use direct
+session messaging to wake the target immediately and do not run independent IM polling watchers.
+Resolve current role sessions through Codex thread discovery.
+
+Do not run an IM Proxy or append new coordination messages to IM. If direct delivery fails, refresh
+the target session and retry with the same UUID. If the target still cannot be reached, report the
+delivery blocker in the sender's task. Delivery success proves receipt, so replies should report
+only a decision, blocker, completed result, or actionable handoff.
 
 When Product hands off a scope change, the handoff must preserve the smallest confirmed
 interpretation of the user's request. Do not silently widen a feedback item from one scenario into
@@ -77,9 +114,13 @@ When a role is running a bounded submission-readiness or release-preparation pas
 complete that pass before reporting back, then return one consolidated blocker summary instead of
 multiple fragmented blocker messages whenever practical.
 
-Before any role appends a coordination IM, it should first re-check the latest IM state; after the
-append, it should immediately re-check again to decide whether a newly arrived message now makes
-the next step clear enough to continue without waiting for the next poll cycle.
+Every completed result or handoff must be consumed by its downstream owner. Product keeps the
+handoff on the critical path until the next action has started or the relevant phase exit is closed;
+a receipt-only state is not progress.
+
+Before any role sends a coordination message, it should process all currently delivered relevant
+messages. After sending, it should continue immediately when the next step is already clear instead
+of waiting for another communication cycle.
 
 Role details live in:
 
@@ -102,8 +143,13 @@ sequenceDiagram
   Architect->>Product: Align scope boundaries and technical direction
   Architect->>Testing: Share technical design and risk boundaries
   Architect->>Engineering: Share design, task breakdown, and constraints
-  Testing->>Testing: Prepare test cases, regression cases, and true-device cases
-  Engineering->>Engineering: Implement the confirmed scope
+  Testing->>Testing: Prepare cases and test-code work packages
+
+  par Implementation
+    Engineering->>Engineering: Implement the confirmed product scope
+  and Test automation
+    Testing->>Testing: Implement automated test code from accepted cases
+  end
 
   par Validation and review
     Testing->>Engineering: Report validation findings and reproduction details
@@ -120,9 +166,9 @@ sequenceDiagram
     Engineering->>Architect: Deliver updated fixes
   end
 
-  Testing->>Product: Provide true-device checklist and candidate validation context
-  Engineering->>Product: Deliver rebuilt app, release candidate, or true-device validation report
-  Product->>Product: Run final true-device validation, or accept the Engineering report
+  Engineering->>Testing: Deliver the frozen release candidate and artifact evidence
+  Testing->>Testing: Execute exact-candidate true-device validation
+  Testing->>Product: Provide true-device results, evidence, and remaining risks
   Product->>Engineering: Report product-acceptance findings when issues remain
   Testing->>Architect: Confirm test status and remaining risks
   Architect->>Product: Confirm technical convergence and release readiness
@@ -139,7 +185,9 @@ version task to the Architect.
 ### Step 2 — Product and Architect align on the solution direction
 
 The Architect reviews the requested scope with Product, identifies technical constraints, and
-prepares the technical design document.
+prepares the technical design document. As part of the implementation decomposition, Architect
+records which packages can run concurrently, their owners and write scopes, and which critical-path
+operations must remain single-owner.
 
 If Product, Architect, Engineering, or Testing is waiting on a confirmation that blocks the next
 step in this sequence, the waiting role should re-ping the owner of that confirmation rather than
@@ -155,6 +203,7 @@ document to prepare the testing design and validation coverage:
 - regression coverage
 - true-device validation cases
 - release-relevant verification cases when applicable
+- automated unit, integration, or script-level test-code tasks
 
 Product also provides important-scenario UX expectations and key-scenario HTML design direction
 when the change needs explicit HTML prototype or brand guidance.
@@ -181,8 +230,10 @@ than pausing at an acknowledgment-only reply.
 
 ### Step 6 — Testing validates the delivered behavior
 
-Once the implementation is functionally ready, Testing executes the planned validation and reports
-issues with enough detail for reproduction.
+Testing implements the automated test code derived from accepted cases as soon as the relevant
+contracts are stable. Once the implementation or candidate is ready, Testing executes the planned
+automated, regression, exact-artifact, and true-device validation. Findings go directly to the
+Engineering session that owns the affected work package, with enough detail for reproduction.
 
 If the delivered candidate and validation target are already clear, Testing should continue with
 validation or checklist preparation directly rather than stopping at receipt-only confirmation.
@@ -201,21 +252,22 @@ instead of stopping after an acknowledgment-only IM reply.
 
 ### Step 8 — Testing and Architect converge in parallel
 
-Testing re-runs verification while the Architect re-reviews the updated code. This loop continues
-until both of these are true:
+Testing may split automated test-code and true-device work into separate sessions with disjoint
+scopes. Those sessions re-run verification while the Architect focuses on code standards,
+architecture, design patterns, and maintainability review. Architect may perform targeted
+risk-based checks but should not duplicate the full Testing matrix. This loop continues until both
+of these are true:
 
 - the tested behavior is acceptable
 - the technical structure is acceptable
 
 ### Step 9 — True-device validation
 
-When required by the change, Product owns the final decision on true-device acceptance for the
-packaged or rebuilt application. Testing prepares the cases, evidence checkpoints, and focused
-re-validation targets, and Engineering provides the rebuilt app or release candidate plus any
-implementation notes needed for efficient checking. If Engineering has already submitted a
-sufficient true-device validation report for the current candidate, Product may accept that report
-directly instead of rerunning the same checks. Any findings return to Engineering for fixes, then
-back through Testing and Architect review again.
+When required by the change, Testing executes the true-device validation against the exact packaged
+or rebuilt candidate. Engineering provides the frozen artifact, its identity evidence, and any
+implementation notes needed for efficient checking. Testing sends each finding directly to the
+responsible Engineering session, then re-validates the fix. Product receives Testing's completed
+evidence and remaining-risk summary and retains the final product and release go/no-go decision.
 
 ### Step 10 — Architect prepares final technical acceptance
 
@@ -289,17 +341,16 @@ Handoff items:
 
 Handoff items:
 
-- true-device checklist
-- important evidence checkpoints
-- focused re-validation targets after implementation changes
+- true-device results and evidence
+- remaining-risk summary
+- final validation recommendation
 
 ### Engineering → Product
 
 Handoff items:
 
-- rebuilt app or release candidate
-- implementation notes needed for focused checking
-- true-device validation report when Product asks Engineering to cover that part of acceptance
+- release-candidate identity and delivery status
+- implementation notes needed for Product's release decision
 
 ### Architect → Engineering
 
@@ -349,7 +400,7 @@ split when deciding who should drive each part of the process.
 - feature placement into `PLAN.MD`
 - scope confirmation
 - important-scenario user experience and HTML design direction
-- final true-device product acceptance
+- final product acceptance based on Testing evidence
 - final release publication decision
 
 ### Architect owns
@@ -369,8 +420,9 @@ split when deciding who should drive each part of the process.
 ### Testing owns
 
 - test-case preparation
+- automated test-code implementation
 - regression planning
-- true-device validation design and support
+- true-device validation execution and evidence
 - release-candidate validation evidence
 
 ## 9. Special repository flows
@@ -388,15 +440,19 @@ split when deciding who should drive each part of the process.
 
 ### Git submission flow
 
-- Engineering prepares submission-ready change sets
-- Architect verifies the code has reached submission quality
-- Product dispatches the Git-submission step to Architect
-- Architect performs the final Git commit with accurate grouping and commit messaging
+- Product promptly commits confirmed product-planning packages; pure coordination with no tracked
+  change needs no commit
+- Engineering and Testing promptly commit each small, complete, validated package within their
+  disjoint write scopes
+- Architect does the same for Architect-owned design, process, or integration packages
+- every commit uses `[update|remove|add|bugfix] <session-name>: <English summary>`
+- Architect verifies code quality, commit scope, message format, and integration order
+- Product dispatches final history review, integration, or release-commit readiness to Architect
+- Architect completes any final integration or release commit and confirms submission readiness
 
 ### Release flow
 
 - Engineering prepares the release candidate build
-- Testing validates the exact candidate artifact and prepares true-device validation support
+- Testing validates the exact candidate artifact and executes true-device validation
 - Architect confirms technical convergence and release readiness
-- Product runs final true-device acceptance
-- Product makes the final publish decision
+- Product reviews Testing's evidence and makes the final product and publish decision

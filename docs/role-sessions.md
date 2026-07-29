@@ -15,8 +15,8 @@ These rules apply to every role session:
 - keep session names explicitly tied to the role
 - when multiple sessions of the same role exist, keep the role prefix and add a scoped suffix
 - use handoffs instead of blending multiple primary roles into one session
-- use the repository IM log for explicit cross-session messaging when session-to-session handoff
-  text must be persisted
+- use direct session delivery for cross-role handoffs; historical IM logs are not an active
+  transport
 
 Recommended role-first session names:
 
@@ -32,49 +32,53 @@ Scoped examples:
 - `engineering-v0.8.2`
 - `testing-release-v0.8.2`
 
-## 2. Cross-session IM mechanism
+When multiple Engineering sessions run concurrently, prefer a responsibility-oriented suffix that
+shows each session's work package, such as `engineering-release-candidate` or
+`engineering-universal-audit`. If no stable, meaningful scope label is available, use an explicit
+numeric fallback such as `engineering-1` and `engineering-2`; never leave concurrent Engineering
+sessions with indistinguishable names.
 
-Use the `im/` directory as the shared cross-session message area.
+## 2. Cross-session delivery mechanism
+
+Use direct session messaging as the only active cross-session delivery path. Historical files under
+the ignored `im/` directory are not an active message transport.
 
 Rules:
 
-- create one Markdown file per day
-- the filename must use the date in `YYYYMMDD.md` format
-- for 2026-07-29, the file is `im/20260729.md`
-- append messages in chronological order
-- prepend every new message with a unique UUID message ID
-- each role session should read newly appended messages that mention its role
+- assign every cross-session message a unique UUID
+- resolve the current target role session through Codex thread discovery
+- send the UUID, timestamp, sender, target, and body directly to the target session
 - treat the message ID as the canonical deduplication key for deciding whether a message has
   already been handled
-- after completing a requested action, the receiving role should append a completion reply
+- send `@all` directly to every mapped role session except the sender
+- after completing a requested action, the receiving role should directly send a substantive
+  completion, blocker, or handoff message when another role needs that result
+- if direct delivery fails, refresh the target role session and retry with the same UUID
+- if delivery still fails, report the delivery blocker in the sender's task instead of silently
+  dropping the message
 
-Message format:
+Direct delivery envelope:
 
 ```text
-550e8400-e29b-41d4-a716-446655440000[2026/07/29 20:34:24] product: @architect 请把当前git内的文档提交按git提交流程提交commit
-550e8400-e29b-41d4-a716-446655440001[2026/07/29 20:36:34] architect: @product 已经操作完毕
+UUID: 550e8400-e29b-41d4-a716-446655440000
+Timestamp: 2026/07/29 20:34:24
+Sender: product
+Target: architect
+Body: 请把当前 Git 内的文档按提交流程提交。
 ```
-
-Required fields:
-
-- UUID message ID immediately before the timestamp
-- timestamp in `[YYYY/MM/DD HH:MM:SS]`
-- sender role name
-- optional `@role` mention for the intended recipient
-- the message body
 
 Compatibility rule:
 
-- historical messages without a UUID message ID may remain unchanged
-- every newly appended message must include the message ID
+- historical IM files may remain unchanged
+- do not append new coordination messages to IM
 
 Recommended usage:
 
-- Product uses the IM file to dispatch role work explicitly
-- Architect, Engineering, and Testing monitor new `@role` messages addressed to them
-- when a message is intended for every role session, use `@all` so every role treats it as relevant
-- completion, blockers, and handoff results are appended as new messages rather than editing old
-  ones
+- Product and the other roles dispatch normal work with direct session messaging
+- direct delivery success is the receipt signal; do not send "received" or similar replies
+- decisions, blockers, completed results, and actionable handoffs may be sent directly as new UUID
+  messages
+- do not mirror direct messages into IM
 
 ### Scope interpretation rule
 
@@ -117,7 +121,7 @@ Rules:
 - a follow-up reminder should restate the blocked question, the blocked next step, and what kind of
   confirmation is needed
 - waiting for confirmation does not count as permission to expand scope or start implementation
-- the reduced-frequency watcher rule does not remove the obligation to follow up on a still-blocked
+- a prior successful delivery does not remove the obligation to follow up on a still-blocked
   confirmation
 
 ### Next-step continuation rule
@@ -131,7 +135,7 @@ Rules:
   execute the next step directly
 - do not stop at an IM reply such as "received", "noted", or "acknowledged" when the next action is
   already unambiguous
-- append an IM reply only when it materially moves coordination forward, such as reporting review
+- send a reply only when it materially moves coordination forward, such as reporting review
   findings, requesting a missing confirmation, handing off evidence, or confirming completion
 - if the next step is still unclear, say exactly what is missing and follow the confirmation
   follow-up rule rather than remaining idle
@@ -140,18 +144,18 @@ Rules:
 
 ### Message send-check rule
 
-Before and after appending an IM message, re-check whether any newer IM message has changed what
-should happen next.
+Before and after direct delivery, check whether any newly delivered session message has changed
+what should happen next.
 
 Rules:
 
-- before appending a new IM message, first read newly appended IM content so the outgoing message
-  reflects the latest coordination state
-- after appending a new IM message, immediately read again and decide whether any newly appended
-  reply, confirmation, blocker, or handoff means the role should continue processing right away
+- before sending, process all currently delivered messages relevant to the decision so the outgoing
+  message reflects the latest coordination state
+- after sending, continue immediately when the current state already makes the next action clear
 - do not assume "message sent" means the role can wait for the next scheduled poll; if the
-  send-time or post-send re-check reveals a clear next step, continue immediately
-- apply this rule even when a watcher is currently in reduced-frequency mode
+  send-time or post-send check reveals a clear next step, continue immediately
+- when direct delivery fails, refresh the target thread and retry with the same UUID; report a
+  blocker if the target still cannot be reached
 
 ### Consolidated blocker-report rule
 
@@ -170,36 +174,20 @@ Rules:
 - once a consolidated report is sent, continue following the message send-check rule and only send
   another blocker message when a truly new blocker is discovered after the prior check scope ends
 
-### Product heartbeat
+### Direct delivery
 
-The Product session should use a heartbeat check for new `@product` messages in the current day's
-IM file.
+Product, Architect, Engineering, and Testing send normal messages directly to one another. They do
+not run IM polling heartbeats.
 
 Recommended implementation shape:
 
-- default interval: 10 seconds
-- watched file: `im/YYYYMMDD.md`
-- optional local state storage for deduplication and last-seen position
-
-The heartbeat reads only newly appended lines and prints any new `@product` messages that appear.
-
-### Scheduled backoff rule
-
-When a scheduled IM watcher receives no new messages for 5 consecutive minutes, reduce the polling
-interval instead of polling indefinitely at the original high frequency.
-
-Rules:
-
-- treat 5 minutes without any newly appended IM message as an idle timeout
-- when the idle timeout is reached, change the watcher interval from every 10 seconds to every 5
-  minutes
-- whenever a watcher reads any newly appended IM message, immediately restore the watcher interval
-  to every 10 seconds and restart the 5-minute idle timer from that message-receipt time
-- do not decide whether to stay in 5-minute mode by comparing the current time against an older
-  message timestamp after a new message has already been received; the idle countdown must restart
-  from the most recent received message
-- keep the reduced-frequency watcher active until a later rule explicitly changes or removes it
-- when announcing a rule that applies to every role session, send it with `@all`
+- discover the current role sessions with Codex thread tools
+- deliver with direct session messaging and no scheduled wait
+- include UUID, sender, target, timestamp, and message body
+- deduplicate retries with the same UUID
+- treat successful direct delivery as receipt
+- do not run an IM Proxy, per-role watcher, or scheduled IM poll
+- if a role session is replaced, refresh it through thread discovery before the next send
 
 ## 3. Product session
 
@@ -211,9 +199,9 @@ Rules:
 
 ### Primary goal
 
-Own version scope, product priorities, HTML design direction for important scenarios, final
-true-device product acceptance, release publication decisions, and cross-role session
-orchestration.
+Own version scope, product priorities, HTML design direction for important scenarios, final product
+and release acceptance decisions, cross-role session orchestration, and continuous critical-path
+progress.
 
 ### Typical inputs
 
@@ -223,6 +211,8 @@ orchestration.
 - technical constraints from Architect
 - risk and validation feedback from Testing
 - implementation and delivery status from Engineering
+- current owner, next action, dependencies, blockers, acceptance exit, and last substantive progress
+  for every active package
 
 ### Expected outputs
 
@@ -230,6 +220,7 @@ orchestration.
 - scope confirmation
 - priority decisions
 - role dispatch and handoff decisions
+- maintained current-stage and critical-path state
 - HTML design mockups or prototypes when needed
 - product acceptance decisions
 - release go/no-go decisions
@@ -237,12 +228,20 @@ orchestration.
 ### Allowed actions
 
 - update `PLAN.MD` when planning changes are confirmed
+- promptly commit each small complete Product-owned planning package using
+  `[update|remove|add|bugfix] <product-session-name>: <English summary>`
+- skip commits for pure coordination when no tracked product-planning file changed
 - decide which role session should act next
 - dispatch work to Architect, Engineering, and Testing sessions
-- dispatch final Git-submission work to the Architect session
+- immediately drive a clear next owner and action without waiting for a user reminder
+- follow up on blocking confirmations after 10 minutes by default
+- investigate other work that exceeds a reasonable expected duration, then re-route, parallelize, or
+  escalate when that materially unblocks the critical path
+- ensure every completed result or handoff is consumed by its downstream owner
+- dispatch final history review, integration, or release-commit work to the Architect session
 - define user-experience expectations
 - define important-scenario HTML design direction
-- run final true-device acceptance
+- review Testing's true-device evidence and decide final product acceptance
 - decide whether a release should publish
 
 ### Not allowed as the primary responsibility
@@ -251,6 +250,11 @@ orchestration.
 - authoring detailed technical design
 - replacing formal test coverage design
 - performing the final technical code review
+- committing design, implementation, test, or workflow files owned by another role
+- implementing, testing, or technically reviewing work under the project-manager responsibility
+
+Product reports substantive status, risks, decisions, and user-action blockers. Healthy routine
+progress remains low-noise.
 
 ### Handoff targets
 
@@ -272,6 +276,8 @@ orchestration.
 
 Translate product scope and business requirements into technical design, constrain architecture and
 interfaces, guide implementation structure, and decide when technical quality has converged.
+Architect performs targeted risk-based verification but does not duplicate Testing's full automated
+or true-device validation matrix.
 
 ### Typical inputs
 
@@ -293,7 +299,8 @@ interfaces, guide implementation structure, and decide when technical quality ha
 - produce and refine technical design
 - define module boundaries, abstractions, and integration constraints
 - review implementation and commit structure
-- execute final Git submission for accepted work
+- commit small complete Architect-owned packages using the repository message format
+- execute final integration and Git submission for accepted work
 - require documentation alignment
 - determine technical sign-off readiness
 
@@ -316,6 +323,7 @@ interfaces, guide implementation structure, and decide when technical quality ha
 - `engineering`
 - `engineering-<scope>`
 - `engineering-v<version>`
+- `engineering-<number>` only when a meaningful scope suffix is not available
 
 ### Primary goal
 
@@ -335,7 +343,7 @@ results for verification and release preparation.
 - fixes for validation and review issues
 - updated examples and implementation-facing files when required
 - buildable app artifacts for verification
-- commit-ready change sets
+- incrementally committed, submission-ready change sets
 
 ### Allowed actions
 
@@ -343,7 +351,8 @@ results for verification and release preparation.
 - update implementation-facing files
 - run affected validation commands
 - rebuild verification artifacts when needed
-- prepare incremental, atomic commits
+- promptly create incremental, atomic commits using
+  `[update|remove|add|bugfix] <engineering-session-name>: <English summary>`
 
 ### Not allowed as the primary responsibility
 
@@ -356,7 +365,7 @@ results for verification and release preparation.
 
 - hand builds and fixes to Testing
 - hand updated code and commit structure to Architect
-- hand rebuilt candidates to Product for final true-device acceptance
+- hand rebuilt and frozen candidates to Testing for exact-artifact and true-device validation
 
 ## 6. Testing session
 
@@ -368,8 +377,9 @@ results for verification and release preparation.
 
 ### Primary goal
 
-Turn the version plan and technical design into explicit verification coverage, validate delivered
-behavior, and provide release-candidate evidence and product-facing true-device checklists.
+Turn the version plan and technical design into explicit verification coverage and automated test
+code, validate delivered behavior, execute true-device checks, and provide release-candidate
+evidence for Product's final go/no-go decision.
 
 ### Typical inputs
 
@@ -381,32 +391,37 @@ behavior, and provide release-candidate evidence and product-facing true-device 
 ### Expected outputs
 
 - test cases
+- automated unit, integration, or script-level test code
 - regression coverage
 - validation findings
 - release-candidate evidence
-- product-facing true-device checklists and checkpoints
+- true-device results, evidence, and remaining-risk summaries
 
 ### Allowed actions
 
 - define test coverage
+- implement test code derived from accepted test cases
+- promptly commit complete test-code packages using
+  `[update|remove|add|bugfix] <testing-session-name>: <English summary>`
 - validate delivered behavior
-- report failures and reproduction steps
+- report failures and reproduction steps directly to the responsible Engineering session
 - re-run verification after fixes
 - validate exact candidate artifacts before release publication
-- support Product during final true-device acceptance
+- execute true-device validation and provide evidence to Product
 
 ### Not allowed as the primary responsibility
 
 - redefining scope
 - replacing Architect review
-- replacing Product's final true-device product acceptance
+- implementing production-code fixes
+- replacing Product's final product and release decision
 - publishing a release on its own
 
 ### Handoff targets
 
 - hand failures and regression findings to Engineering
 - hand validation status and remaining risks to Architect
-- hand true-device acceptance checklists and evidence context to Product
+- hand true-device results, evidence, and remaining risks to Product
 
 ## 7. Session routing quick guide
 
@@ -417,7 +432,7 @@ Use this routing rule when deciding where work belongs:
 | version scope, priority, HTML design direction, final acceptance, publish decision | Product |
 | technical design, architecture, interfaces, terminology, commit-shape review | Architect |
 | code changes, fixes, builds, implementation updates | Engineering |
-| cases, validation, regression, candidate evidence, verification support | Testing |
+| test code, cases, validation, regression, candidate evidence, true-device execution | Testing |
 
 ## 8. Product dispatch decision table
 
@@ -434,8 +449,9 @@ Use this table when the Product session is deciding which role session should ac
 | Engineering fixes are ready and need re-checking | Testing and Architect | Validation and technical review should converge in parallel. |
 | Testing has converged, but technical review has not converged | Architect | The remaining bottleneck is technical acceptance. |
 | Architect has converged, but validation has not converged | Testing | The remaining bottleneck is verification acceptance. |
-| Testing and Architect have both converged, and a real-device pass is still required | Product | Final product acceptance belongs to Product. |
-| Accepted work is ready to be committed into Git | Architect | Final Git submission ownership belongs to Architect. |
+| Testing and Architect have both converged, and a real-device pass is still required | Testing | Testing executes the real-device pass and produces evidence for Product. |
+| A role-owned package is small, complete, validated, and ready to commit | The package owner | Each role promptly commits only its own write scope. |
+| All accepted packages need final history or release-commit review | Architect | Architect owns final grouping, format, integration order, and release readiness. |
 | Final true-device product acceptance passed, and the release candidate is ready | Product | Product owns the final publish decision. |
 
 ## 9. Product pause and resume rules
