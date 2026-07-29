@@ -27,7 +27,8 @@ Recommended session names:
 - clarify scope boundaries with the Architect
 - decide whether a change is a must-have, should-have, or follow-up item
 - decide when a validated release candidate is acceptable to publish
-- operate true-device validation for final product acceptance
+- operate true-device validation for final product acceptance, or explicitly accept an Engineering
+  true-device validation report instead of rerunning the same checks
 
 ## Repository-specific workflow requirements
 
@@ -37,9 +38,17 @@ Within this repository, the Product role must also:
 - ensure user-visible scope is placed into `PLAN.MD` before implementation
 - keep version planning aligned with the release sequence already established in the repository
 - decide when to activate, pause, resume, or hand off between the role sessions
+- dispatch scope changes using explicit `Scope in` and `Scope out` boundaries when nearby behavior
+  could be misread as affected
+- route product-driven implementation changes through the Architect by default, instead of
+  directly issuing implementation instructions to Engineering, unless the Architect has already
+  confirmed the same boundaries and Product is only removing ambiguity
 - publish a version only after Testing and Architect sign-off have both converged
 - treat failed release validation as a release blocker, not a follow-up convenience issue
 - own the final true-device validation pass from the product and user-experience perspective
+- when Engineering has already submitted a sufficient true-device validation report for the current
+  candidate, decide whether Product can accept that report directly instead of repeating the same
+  device checks
 
 ## Required capabilities
 
@@ -93,6 +102,8 @@ Before a release is published, the Product role should verify that:
 - the repository is ready for version publication rather than only local completion
 - the real-device experience matches the intended user experience, important scenarios, and brand
   presentation
+- if Product skipped rerunning a device check, the accepted Engineering validation report is
+  specific enough to support that decision
 
 ## Quality bar
 

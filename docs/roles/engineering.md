@@ -22,7 +22,7 @@ Recommended session names:
 - update affected code, examples, and implementation-facing files as required by the workflow
 - fix defects raised by Testing
 - address technical review feedback raised by the Architect
-- support true-device and packaged-app verification by producing updated builds when needed
+- support packaged-app verification by producing updated builds when needed
 
 ## Repository-specific workflow requirements
 
@@ -52,6 +52,7 @@ The Engineering role should produce:
 - fixes for validation failures
 - fixes for technical review findings
 - buildable results for verification
+- true-device validation reports when Product requests them for candidate acceptance
 - commit-ready changes when the task reaches submission quality
 
 ## Inputs
@@ -68,7 +69,10 @@ The Engineering role works from:
 - implements work defined by the Architect
 - responds to issues raised by Testing
 - updates code until both Testing and Architect feedback have converged
-- provides revised builds for true-device validation when required
+- provides revised builds and implementation notes for Product-side true-device validation when
+  required
+- may provide a true-device validation report that Product can review instead of rerunning the
+  same checks
 
 ## Implementation responsibilities
 
@@ -78,7 +82,9 @@ When implementing a confirmed feature or fix, the Engineering role should:
 2. follow the accepted technical design
 3. update required examples and implementation-facing documentation as part of the change
 4. validate the affected code path
-5. support review and verification iteration until convergence
+5. hand off updated builds for Product-side true-device validation when the change needs it
+6. provide a true-device validation report when Product asks Engineering to cover that check
+7. support review and verification iteration until convergence
 
 ## Git responsibilities
 
@@ -111,3 +117,4 @@ The Engineering role must:
 - approving release publication on its own
 - replacing the Architect's technical review
 - replacing Testing coverage and validation
+- performing the final true-device product acceptance

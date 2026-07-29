@@ -43,6 +43,8 @@ Within this repository, the Architect role must also:
 
 - ensure implementation work follows the accepted `PLAN.MD` scope
 - ensure technical design and testing design are prepared before coding begins
+- produce the technical design document first, then hand it to Testing as the required basis for
+  test-plan design
 - ensure design changes are re-read after user adjustments before implementation resumes
 - ensure user-visible work has a matching example direction before coding starts
 - perform technical review before code is considered ready for final submission
@@ -78,6 +80,7 @@ The Architect role should produce or approve:
 - technical design documents
 - implementation task decomposition
 - architecture constraints and review feedback
+- the handoff package that Testing uses to design the test plan
 - final technical sign-off before code submission preparation
 - review feedback on code structure and long-term maintainability
 - terminology and interface-boundary guidance when the feature introduces new concepts or APIs
@@ -95,7 +98,7 @@ The Architect role works from:
 
 - aligns with Product on what the version must deliver
 - gives Engineering the implementation direction and boundaries
-- gives Testing the technical context needed to prepare coverage
+- gives Testing the technical design document and technical context needed to prepare the test plan
 - reviews implementation in parallel with Testing validation
 - re-reviews after fixes until the codebase converges
 

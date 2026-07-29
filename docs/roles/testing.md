@@ -30,6 +30,7 @@ Recommended session names:
 Within this repository, the Testing role must also:
 
 - prepare test coverage from both the accepted version scope and the technical design
+- wait for the Architect's technical design document before finalizing the test-plan design
 - update validation scope when the accepted design changes
 - define example-driven, regression, and true-device verification where applicable
 - treat release-candidate validation as a distinct gate, not as ordinary local testing
@@ -49,6 +50,7 @@ Within this repository, the Testing role must also:
 
 The Testing role should produce:
 
+- test-plan design documents derived from the Architect's technical design
 - test case documents
 - true-device validation cases
 - validation findings
@@ -69,6 +71,7 @@ The Testing role works from:
 ## Collaboration with other roles
 
 - prepares test coverage after Product and Architect align on scope and design
+- prepares the testing design after receiving the Architect handoff package
 - validates Engineering output
 - feeds defects and reproduction context back to Engineering
 - shares results with the Architect while code review is also in progress

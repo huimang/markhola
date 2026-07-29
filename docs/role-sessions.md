@@ -42,29 +42,164 @@ Rules:
 - the filename must use the date in `YYYYMMDD.md` format
 - for 2026-07-29, the file is `im/20260729.md`
 - append messages in chronological order
+- prepend every new message with a unique UUID message ID
 - each role session should read newly appended messages that mention its role
+- treat the message ID as the canonical deduplication key for deciding whether a message has
+  already been handled
 - after completing a requested action, the receiving role should append a completion reply
 
 Message format:
 
 ```text
-[2026/07/29 20:34:24] product: @architect 请把当前git内的文档提交按git提交流程提交commit
-[2026/07/29 20:36:34] architect: @product 已经操作完毕
+550e8400-e29b-41d4-a716-446655440000[2026/07/29 20:34:24] product: @architect 请把当前git内的文档提交按git提交流程提交commit
+550e8400-e29b-41d4-a716-446655440001[2026/07/29 20:36:34] architect: @product 已经操作完毕
 ```
 
 Required fields:
 
+- UUID message ID immediately before the timestamp
 - timestamp in `[YYYY/MM/DD HH:MM:SS]`
 - sender role name
 - optional `@role` mention for the intended recipient
 - the message body
 
+Compatibility rule:
+
+- historical messages without a UUID message ID may remain unchanged
+- every newly appended message must include the message ID
+
 Recommended usage:
 
 - Product uses the IM file to dispatch role work explicitly
 - Architect, Engineering, and Testing monitor new `@role` messages addressed to them
+- when a message is intended for every role session, use `@all` so every role treats it as relevant
 - completion, blockers, and handoff results are appended as new messages rather than editing old
   ones
+
+### Scope interpretation rule
+
+When a user or role gives short product feedback, interpret it at the smallest reasonable scope
+unless the message explicitly broadens it.
+
+Rules:
+
+- first identify the exact target object, such as a page state, a specific prompt, a component, or
+  a whole feature
+- first identify the requested action, such as remove, restyle, narrow the trigger condition, or
+  disable only in one scenario
+- do not silently expand a local complaint into a whole-feature product decision
+- before dispatching a scope-changing instruction, write one explicit scope sentence that states
+  what is in scope and what is out of scope
+- if a role had to choose an interpretation, prefer the smallest interpretation that still
+  satisfies the request
+- when the change would alter implementation behavior, Product should normally send the corrected
+  scope to Architect first, not directly to Engineering, unless Architect has already aligned on
+  the same boundaries and Product is only removing ambiguity
+
+Recommended dispatch template:
+
+- `Scope in:` the exact behavior or scenario that should change
+- `Scope out:` nearby behaviors that should remain unchanged
+- `Reason:` why the change is needed
+- `Acceptance:` what outcome proves the interpretation is correct
+
+### Confirmation follow-up rule
+
+When a role is waiting for scope confirmation or clarification, it must not wait indefinitely
+without follow-up.
+
+Rules:
+
+- if a pending confirmation blocks implementation or validation progress, the waiting role should
+  send a follow-up reminder after a reasonable delay instead of remaining silent
+- default reminder cadence: follow up once after 10 minutes without a confirmation reply, then keep
+  following up at a low frequency while the task remains blocked
+- a follow-up reminder should restate the blocked question, the blocked next step, and what kind of
+  confirmation is needed
+- waiting for confirmation does not count as permission to expand scope or start implementation
+- the reduced-frequency watcher rule does not remove the obligation to follow up on a still-blocked
+  confirmation
+
+### Next-step continuation rule
+
+When a role has already received enough direction to identify the next concrete step, it should
+continue that step immediately instead of stopping after only acknowledging receipt.
+
+Rules:
+
+- once the next owner, next action, and blocking condition are all clear, the receiving role should
+  execute the next step directly
+- do not stop at an IM reply such as "received", "noted", or "acknowledged" when the next action is
+  already unambiguous
+- append an IM reply only when it materially moves coordination forward, such as reporting review
+  findings, requesting a missing confirmation, handing off evidence, or confirming completion
+- if the next step is still unclear, say exactly what is missing and follow the confirmation
+  follow-up rule rather than remaining idle
+- this rule does not allow a role to bypass scope boundaries, role boundaries, or the standard
+  planning-before-implementation workflow
+
+### Message send-check rule
+
+Before and after appending an IM message, re-check whether any newer IM message has changed what
+should happen next.
+
+Rules:
+
+- before appending a new IM message, first read newly appended IM content so the outgoing message
+  reflects the latest coordination state
+- after appending a new IM message, immediately read again and decide whether any newly appended
+  reply, confirmation, blocker, or handoff means the role should continue processing right away
+- do not assume "message sent" means the role can wait for the next scheduled poll; if the
+  send-time or post-send re-check reveals a clear next step, continue immediately
+- apply this rule even when a watcher is currently in reduced-frequency mode
+
+### Consolidated blocker-report rule
+
+When a role is performing a bounded release-preparation, submission-readiness, or similar
+repository-wide check, it should prefer one consolidated blocker report over multiple fragmented
+messages.
+
+Rules:
+
+- before reporting a newly found blocker, first finish the current bounded check scope whenever
+  practical, so nearby blockers can be reported together
+- if multiple blockers belong to the same immediate decision or handoff, send them in one message
+  instead of one-by-one
+- use a fragmented sequence only when an urgent blocker must be escalated immediately or when the
+  later issue could not reasonably be discovered within the same check pass
+- once a consolidated report is sent, continue following the message send-check rule and only send
+  another blocker message when a truly new blocker is discovered after the prior check scope ends
+
+### Product heartbeat
+
+The Product session should use a heartbeat check for new `@product` messages in the current day's
+IM file.
+
+Recommended implementation shape:
+
+- default interval: 10 seconds
+- watched file: `im/YYYYMMDD.md`
+- optional local state storage for deduplication and last-seen position
+
+The heartbeat reads only newly appended lines and prints any new `@product` messages that appear.
+
+### Scheduled backoff rule
+
+When a scheduled IM watcher receives no new messages for 5 consecutive minutes, reduce the polling
+interval instead of polling indefinitely at the original high frequency.
+
+Rules:
+
+- treat 5 minutes without any newly appended IM message as an idle timeout
+- when the idle timeout is reached, change the watcher interval from every 10 seconds to every 5
+  minutes
+- whenever a watcher reads any newly appended IM message, immediately restore the watcher interval
+  to every 10 seconds and restart the 5-minute idle timer from that message-receipt time
+- do not decide whether to stay in 5-minute mode by comparing the current time against an older
+  message timestamp after a new message has already been received; the idle countdown must restart
+  from the most recent received message
+- keep the reduced-frequency watcher active until a later rule explicitly changes or removes it
+- when announcing a rule that applies to every role session, send it with `@all`
 
 ## 3. Product session
 
