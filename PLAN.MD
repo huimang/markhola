@@ -218,20 +218,20 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Synchronize the active window's zoomed or restored state when switching native tabs
    - Preserve the original window size so double-clicking the title bar can restore it after a tab switch
 ### v0.8.2
-1. Add Typora-style inline Markdown reading and editing
-   - Keep Markdown source as the single source of truth while presenting formatted content in the WebView
-   - Allow users to click formatted headings, paragraphs, emphasis, links, lists, blockquotes, task items, and code blocks and edit them in place
-   - Reveal the relevant Markdown syntax markers when the caret or selection enters a formatted range, and hide them again when editing leaves that range
-   - Keep the inline editing experience shared across macOS and Windows WebView implementations
-2. Add localized source editing for complex rendered blocks
-   - Keep tables, images, mathematical expressions, Mermaid diagrams, and generated TOC content rendered during normal reading
-   - Switch only the selected complex block to its Markdown source representation for editing
-   - Re-render the affected block after editing finishes without rebuilding the entire document
-3. Add incremental document updates for the mixed reading and editing view
-   - Re-parse and update only the affected paragraph or block during normal typing
-   - Avoid replacing the complete preview DOM or re-rendering every Mermaid and MathJax block after each input
-   - Synchronize edits back to the Rust document model without sending and reprocessing the complete document on every keystroke when incremental changes are sufficient
-   - Preserve cursor position, selection, undo and redo, input method behavior, copy and paste, find and replace, saving, and dirty-state tracking
+1. Non-visual items already implemented
+   - Keep native tab closing separate from application closing, while making the main window close
+     button quit MarkHola
+   - Keep footer and editor source line counts aligned
+   - Render Mermaid content so literal `\n` sequences appear as visible line breaks in app
+     preview, HTML export, and PDF/print output
+   - Keep the default empty workspace silent instead of showing the bottom-right default prompt
+   - Show visible success feedback after exporting PDF or HTML, including the output path and an
+     `Open` action
+   - Keep export-related error feedback visible as a separate error-only status path
+2. Keep visual editing deferred
+   - Do not bring back Typora-style inline mixed reading and editing in `v0.8.2`
+   - Do not bring back localized mixed visual editing for complex rendered blocks in `v0.8.2`
+   - Do not bring back broader incremental mixed-view editing updates in `v0.8.2`
 
 ### v0.9.0
 1. Add Apple Intel support

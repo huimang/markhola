@@ -1,6 +1,6 @@
 # MarkHola Documentation
 
-Current version: `v0.8.1`
+Current version: `v0.8.2`
 
 ## What is MarkHola
 
@@ -15,8 +15,9 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Remember the selected language, theme, and document size across app relaunches
 - Find text in readonly mode and find or replace text in writable mode
 - Open a right-side document Outline in readonly mode
-- Render Mermaid, math, tables, links, images, and highlighted code
-- Export the current document to PDF or HTML and print it
+- Render Mermaid, including literal `\n` line breaks, math, tables, links, images, and highlighted code
+- Export the current document to PDF or HTML, receive a successful-export prompt with an `Open` action, and print it
+- Quit MarkHola with the main window's red close button while keeping tab-close commands document-scoped
 
 ## Menus
 
@@ -69,3 +70,4 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Follow System changes between Default and Dark when the macOS appearance changes.
 - Rendered Markdown links do not use underlines.
 - Default and Dark use separate visually comfortable code palettes.
+- The default empty state does not show a status prompt; successful PDF and HTML exports show the output path and an `Open` action.

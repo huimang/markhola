@@ -1,6 +1,6 @@
 # Mermaid Verification Examples
 
-This document is used to verify Mermaid rendering in MarkHola `v0.6.2`.
+This document is used to verify Mermaid rendering in MarkHola `v0.8.2`.
 
 ## Flowchart
 
@@ -10,6 +10,15 @@ flowchart TD
   B -->|Yes| C[Render diagram]
   B -->|No| D[Keep regular preview]
   C --> E[Show SVG result]
+```
+
+## Escaped Line Breaks
+
+Literal `\n` sequences in node and edge labels should render as visible line breaks without changing this Markdown source.
+
+```mermaid
+flowchart LR
+  A[First line\nSecond line] -->|Continue\nrendering| B[Third line\nFourth line]
 ```
 
 ## Sequence Diagram
