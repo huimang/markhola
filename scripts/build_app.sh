@@ -9,23 +9,29 @@ APP_NAME="MarkHola"
 APP_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/$APP_NAME.app"
-CONTENTS_DIR="$APP_DIR/Contents"
-MACOS_DIR="$CONTENTS_DIR/MacOS"
-RESOURCES_DIR="$CONTENTS_DIR/Resources"
-ICONSET_DIR="$DIST_DIR/$APP_NAME.icon-build"
-ICNS_PATH="$RESOURCES_DIR/$APP_NAME.icns"
+BUILD_TARGET=""
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
-BUILD_MODE="host"
 
-if [[ "${1:-}" == "--universal" ]]; then
-  BUILD_MODE="universal"
-  shift
-fi
+usage() {
+  print -u2 -- "Usage: $0 [--target aarch64-apple-darwin|x86_64-apple-darwin] [--app PATH]"
+}
 
-if [[ "$#" -ne 0 ]]; then
-  print -u2 -- "Usage: $0 [--universal]"
-  exit 1
-fi
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --target)
+      BUILD_TARGET="$2"
+      shift 2
+      ;;
+    --app)
+      APP_DIR="$2"
+      shift 2
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 require_command() {
   local command_name="$1"
@@ -35,50 +41,57 @@ require_command() {
   fi
 }
 
+markhola_prepare_rust_toolchain
+
+if [[ -z "$BUILD_TARGET" ]]; then
+  BUILD_TARGET="$("$MARKHOLA_RUSTC_BIN" -Vv | sed -n 's/^host: //p')"
+fi
+
+case "$BUILD_TARGET" in
+  aarch64-apple-darwin)
+    EXPECTED_ARCH="arm64"
+    ;;
+  x86_64-apple-darwin)
+    EXPECTED_ARCH="x86_64"
+    ;;
+  *)
+    print -u2 -- "Unsupported macOS Rust target: $BUILD_TARGET"
+    usage
+    exit 1
+    ;;
+esac
+
+case "$APP_DIR" in
+  "$DIST_DIR"/*.app) ;;
+  *)
+    print -u2 -- "App output must be a direct .app child of $DIST_DIR"
+    exit 1
+    ;;
+esac
+
+CONTENTS_DIR="$APP_DIR/Contents"
+MACOS_DIR="$CONTENTS_DIR/MacOS"
+RESOURCES_DIR="$CONTENTS_DIR/Resources"
+APP_BASENAME="${APP_DIR:t:r}"
+ICONSET_DIR="$DIST_DIR/${APP_BASENAME}.icon-build"
+ICNS_PATH="$RESOURCES_DIR/$APP_NAME.icns"
+
 render_icon() {
   local size="$1"
   local output="$2"
   sips -z "$size" "$size" "$ROOT_DIR/assets/app-icon.png" --out "$output" >/dev/null
 }
 
-build_thin_binary() {
-  local target="$1"
-  print -r -- "==> Building ${target} release binary"
+assemble_executable() {
+  print -r -- "==> Building $BUILD_TARGET release binary"
   markhola_cargo build \
     --release \
     --locked \
     --manifest-path "$ROOT_DIR/Cargo.toml" \
-    --target "$target" \
+    --target "$BUILD_TARGET" \
     --bin markhola
-}
 
-assemble_executable() {
-  local host_target
-  host_target="$("$MARKHOLA_RUSTC_BIN" -Vv | sed -n 's/^host: //p')"
-
-  if [[ "$BUILD_MODE" == "universal" ]]; then
-    local target
-    for target in "${MARKHOLA_MACOS_TARGETS[@]}"; do
-      build_thin_binary "$target"
-    done
-
-    print -r -- "==> Creating Universal 2 executable"
-    lipo -create \
-      "$ROOT_DIR/target/aarch64-apple-darwin/release/markhola" \
-      "$ROOT_DIR/target/x86_64-apple-darwin/release/markhola" \
-      -output "$MACOS_DIR/$APP_NAME"
-  else
-    case "$host_target" in
-      aarch64-apple-darwin|x86_64-apple-darwin) ;;
-      *)
-        print -u2 -- "Unsupported macOS Rust host: $host_target"
-        exit 1
-        ;;
-    esac
-    build_thin_binary "$host_target"
-    cp "$ROOT_DIR/target/$host_target/release/markhola" "$MACOS_DIR/$APP_NAME"
-  fi
-
+  cp "$ROOT_DIR/target/$BUILD_TARGET/release/markhola" "$MACOS_DIR/$APP_NAME"
   chmod +x "$MACOS_DIR/$APP_NAME"
 }
 
@@ -110,7 +123,7 @@ render_resources() {
 }
 
 write_info_plist() {
-  cat > "$CONTENTS_DIR/Info.plist" <<PLIST
+  cat >"$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -230,12 +243,10 @@ sign_app_bundle() {
 }
 
 require_command sips
-require_command lipo
 require_command ditto
 require_command codesign
 require_command xattr
 require_command xcrun
-markhola_prepare_rust_toolchain
 
 mkdir -p "$DIST_DIR"
 rm -rf "$APP_DIR"
@@ -246,10 +257,8 @@ render_resources
 write_info_plist
 sign_app_bundle
 
-if [[ "$BUILD_MODE" == "universal" ]]; then
-  "$ROOT_DIR/scripts/verify_macos_architectures.sh" --app "$APP_DIR" --universal
-else
-  "$ROOT_DIR/scripts/verify_macos_architectures.sh" --app "$APP_DIR" --host
-fi
+"$ROOT_DIR/scripts/verify_macos_architectures.sh" \
+  --app "$APP_DIR" \
+  --architecture "$EXPECTED_ARCH"
 
-print -r -- "==> Done: $APP_DIR (${BUILD_MODE})"
+print -r -- "==> Done: $APP_DIR ($EXPECTED_ARCH)"

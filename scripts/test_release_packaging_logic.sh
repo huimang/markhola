@@ -29,12 +29,23 @@ setup_package_repo() {
   local repo_root="$1"
   mkdir -p "$repo_root/scripts" "$repo_root/dist" "$repo_root/assets"
   cp "$ROOT_DIR/scripts/package_dmg.sh" "$repo_root/scripts/package_dmg.sh"
+  cat >"$repo_root/scripts/macos_toolchain.sh" <<'EOF'
+#!/bin/zsh
+set -euo pipefail
+MARKHOLA_RUST_TOOLCHAIN="1.95.0"
+MARKHOLA_MACOS_DEPLOYMENT_TARGET="14.0"
+markhola_prepare_rust_toolchain() {
+  MARKHOLA_RUSTC_BIN="$MARKHOLA_MOCK_BIN/mock-rustc"
+  MARKHOLA_CARGO_BIN="$MARKHOLA_MOCK_BIN/mock-cargo"
+}
+EOF
   cat >"$repo_root/Cargo.toml" <<'EOF'
 [package]
 name = "markhola"
 version = "0.9.0"
 edition = "2024"
 EOF
+  print -n -- "lockfile" >"$repo_root/Cargo.lock"
   : >"$repo_root/assets/app-icon.png"
 }
 
@@ -45,13 +56,39 @@ setup_package_mocks() {
 
   mkdir -p "$mock_bin"
 
+  cat >"$mock_bin/mock-rustc" <<'EOF'
+#!/bin/zsh
+print -r -- "rustc 1.95.0 (mock)"
+EOF
+  chmod +x "$mock_bin/mock-rustc"
+
+  cat >"$mock_bin/mock-cargo" <<'EOF'
+#!/bin/zsh
+print -r -- "cargo 1.95.0 (mock)"
+EOF
+  chmod +x "$mock_bin/mock-cargo"
+
   cat >"$repo_root/scripts/build_app.sh" <<'EOF'
 #!/bin/zsh
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 print -r -- "build_app:$*" >>"$ROOT_DIR/mock.log"
-mkdir -p "$ROOT_DIR/dist/MarkHola.app/Contents/MacOS"
-print -n -- "binary" >"$ROOT_DIR/dist/MarkHola.app/Contents/MacOS/MarkHola"
+app_path=""
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --target)
+      shift 2
+      ;;
+    --app)
+      app_path="$2"
+      shift 2
+      ;;
+  esac
+done
+mkdir -p "$app_path/Contents/MacOS" "$app_path/Contents/Resources/help"
+print -n -- "binary" >"$app_path/Contents/MacOS/MarkHola"
+print -n -- "plist" >"$app_path/Contents/Info.plist"
+print -n -- "help" >"$app_path/Contents/Resources/help/Documentation.md"
 EOF
   chmod +x "$repo_root/scripts/build_app.sh"
 
@@ -118,20 +155,32 @@ run_package_case() {
   (
     export PATH="$mock_bin:$PATH"
     export MARKHOLA_MOCK_LOG="$log_path"
+    export MARKHOLA_MOCK_BIN="$mock_bin"
     cd "$repo_root"
     "$@" ./scripts/package_dmg.sh >"$repo_root/stdout.log" 2>"$repo_root/stderr.log"
   )
 
-  assert_file_contains "$log_path" "build_app:--universal"
+  assert_file_contains "$log_path" "build_app:--target aarch64-apple-darwin --app "
+  assert_file_contains "$log_path" "dist/MarkHola-apple-silicon.app"
+  assert_file_contains "$log_path" "build_app:--target x86_64-apple-darwin --app "
+  assert_file_contains "$log_path" "dist/MarkHola-intel.app"
   assert_file_contains "$log_path" "verify:--app "
-  assert_file_contains "$log_path" "dist/MarkHola.app --universal"
+  assert_file_contains "$log_path" "dist/MarkHola-apple-silicon.app --architecture arm64"
+  assert_file_contains "$log_path" "dist/MarkHola-intel.app --architecture x86_64"
   assert_file_contains "$log_path" "hdiutil:create -volname MarkHola -srcfolder "
-  assert_file_contains "$log_path" "dist/dmg-root -ov -format UDZO "
-  assert_file_contains "$log_path" "dist/MarkHola-0.9.0.dmg"
+  assert_file_contains "$log_path" "dist/dmg-root-apple-silicon -ov -format UDZO "
+  assert_file_contains "$log_path" "dist/MarkHola-0.9.0-apple-silicon.dmg"
+  assert_file_contains "$log_path" "dist/dmg-root-intel -ov -format UDZO "
+  assert_file_contains "$log_path" "dist/MarkHola-0.9.0-intel.dmg"
 
-  if [[ ! -f "$repo_root/dist/MarkHola-0.9.0.dmg" ]]; then
-    fail "Expected DMG output for $case_name"
-  fi
+  [[ -f "$repo_root/dist/MarkHola-0.9.0-apple-silicon.dmg" ]] \
+    || fail "Expected Apple Silicon DMG output for $case_name"
+  [[ -f "$repo_root/dist/MarkHola-0.9.0-intel.dmg" ]] \
+    || fail "Expected Intel DMG output for $case_name"
+  [[ -f "$repo_root/dist/MarkHola-0.9.0-apple-silicon.manifest.txt" ]] \
+    || fail "Expected Apple Silicon manifest for $case_name"
+  [[ -f "$repo_root/dist/MarkHola-0.9.0-intel.manifest.txt" ]] \
+    || fail "Expected Intel manifest for $case_name"
 
   print -r -- "$repo_root"
 }
@@ -140,7 +189,8 @@ test_package_without_signing() {
   local repo_root
   repo_root="$(run_package_case package-no-sign env)"
 
-  assert_file_contains "$repo_root/stderr.log" "Warning: CODESIGN_IDENTITY is not set; DMG signing is skipped."
+  assert_file_contains "$repo_root/stderr.log" "DMG signing is skipped for MarkHola-0.9.0-apple-silicon.dmg"
+  assert_file_contains "$repo_root/stderr.log" "DMG signing is skipped for MarkHola-0.9.0-intel.dmg"
   if /usr/bin/grep -Fq "xcrun:" "$repo_root/mock.log"; then
     fail "Unexpected xcrun invocation without notarization"
   fi
@@ -153,7 +203,8 @@ test_package_with_signing_and_notary() {
   assert_file_contains "$repo_root/mock.log" "codesign:--force --timestamp --sign Developer ID Application: Example "
   assert_file_contains "$repo_root/mock.log" "codesign:--verify --verbose=2 "
   assert_file_contains "$repo_root/mock.log" "xcrun:notarytool submit "
-  assert_file_contains "$repo_root/mock.log" "dist/MarkHola-0.9.0.dmg --keychain-profile markhola-notary --wait"
+  assert_file_contains "$repo_root/mock.log" "dist/MarkHola-0.9.0-apple-silicon.dmg --keychain-profile markhola-notary --wait"
+  assert_file_contains "$repo_root/mock.log" "dist/MarkHola-0.9.0-intel.dmg --keychain-profile markhola-notary --wait"
   assert_file_contains "$repo_root/mock.log" "xcrun:stapler staple "
   assert_file_contains "$repo_root/mock.log" "xcrun:stapler validate "
 }
@@ -244,14 +295,18 @@ print -r -- "package_attempt:$attempt" >>"$MARKHOLA_MOCK_LOG"
 if [[ "$attempt" -lt 3 ]]; then
   exit 1
 fi
-mkdir -p "$ROOT_DIR/dist/MarkHola.app/Contents/Resources/themes/default"
-mkdir -p "$ROOT_DIR/dist/MarkHola.app/Contents/Resources/themes/dark"
-mkdir -p "$ROOT_DIR/dist/MarkHola.app/Contents/Resources/help"
-print -n -- "css" >"$ROOT_DIR/dist/MarkHola.app/Contents/Resources/themes/default/layout.css"
-print -n -- "css" >"$ROOT_DIR/dist/MarkHola.app/Contents/Resources/themes/dark/layout.css"
-cp "$ROOT_DIR/assets/help/Documentation.md" "$ROOT_DIR/dist/MarkHola.app/Contents/Resources/help/Documentation.md"
-cp "$ROOT_DIR/assets/help/Documentation.zh-CN.md" "$ROOT_DIR/dist/MarkHola.app/Contents/Resources/help/Documentation.zh-CN.md"
-print -n -- "dmg" >"$ROOT_DIR/dist/MarkHola-0.9.0.dmg"
+for label in apple-silicon intel; do
+  app="$ROOT_DIR/dist/MarkHola-${label}.app"
+  mkdir -p "$app/Contents/Resources/themes/default"
+  mkdir -p "$app/Contents/Resources/themes/dark"
+  mkdir -p "$app/Contents/Resources/help"
+  print -n -- "css" >"$app/Contents/Resources/themes/default/layout.css"
+  print -n -- "css" >"$app/Contents/Resources/themes/dark/layout.css"
+  cp "$ROOT_DIR/assets/help/Documentation.md" "$app/Contents/Resources/help/Documentation.md"
+  cp "$ROOT_DIR/assets/help/Documentation.zh-CN.md" "$app/Contents/Resources/help/Documentation.zh-CN.md"
+  print -n -- "dmg" >"$ROOT_DIR/dist/MarkHola-0.9.0-${label}.dmg"
+  print -n -- "manifest" >"$ROOT_DIR/dist/MarkHola-0.9.0-${label}.manifest.txt"
+done
 EOF
   chmod +x "$repo_root/scripts/package_dmg.sh"
 
@@ -288,7 +343,8 @@ test_release_regression_retries_packaging() {
   assert_file_contains "$repo_root/mock.log" "package_attempt:2"
   assert_file_contains "$repo_root/mock.log" "package_attempt:3"
   assert_file_contains "$repo_root/mock.log" "verify_release:--app "
-  assert_file_contains "$repo_root/mock.log" "dist/MarkHola.app --universal"
+  assert_file_contains "$repo_root/mock.log" "dist/MarkHola-apple-silicon.app --architecture arm64"
+  assert_file_contains "$repo_root/mock.log" "dist/MarkHola-intel.app --architecture x86_64"
   assert_file_contains "$repo_root/stderr.log" "Retrying full packaging flow after transient failure (attempt 1/3)..."
   assert_file_contains "$repo_root/stderr.log" "Retrying full packaging flow after transient failure (attempt 2/3)..."
 }

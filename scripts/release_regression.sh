@@ -21,7 +21,7 @@ done
 
 markhola_prepare_rust_toolchain
 
-echo "==> Running Universal 2 architecture gate tests"
+echo "==> Running thin architecture gate tests"
 "$ROOT_DIR/scripts/test_verify_macos_architectures.sh"
 
 require_file() {
@@ -199,17 +199,24 @@ else
 fi
 
 if [[ "$WITH_PACKAGE" -eq 1 ]]; then
-  echo "==> Packaging app bundle and DMG"
+  echo "==> Packaging paired architecture-specific Apps and DMGs"
   run_packaging_with_retry
 
-  require_file "dist/MarkHola.app/Contents/Resources/themes/default/layout.css"
-  require_file "dist/MarkHola.app/Contents/Resources/themes/dark/layout.css"
-  require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.md"
-  require_file "dist/MarkHola.app/Contents/Resources/help/Documentation.zh-CN.md"
-  require_file "dist/MarkHola-${APP_VERSION}.dmg"
+  for label in apple-silicon intel; do
+    require_file "dist/MarkHola-${label}.app/Contents/Resources/themes/default/layout.css"
+    require_file "dist/MarkHola-${label}.app/Contents/Resources/themes/dark/layout.css"
+    require_file "dist/MarkHola-${label}.app/Contents/Resources/help/Documentation.md"
+    require_file "dist/MarkHola-${label}.app/Contents/Resources/help/Documentation.zh-CN.md"
+    require_file "dist/MarkHola-${APP_VERSION}-${label}.dmg"
+    require_file "dist/MarkHola-${APP_VERSION}-${label}.manifest.txt"
+  done
+
   "$ROOT_DIR/scripts/verify_macos_architectures.sh" \
-    --app "$ROOT_DIR/dist/MarkHola.app" \
-    --universal
+    --app "$ROOT_DIR/dist/MarkHola-apple-silicon.app" \
+    --architecture arm64
+  "$ROOT_DIR/scripts/verify_macos_architectures.sh" \
+    --app "$ROOT_DIR/dist/MarkHola-intel.app" \
+    --architecture x86_64
 fi
 
 echo "==> Automated regression checks passed"
