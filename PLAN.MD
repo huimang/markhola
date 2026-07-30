@@ -262,7 +262,12 @@ This is another markdown reader and exporter software.Written by AI, free are th
 2. Add a local process-command protocol for export and save automation
    - Allow a local automation client to send structured commands to a running MarkHola process
      without taking keyboard focus or driving the visible UI
-   - Cover at least exporting the active document as PNG and saving the active writable document
+   - Cover at least exporting the active document as PNG, saving the active writable document to
+     its current path, and saving the current in-memory document to another path
+   - Make protocol Save As reuse the production Save As service without showing a save panel, so
+     validation can write to an isolated temporary file instead of overwriting the source fixture
+   - Keep the original source file unchanged after Save As, switch the active document to the new
+     canonical path on success, and return the new document identity and path
    - Require each request to carry a request ID, command name, target document identity when needed,
      output path or save options, and an explicit overwrite policy
    - Return a structured response with the request ID, success or failure status, affected document,
@@ -276,7 +281,7 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Verify PNG export from the visible application action and through the local process-command
      protocol against the exact packaged candidate
    - Verify deterministic request/response correlation, output-file identity, overwrite handling,
-     failure responses, and no-focus-stealing behavior
+     Save As isolation from the source fixture, failure responses, and no-focus-stealing behavior
    - Use the protocol to accelerate release validation without treating protocol success alone as a
      substitute for visual inspection of representative PNG output
 
