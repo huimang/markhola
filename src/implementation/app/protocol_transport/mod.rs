@@ -7,12 +7,19 @@ mod tests;
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use discovery::{EndpointPaths, PublishedEndpoint};
 use serde::Deserialize;
+use tao::event_loop::EventLoopProxy;
+
+use super::{ProtocolRequestEnvelope, UserEvent};
+
+pub(crate) use discovery::ProtocolIdentity;
 
 const MAX_REQUEST_BYTES: usize = 1024 * 1024;
 const PROTOCOL_VERSION: u32 = 1;
@@ -21,6 +28,7 @@ const NOT_READY_RESPONSE: &[u8] = br#"{"ok":false,"error_code":"protocol_not_rea
 pub(super) struct ProtocolTransport {
     endpoint: PublishedEndpoint,
     stopping: Arc<AtomicBool>,
+    proxy: Arc<Mutex<Option<EventLoopProxy<UserEvent>>>>,
     worker: Option<JoinHandle<()>>,
 }
 
@@ -39,19 +47,40 @@ impl ProtocolTransport {
             .map_err(|error| format!("Failed to configure automation socket: {error}"))?;
 
         let stopping = Arc::new(AtomicBool::new(false));
+        let proxy = Arc::new(Mutex::new(None));
         let worker_stopping = Arc::clone(&stopping);
+        let worker_proxy = Arc::clone(&proxy);
         let expected_uid = peer::current_uid();
         let expected_token = endpoint.instance_token().to_string();
         let worker = thread::Builder::new()
             .name("markhola-protocol-transport".to_string())
-            .spawn(move || run_listener(listener, expected_uid, expected_token, worker_stopping))
+            .spawn(move || {
+                run_listener(
+                    listener,
+                    expected_uid,
+                    expected_token,
+                    worker_proxy,
+                    worker_stopping,
+                )
+            })
             .map_err(|error| format!("Failed to start automation transport: {error}"))?;
 
         Ok(Self {
             endpoint,
             stopping,
+            proxy,
             worker: Some(worker),
         })
+    }
+
+    pub(super) fn attach_proxy(&self, proxy: EventLoopProxy<UserEvent>) {
+        if let Ok(mut attached) = self.proxy.lock() {
+            *attached = Some(proxy);
+        }
+    }
+
+    pub(super) fn identity(&self) -> ProtocolIdentity {
+        self.endpoint.identity(PROTOCOL_VERSION)
     }
 
     #[cfg(test)]
@@ -79,11 +108,12 @@ fn run_listener(
     listener: UnixListener,
     expected_uid: u32,
     expected_token: String,
+    proxy: Arc<Mutex<Option<EventLoopProxy<UserEvent>>>>,
     stopping: Arc<AtomicBool>,
 ) {
     while !stopping.load(Ordering::Acquire) {
         match listener.accept() {
-            Ok((stream, _)) => handle_connection(stream, expected_uid, &expected_token),
+            Ok((stream, _)) => handle_connection(stream, expected_uid, &expected_token, &proxy),
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(20));
             }
@@ -92,7 +122,12 @@ fn run_listener(
     }
 }
 
-fn handle_connection(mut stream: UnixStream, expected_uid: u32, expected_token: &str) {
+fn handle_connection(
+    mut stream: UnixStream,
+    expected_uid: u32,
+    expected_token: &str,
+    proxy: &Mutex<Option<EventLoopProxy<UserEvent>>>,
+) {
     if peer::peer_uid(&stream) != Ok(expected_uid) {
         return;
     }
@@ -106,8 +141,24 @@ fn handle_connection(mut stream: UnixStream, expected_uid: u32, expected_token: 
         return;
     }
 
-    let _ = stream.write_all(NOT_READY_RESPONSE);
+    let response = dispatch_request(payload, proxy).unwrap_or_else(|| NOT_READY_RESPONSE.to_vec());
+    let _ = stream.write_all(&response);
     let _ = stream.write_all(b"\n");
+}
+
+fn dispatch_request(
+    payload: Vec<u8>,
+    proxy: &Mutex<Option<EventLoopProxy<UserEvent>>>,
+) -> Option<Vec<u8>> {
+    let proxy = proxy.lock().ok()?.clone()?;
+    let (response, receiver) = mpsc::sync_channel(1);
+    proxy
+        .send_event(UserEvent::ProtocolRequest(ProtocolRequestEnvelope {
+            payload,
+            response,
+        }))
+        .ok()?;
+    receiver.recv_timeout(Duration::from_secs(2)).ok()
 }
 
 fn read_frame(stream: &mut UnixStream) -> Result<Vec<u8>, ()> {

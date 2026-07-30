@@ -42,6 +42,53 @@ pub(super) struct PublishedEndpoint {
     instance_token: String,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct ProtocolIdentity {
+    protocol_version: u32,
+    pid: u32,
+    instance_id: String,
+    instance_token: String,
+    socket_path: String,
+}
+
+impl ProtocolIdentity {
+    pub(crate) fn protocol_version(&self) -> u32 {
+        self.protocol_version
+    }
+
+    pub(crate) fn pid(&self) -> u32 {
+        self.pid
+    }
+
+    pub(crate) fn instance_id(&self) -> &str {
+        &self.instance_id
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn instance_token(&self) -> &str {
+        &self.instance_token
+    }
+
+    pub(crate) fn exact_instance_token(&self) -> &str {
+        &self.instance_token
+    }
+
+    pub(crate) fn socket_path(&self) -> &str {
+        &self.socket_path
+    }
+
+    #[cfg(test)]
+    pub(crate) fn for_test(instance_id: &str, instance_token: &str) -> Self {
+        Self {
+            protocol_version: 1,
+            pid: std::process::id(),
+            instance_id: instance_id.to_string(),
+            instance_token: instance_token.to_string(),
+            socket_path: "/tmp/markhola-protocol-test.sock".to_string(),
+        }
+    }
+}
+
 impl PublishedEndpoint {
     pub(super) fn create(paths: EndpointPaths, protocol_version: u32) -> Result<Self, String> {
         create_private_directory(&paths.runtime_directory)?;
@@ -72,12 +119,28 @@ impl PublishedEndpoint {
         })
     }
 
-    pub(super) fn socket_path(&self) -> &Path {
+    pub(crate) fn socket_path(&self) -> &Path {
         &self.socket_path
     }
 
-    pub(super) fn instance_token(&self) -> &str {
+    pub(crate) fn instance_token(&self) -> &str {
         &self.instance_token
+    }
+
+    pub(super) fn identity(&self, protocol_version: u32) -> ProtocolIdentity {
+        let instance_id = self
+            .record_path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+            .to_string();
+        ProtocolIdentity {
+            protocol_version,
+            pid: std::process::id(),
+            instance_id,
+            instance_token: self.instance_token.clone(),
+            socket_path: self.socket_path.to_string_lossy().into_owned(),
+        }
     }
 
     #[cfg(test)]

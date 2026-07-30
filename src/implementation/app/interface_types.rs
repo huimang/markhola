@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::mpsc::SyncSender;
 
 use serde::Serialize;
 use tao::window::WindowId;
@@ -39,7 +40,14 @@ pub(crate) enum UserEvent {
     EditorChanged(WindowId, String),
     ShowAbout,
     OpenDocumentation,
+    ProtocolRequest(ProtocolRequestEnvelope),
     Exit,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ProtocolRequestEnvelope {
+    pub(crate) payload: Vec<u8>,
+    pub(crate) response: SyncSender<Vec<u8>>,
 }
 
 #[derive(Clone, Debug)]

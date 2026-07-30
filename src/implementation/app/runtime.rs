@@ -13,6 +13,7 @@ use crate::workspace::DocumentWorkspace;
 use super::asset_access::AssetAccessRegistry;
 use super::document_surface::DocumentSurface;
 use super::native_footer::NativeFooter;
+use super::protocol_commands::ProtocolCommandRuntime;
 use super::protocol_transport::ProtocolTransport;
 use super::{OpenPathRequest, UserEvent};
 
@@ -50,6 +51,7 @@ pub(super) struct AppRuntime {
     pub(super) active_document_id: Option<u64>,
     pub(super) inactive_surfaces: HashMap<WindowId, DocumentSurface>,
     pub(super) _protocol_transport: ProtocolTransport,
+    pub(super) protocol_commands: ProtocolCommandRuntime,
 }
 
 impl AppRuntime {
@@ -65,6 +67,7 @@ impl AppRuntime {
         language: AppLanguage,
         document_size: DocumentSize,
         protocol_transport: ProtocolTransport,
+        protocol_commands: ProtocolCommandRuntime,
     ) -> Self {
         Self {
             proxy,
@@ -82,6 +85,7 @@ impl AppRuntime {
             active_document_id: None,
             inactive_surfaces: HashMap::new(),
             _protocol_transport: protocol_transport,
+            protocol_commands,
         }
     }
 

@@ -182,6 +182,9 @@ fn describe_user_event(
         UserEvent::OpenDocumentation => {
             (None, "OpenDocumentation", format!("source={stage_source}"))
         }
+        UserEvent::ProtocolRequest(_) => {
+            (None, "ProtocolRequest", format!("source={stage_source}"))
+        }
         UserEvent::Exit => (None, "Exit", format!("source={stage_source}")),
     }
 }

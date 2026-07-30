@@ -123,6 +123,12 @@ pub(super) fn handle_user_event(
         }
         UserEvent::ShowAbout => render_about(&runtime.webview),
         UserEvent::OpenDocumentation => open_documentation(runtime),
+        UserEvent::ProtocolRequest(request) => {
+            let response = runtime
+                .protocol_commands
+                .handle(&request.payload, &runtime.workspace);
+            let _ = request.response.send(response);
+        }
         UserEvent::Exit => exit_application(runtime, control_flow),
     }
 }

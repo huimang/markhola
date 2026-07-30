@@ -10,6 +10,7 @@ mod ipc;
 mod native_footer;
 mod native_tabs;
 mod navigation_actions;
+mod protocol_commands;
 mod protocol_transport;
 mod runtime;
 mod save_actions;

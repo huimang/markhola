@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::markdown;
+use sha2::{Digest, Sha256};
 
 use super::{ActiveDocument, DocumentMode, DocumentSnapshot, DocumentTabSnapshot};
 
@@ -43,6 +44,8 @@ impl ActiveDocument {
             line_count,
             mode: DocumentMode::Readonly,
             dirty: false,
+            version: 1,
+            render_generation: 1,
         }
     }
 
@@ -69,6 +72,8 @@ impl ActiveDocument {
             line_count: 0,
             mode: DocumentMode::Writable,
             dirty: false,
+            version: 1,
+            render_generation: 0,
         }
     }
 
@@ -86,7 +91,15 @@ impl ActiveDocument {
             mode: self.mode,
             mode_label: self.mode.label(),
             dirty: self.needs_save(),
-            save_status: if self.needs_save() { "Unsaved" } else { "Saved" },
+            save_status: if self.needs_save() {
+                "Unsaved"
+            } else {
+                "Saved"
+            },
+            version: self.version,
+            content_sha256: self.content_sha256(),
+            render_generation: self.render_generation,
+            render_errors: Vec::new(),
         }
     }
 
@@ -137,6 +150,18 @@ impl ActiveDocument {
         self.draft
     }
 
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
+    pub fn content_sha256(&self) -> String {
+        format!("{:x}", Sha256::digest(self.markdown.as_bytes()))
+    }
+
+    pub fn render_generation(&self) -> u64 {
+        self.render_generation
+    }
+
     pub fn suggested_pdf_export_path(&self) -> PathBuf {
         suggested_pdf_export_path(self.file_path())
     }
@@ -145,6 +170,7 @@ impl ActiveDocument {
         self.markdown = markdown;
         self.refresh_metadata();
         self.dirty = self.markdown != self.saved_markdown;
+        self.advance_version();
     }
 
     pub fn toggle_mode(&mut self) {
@@ -152,6 +178,7 @@ impl ActiveDocument {
         if self.mode == DocumentMode::Readonly {
             self.refresh_html();
         }
+        self.advance_version();
     }
 
     pub fn mark_saved(&mut self) {
@@ -159,6 +186,7 @@ impl ActiveDocument {
         self.refresh_metadata();
         self.refresh_html();
         self.dirty = false;
+        self.advance_version();
     }
 
     pub fn reload_from_disk_markdown(&mut self, markdown: String) {
@@ -167,6 +195,7 @@ impl ActiveDocument {
         self.refresh_metadata();
         self.refresh_html();
         self.dirty = false;
+        self.advance_version();
     }
 
     pub fn replace_file_path(&mut self, path: PathBuf, base_url: String) {
@@ -193,6 +222,11 @@ impl ActiveDocument {
 
     fn refresh_html(&mut self) {
         self.html = markdown::render_html(&self.markdown);
+        self.render_generation = self.render_generation.saturating_add(1);
+    }
+
+    fn advance_version(&mut self) {
+        self.version = self.version.saturating_add(1);
     }
 
     fn needs_save(&self) -> bool {

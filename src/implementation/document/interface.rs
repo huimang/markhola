@@ -25,6 +25,8 @@ pub struct ActiveDocument {
     pub(super) line_count: usize,
     pub(super) mode: DocumentMode,
     pub(super) dirty: bool,
+    pub(super) version: u64,
+    pub(super) render_generation: u64,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -42,6 +44,10 @@ pub struct DocumentSnapshot {
     pub mode_label: &'static str,
     pub dirty: bool,
     pub save_status: &'static str,
+    pub version: u64,
+    pub content_sha256: String,
+    pub render_generation: u64,
+    pub render_errors: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
