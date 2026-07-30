@@ -62,5 +62,5 @@ pub(super) fn handle_window_event(
 
 fn handle_close_requested(runtime: &mut AppRuntime, control_flow: &mut ControlFlow) {
     log_event("window.close_requested", None, "window close requested", "");
-    super::navigation_actions::exit_application(runtime, control_flow);
+    super::navigation_actions::close_current_document(runtime, control_flow);
 }

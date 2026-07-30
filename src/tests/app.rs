@@ -517,8 +517,11 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     let shortcuts_source = include_str!("../implementation/app/shortcuts.rs");
     let navigation_source = include_str!("../implementation/app/navigation_actions.rs");
     let close_actions_source = include_str!("../implementation/app/close_actions.rs");
-    let document_window_configuration = tabs_source
-        .split("pub(super) fn configure_document_window")
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+    let file_menu_source = include_str!("../implementation/app/menu_file.rs");
+    let app_menu_source = include_str!("../implementation/app/menu_app.rs");
+    let application_close_button_configuration = tabs_source
+        .split("fn configure_application_close_button")
         .nth(1)
         .unwrap()
         .split("fn configure_window_chrome")
@@ -526,11 +529,18 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
         .unwrap();
 
     assert!(bootstrap_source.contains("native_tabs::configure_main_window("));
-    assert!(bootstrap_source.contains("native_tabs::configure_document_window("));
+    assert!(bootstrap_source.contains(
+        "native_tabs::configure_document_window(&window, selected_theme, proxy)"
+    ));
     assert!(!bootstrap_source.contains("native_tabs::configure("));
     assert!(tabs_source.contains("standardWindowButton(NSWindowButton::CloseButton)"));
-    assert!(tabs_source.contains("sel!(exitApplication:)"));
-    assert!(!document_window_configuration.contains("exitApplication:"));
+    assert!(application_close_button_configuration.contains("sel!(exitApplication:)"));
+    assert_eq!(
+        tabs_source
+            .matches("configure_application_close_button(window, proxy);")
+            .count(),
+        2
+    );
     assert!(
         window_events_source.contains(
             "WindowEvent::CloseRequested => handle_close_requested(runtime, control_flow)"
@@ -538,11 +548,11 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     );
     assert!(
         window_events_source
-            .contains("super::navigation_actions::exit_application(runtime, control_flow)")
+            .contains("super::navigation_actions::close_current_document(runtime, control_flow)")
     );
     assert!(
         !window_events_source
-            .contains("super::navigation_actions::close_current_document(runtime, control_flow)")
+            .contains("super::navigation_actions::exit_application(runtime, control_flow)")
     );
     assert!(!window_events_source.contains("WindowEvent::CloseRequested => UserEvent::Exit"));
     assert!(navigation_source.contains(
@@ -557,6 +567,12 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     assert!(shortcuts_source.contains(
         "KeyCode::KeyW => emit_shortcut(proxy, UserEvent::CloseCurrentDocument, \"Command+W\")"
     ));
+    assert!(
+        user_events_source.contains("UserEvent::Exit => exit_application(runtime, control_flow)")
+    );
+    assert!(file_menu_source.contains("Some(sel!(closeCurrentDocument:))"));
+    assert!(file_menu_source.contains("Some(sel!(exitApplication:))"));
+    assert!(app_menu_source.contains("Some(sel!(exitApplication:))"));
 }
 
 #[test]

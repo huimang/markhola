@@ -30,6 +30,19 @@ pub(super) fn configure_main_window(
     proxy: &EventLoopProxy<UserEvent>,
 ) {
     configure_window_chrome(window, theme);
+    configure_application_close_button(window, proxy);
+}
+
+pub(super) fn configure_document_window(
+    window: &Window,
+    theme: AppTheme,
+    proxy: &EventLoopProxy<UserEvent>,
+) {
+    configure_window_chrome(window, theme);
+    configure_application_close_button(window, proxy);
+}
+
+fn configure_application_close_button(window: &Window, proxy: &EventLoopProxy<UserEvent>) {
     #[cfg(target_os = "macos")]
     unsafe {
         let ns_window = &*(window.ns_window() as *mut NSWindow);
@@ -43,10 +56,6 @@ pub(super) fn configure_main_window(
     }
     #[cfg(not(target_os = "macos"))]
     let _ = proxy;
-}
-
-pub(super) fn configure_document_window(window: &Window, theme: AppTheme) {
-    configure_window_chrome(window, theme);
 }
 
 fn configure_window_chrome(window: &Window, theme: AppTheme) {
