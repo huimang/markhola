@@ -17,6 +17,7 @@ UI_MATRIX_FILE="$UI_DIR/ui-matrix.tsv"
 BLOCKERS_FILE="$UI_DIR/blockers.txt"
 STARTUP_LOG="$UI_DIR/startup.log"
 APP_LOG_PATH_FILE="$UI_DIR/app-log-path.txt"
+RUNTIME_ARCH_FILE="$UI_DIR/runtime-architecture.txt"
 
 DMG_PATH="$CANDIDATE_DIR/$RELEASE_ASSET_NAME"
 MOUNT_ROOT="$RUNNER_TEMP/intel-g4-mount"
@@ -347,6 +348,7 @@ capture_blocked_ui_placeholders() {
   printf 'BLOCKED: GUI capability gate failed before PID capture.\n' >"$UI_DIR/process.txt"
   printf 'BLOCKED: GUI capability gate failed before lsof capture.\n' >"$UI_DIR/lsof.txt"
   printf 'BLOCKED: GUI capability gate failed before sample capture.\n' >"$UI_DIR/sample.txt"
+  printf 'BLOCKED: GUI capability gate failed before runtime architecture verification.\n' >"$RUNTIME_ARCH_FILE"
   printf 'BLOCKED: GUI capability gate failed before window-owner capture.\n' >"$UI_DIR/window-owner.txt"
   printf 'BLOCKED: GUI capability gate failed before About binding.\n' >"$UI_DIR/about.txt"
 }
@@ -409,6 +411,15 @@ run_gui_matrix() {
   ps -p "$app_pid" -o pid=,ppid=,state=,etime=,command= >"$UI_DIR/process.txt"
   lsof -p "$app_pid" >"$UI_DIR/lsof.txt" 2>&1 || true
   sample "$app_pid" 2 1 -file "$UI_DIR/sample.txt" >/dev/null 2>&1 || printf 'BLOCKED: sample command failed for pid=%s\n' "$app_pid" >"$UI_DIR/sample.txt"
+
+  if grep -q 'Code Type:.*X86-64' "$UI_DIR/sample.txt" \
+    && ! grep -Eqi 'translated|arm64|aarch64' "$UI_DIR/sample.txt"; then
+    printf 'PASS: exact pid %s sample output confirms Code Type X86-64 with no translated/arm64 markers.\n' "$app_pid" >"$RUNTIME_ARCH_FILE"
+    append_ui_result "runtime_architecture" "PASS" "sample output confirms x86_64 runtime for pid=$app_pid"
+  else
+    cat "$UI_DIR/sample.txt" >"$RUNTIME_ARCH_FILE"
+    append_ui_result "runtime_architecture" "BLOCKED" "sample output did not prove x86_64 non-translated runtime for pid=$app_pid"
+  fi
 
   {
     echo "sample_document=$sample_doc"

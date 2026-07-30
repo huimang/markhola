@@ -26,6 +26,10 @@ assert_contains "$HARNESS" '[[ "$minimum_system_version" == "14.0" ]]'
 assert_contains "$HARNESS" 'grep -q "pid=$app_pid" "$candidate_path"'
 assert_contains "$HARNESS" 'append_ui_result "startup_log_binding" "BLOCKED"'
 assert_contains "$HARNESS" 'append_ui_result "startup_log_binding" "PASS"'
+assert_contains "$HARNESS" "grep -q 'Code Type:.*X86-64' \"\$UI_DIR/sample.txt\""
+assert_contains "$HARNESS" "grep -Eqi 'translated|arm64|aarch64' \"\$UI_DIR/sample.txt\""
+assert_contains "$HARNESS" 'append_ui_result "runtime_architecture" "BLOCKED"'
+assert_contains "$HARNESS" 'append_ui_result "runtime_architecture" "PASS"'
 assert_contains "$HARNESS" 'first application process whose unix id is (targetPid as integer)'
 assert_contains "$HARNESS" 'CGWindow owner PID mismatch'
 assert_contains "$FIXTURE" "let windowOwnerPID: Int32?"
