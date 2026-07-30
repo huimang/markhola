@@ -16,6 +16,7 @@ SUMMARY_FILE="$ARTIFACT_ROOT/summary.txt"
 UI_MATRIX_FILE="$UI_DIR/ui-matrix.tsv"
 BLOCKERS_FILE="$UI_DIR/blockers.txt"
 STARTUP_LOG="$UI_DIR/startup.log"
+APP_LOG_PATH_FILE="$UI_DIR/app-log-path.txt"
 
 DMG_PATH="$CANDIDATE_DIR/$RELEASE_ASSET_NAME"
 MOUNT_ROOT="$RUNNER_TEMP/intel-g4-mount"
@@ -69,6 +70,17 @@ compare_directory_parity() {
   if ! diff -rq "$source_dir" "$target_dir" >"$diff_file"; then
     fail_closed "Resource parity mismatch for $label"
   fi
+}
+
+current_date_stamp() {
+  date '+%Y%m%d'
+}
+
+candidate_log_paths() {
+  local stamp
+  stamp="$(current_date_stamp)"
+  printf '%s\n' "/var/log/markhola/markholo-${stamp}.log"
+  printf '%s\n' "/tmp/markhola.log"
 }
 
 validate_sha_input() {
@@ -331,6 +343,7 @@ check_gui_capabilities() {
 capture_blocked_ui_placeholders() {
   printf 'BLOCKED: GUI capability gate failed before launching MarkHola.\n' >"$UI_DIR/startup.txt"
   printf 'BLOCKED: GUI capability gate failed before capturing startup log.\n' >"$STARTUP_LOG"
+  printf 'BLOCKED: GUI capability gate failed before locating candidate app log path.\n' >"$APP_LOG_PATH_FILE"
   printf 'BLOCKED: GUI capability gate failed before PID capture.\n' >"$UI_DIR/process.txt"
   printf 'BLOCKED: GUI capability gate failed before lsof capture.\n' >"$UI_DIR/lsof.txt"
   printf 'BLOCKED: GUI capability gate failed before sample capture.\n' >"$UI_DIR/sample.txt"
@@ -341,17 +354,31 @@ capture_blocked_ui_placeholders() {
 run_gui_matrix() {
   local sample_doc="$ROOT_DIR/examples/basic.md"
   local app_pid=""
+  local app_log_path=""
+  local startup_ready=0
+  local candidate_path
 
   printf 'launch_command=%q %q\n' "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$UI_DIR/startup.txt"
   "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$STARTUP_LOG" 2>&1 &
   app_pid="$!"
   echo "spawned_pid=$app_pid" >>"$UI_DIR/startup.txt"
+  {
+    echo "candidate_log_paths:"
+    candidate_log_paths
+  } >"$APP_LOG_PATH_FILE"
 
   for _ in {1..30}; do
     if ps -p "$app_pid" >/dev/null 2>&1; then
-      if grep -q "stage=" "$STARTUP_LOG" 2>/dev/null; then
-        break
-      fi
+      while IFS= read -r candidate_path; do
+        if [[ -r "$candidate_path" ]] \
+          && grep -q "pid=$app_pid" "$candidate_path" 2>/dev/null \
+          && grep -q "stage=" "$candidate_path" 2>/dev/null; then
+          app_log_path="$candidate_path"
+          startup_ready=1
+          cp "$candidate_path" "$STARTUP_LOG"
+          break 2
+        fi
+      done < <(candidate_log_paths)
     else
       app_pid=""
       break
@@ -365,7 +392,20 @@ run_gui_matrix() {
     return 1
   fi
 
+  if [[ "$startup_ready" -ne 1 || -z "$app_log_path" ]]; then
+    {
+      echo "app_pid=$app_pid"
+      echo "status=BLOCKED"
+      echo "reason=unable to locate readable candidate startup log containing pid and stage fields"
+      echo "stdout_stderr_capture=$STARTUP_LOG"
+    } >"$UI_DIR/startup.txt"
+    printf 'BLOCKED: no readable candidate app log was captured for pid=%s\n' "$app_pid" >"$STARTUP_LOG"
+    append_ui_result "startup_log_binding" "BLOCKED" "Unable to capture real candidate startup log for pid=$app_pid"
+    return 1
+  fi
+
   append_ui_result "launch_markhola" "PASS" "pid=$app_pid"
+  append_ui_result "startup_log_binding" "PASS" "startup log captured from $app_log_path for pid=$app_pid"
   ps -p "$app_pid" -o pid=,ppid=,state=,etime=,command= >"$UI_DIR/process.txt"
   lsof -p "$app_pid" >"$UI_DIR/lsof.txt" 2>&1 || true
   sample "$app_pid" 2 1 -file "$UI_DIR/sample.txt" >/dev/null 2>&1 || printf 'BLOCKED: sample command failed for pid=%s\n' "$app_pid" >"$UI_DIR/sample.txt"
@@ -374,6 +414,7 @@ run_gui_matrix() {
     echo "sample_document=$sample_doc"
     echo "app_pid=$app_pid"
     echo "app_binary=$APP_COPY/Contents/MacOS/MarkHola"
+    echo "candidate_app_log=$app_log_path"
     echo "startup_log=$STARTUP_LOG"
   } >"$UI_DIR/startup.txt"
 
