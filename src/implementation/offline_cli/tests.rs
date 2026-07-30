@@ -87,3 +87,21 @@ fn public_help_excludes_internal_smoke_entry_points() {
     assert!(help.contains("--theme=light|dark"));
     assert!(!help.contains("--smoke-"));
 }
+
+#[test]
+fn offline_exports_use_a_prohibited_unattached_runtime_without_app_bootstrap() {
+    let main = include_str!("../../main.rs");
+    let cli = include_str!("mod.rs");
+    let runtime = include_str!("runtime.rs");
+
+    assert!(main.find("--smoke-export").unwrap() < main.find("run_if_requested").unwrap());
+    assert!(main.find("run_if_requested").unwrap() < main.find("app::run()").unwrap());
+    assert!(cli.contains("HiddenExportRuntime::initialize()"));
+    assert!(cli.contains("export_document_to_path_with_theme("));
+    assert!(runtime.contains("NSApplicationActivationPolicy::Prohibited"));
+    assert!(runtime.contains("application.windows().count() != 0"));
+    assert!(!runtime.contains("activateIgnoringOtherApps"));
+    assert!(!runtime.contains("NSWindow"));
+    assert!(!cli.contains("ProtocolTransport"));
+    assert!(!cli.contains("FileDialog"));
+}

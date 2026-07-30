@@ -8,6 +8,7 @@ use crate::export_service::{ExportCancellation, ExportError};
 
 mod output;
 mod parser;
+mod runtime;
 
 use parser::{CliTheme, Command, ExportOptions};
 
@@ -93,14 +94,51 @@ fn run_export(options: ExportOptions) -> i32 {
         CliTheme::Light => AppTheme::Default,
         CliTheme::Dark => AppTheme::Dark,
     };
-    match crate::export_service::export_document_to_path_with_theme(
-        &document,
-        theme,
+    let hidden_runtime = if matches!(
         options.format,
-        &options.target,
-        options.overwrite,
-        &ExportCancellation::default(),
+        crate::export_service::ExportFormat::Png | crate::export_service::ExportFormat::Pdf
     ) {
+        match runtime::HiddenExportRuntime::initialize() {
+            Ok(runtime) => Some(runtime),
+            Err(message) => {
+                output::print_failure(
+                    options.command,
+                    "runtime_initialization_failed",
+                    &message,
+                    Some(&source),
+                    canonical_target_for_error(&options.target).as_deref(),
+                    options.json,
+                );
+                return EXIT_INTERNAL;
+            }
+        }
+    } else {
+        None
+    };
+    let export_result = objc2::rc::autoreleasepool(|_| {
+        crate::export_service::export_document_to_path_with_theme(
+            &document,
+            theme,
+            options.format,
+            &options.target,
+            options.overwrite,
+            &ExportCancellation::default(),
+        )
+    });
+    if let Some(runtime) = hidden_runtime
+        && let Err(message) = runtime.finish()
+    {
+        output::print_failure(
+            options.command,
+            "runtime_cleanup_failed",
+            &message,
+            Some(&source),
+            canonical_target_for_error(&options.target).as_deref(),
+            options.json,
+        );
+        return EXIT_INTERNAL;
+    }
+    match export_result {
         Ok(result) => {
             output::print_success(
                 options.command,
