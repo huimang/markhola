@@ -12,6 +12,8 @@ mod file_io;
 mod html_export;
 #[path = "interface/markdown.rs"]
 mod markdown;
+#[path = "interface/offline_cli.rs"]
+mod offline_cli;
 #[path = "interface/pdf_export.rs"]
 mod pdf_export;
 #[path = "interface/printing.rs"]
@@ -72,6 +74,10 @@ fn main() {
         }
         println!("markhola smoke html export succeeded: {}", output.display());
         return;
+    }
+
+    if let Some(exit_code) = offline_cli::run_if_requested(&args[1..]) {
+        std::process::exit(exit_code);
     }
 
     if let Err(error) = app::run() {
