@@ -158,6 +158,7 @@ require_file "examples/math.md"
 require_file "examples/multi-document.md"
 require_file "examples/pdf-export.md"
 require_file "examples/theme-showcase.md"
+require_file "examples/v0.9.2-offline-cli-export.md"
 require_file "assets/help/Documentation.md"
 require_file "assets/help/Documentation.zh-CN.md"
 require_file "i18n/en.yaml"
@@ -167,6 +168,62 @@ require_file "themes/dark/layout.css"
 require_file "scripts/release_regression_checklist.md"
 verify_help_version "assets/help/Documentation.md"
 verify_help_version "assets/help/Documentation.zh-CN.md"
+
+echo "==> Running public offline CLI regression"
+CLI_BINARY="$ROOT_DIR/target/release/markhola"
+CLI_SOURCE="$ROOT_DIR/examples/v0.9.2-offline-cli-export.md"
+CLI_PNG_PATH="$ROOT_DIR/dist/offline-cli-smoke.png"
+CLI_PDF_PATH="$ROOT_DIR/dist/offline-cli-smoke.pdf"
+CLI_HTML_PATH="$ROOT_DIR/dist/offline-cli-smoke.html"
+CLI_SOURCE_SHA_BEFORE="$(shasum -a 256 "$CLI_SOURCE" | awk '{print $1}')"
+rm -f "$CLI_PNG_PATH" "$CLI_PDF_PATH" "$CLI_HTML_PATH"
+
+if [[ "$("$CLI_BINARY" version)" != "MarkHola ${APP_VERSION}" ]]; then
+  echo "Offline CLI version output does not match v${APP_VERSION}." >&2
+  exit 1
+fi
+CLI_HELP_OUTPUT="$("$CLI_BINARY" help)"
+if [[ "$CLI_HELP_OUTPUT" != *"export-png"* || "$CLI_HELP_OUTPUT" == *"--smoke-"* ]]; then
+  echo "Offline CLI help is missing public commands or exposes internal smoke commands." >&2
+  exit 1
+fi
+
+"$CLI_BINARY" export-png \
+  --source="$CLI_SOURCE" \
+  --target="$CLI_PNG_PATH" \
+  --theme=dark \
+  --json
+"$CLI_BINARY" export-pdf \
+  --source="$CLI_SOURCE" \
+  --target="$CLI_PDF_PATH" \
+  --theme=light \
+  --json
+"$CLI_BINARY" export-html \
+  --source="$CLI_SOURCE" \
+  --target="$CLI_HTML_PATH" \
+  --theme=dark \
+  --json
+
+if [[ "$(head -c 8 "$CLI_PNG_PATH" | xxd -p)" != "89504e470d0a1a0a" ]]; then
+  echo "Offline CLI PNG output has an invalid signature." >&2
+  exit 1
+fi
+if [[ "$(head -c 5 "$CLI_PDF_PATH")" != "%PDF-" ]]; then
+  echo "Offline CLI PDF output has an invalid signature." >&2
+  exit 1
+fi
+if ! grep -q '<!DOCTYPE html>' "$CLI_HTML_PATH"; then
+  echo "Offline CLI HTML output is invalid." >&2
+  exit 1
+fi
+if [[ "$(shasum -a 256 "$CLI_SOURCE" | awk '{print $1}')" != "$CLI_SOURCE_SHA_BEFORE" ]]; then
+  echo "Offline CLI modified its source fixture." >&2
+  exit 1
+fi
+if find "$ROOT_DIR/dist" -maxdepth 1 -name '.*.markhola-export-*.tmp' -print -quit | grep -q .; then
+  echo "Offline CLI left a temporary export artifact." >&2
+  exit 1
+fi
 
 echo "==> Running automated PDF export smoke test"
 SMOKE_EXPORT_PATH="$ROOT_DIR/dist/pdf-export-smoke.pdf"

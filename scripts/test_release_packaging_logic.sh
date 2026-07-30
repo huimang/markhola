@@ -219,6 +219,7 @@ setup_regression_repo() {
     "$repo_root/i18n" \
     "$repo_root/themes/default" \
     "$repo_root/themes/dark" \
+    "$repo_root/target/release" \
     "$repo_root/dist"
 
   cp "$ROOT_DIR/scripts/release_regression.sh" "$repo_root/scripts/release_regression.sh"
@@ -310,6 +311,50 @@ done
 EOF
   chmod +x "$repo_root/scripts/package_dmg.sh"
 
+  cat >"$repo_root/target/release/markhola" <<'EOF'
+#!/bin/zsh
+set -euo pipefail
+
+command_name="${1:-}"
+shift || true
+
+case "$command_name" in
+  version)
+    print -r -- "MarkHola 0.9.0"
+    ;;
+  help)
+    print -r -- "Usage: markhola <export-png|export-pdf|export-html|version|help>"
+    ;;
+  export-png|export-pdf|export-html)
+    target_path=""
+    for argument in "$@"; do
+      case "$argument" in
+        --target=*)
+          target_path="${argument#--target=}"
+          ;;
+      esac
+    done
+    [[ -n "$target_path" ]] || exit 2
+    case "$command_name" in
+      export-png)
+        printf '\211PNG\r\n\032\n' >"$target_path"
+        ;;
+      export-pdf)
+        print -n -- "%PDF-1.7" >"$target_path"
+        ;;
+      export-html)
+        print -n -- "<!DOCTYPE html><html></html>" >"$target_path"
+        ;;
+    esac
+    print -r -- '{"schema_version":1,"status":"completed"}'
+    ;;
+  *)
+    exit 2
+    ;;
+esac
+EOF
+  chmod +x "$repo_root/target/release/markhola"
+
   print -r -- "# example" >"$repo_root/examples/basic.md"
   cp "$repo_root/examples/basic.md" "$repo_root/examples/languages.md"
   cp "$repo_root/examples/basic.md" "$repo_root/examples/mermaid.md"
@@ -317,6 +362,7 @@ EOF
   cp "$repo_root/examples/basic.md" "$repo_root/examples/multi-document.md"
   cp "$repo_root/examples/basic.md" "$repo_root/examples/pdf-export.md"
   cp "$repo_root/examples/basic.md" "$repo_root/examples/theme-showcase.md"
+  cp "$repo_root/examples/basic.md" "$repo_root/examples/v0.9.2-offline-cli-export.md"
   print -r -- "Current version: \`v0.9.0\`" >"$repo_root/assets/help/Documentation.md"
   print -r -- "Current version: \`v0.9.0\`" >"$repo_root/assets/help/Documentation.zh-CN.md"
   print -n -- "en" >"$repo_root/i18n/en.yaml"
