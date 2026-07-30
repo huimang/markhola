@@ -237,6 +237,13 @@ This is another markdown reader and exporter software.Written by AI, free are th
 1. Add Apple Intel support
    - Run the macOS app on Apple Intel in addition to Apple Silicon
    - Keep the existing macOS document, export, menu, and packaging behavior aligned across both chip families
+   - Publish two explicitly labeled DMG assets instead of one unlabeled Universal 2 download:
+     - `MarkHola-0.9.0-apple-silicon.dmg`, containing an `arm64` application
+     - `MarkHola-0.9.0-intel.dmg`, containing an `x86_64` application
+   - Do not publish the existing unlabeled Universal 2 DMG as a v0.9.0 release asset
+   - Validate each exact architecture-specific DMG independently before publication
+   - Require the Intel DMG to pass native validation on a physical Intel Mac running macOS 14 or
+     later; Rosetta and an Apple Silicon virtual machine do not satisfy this gate
 
 ### v1.0.0
 Start this milestone immediately after v0.9.0 is successfully published; do not schedule v0.9.1 or v0.9.2 work in between.
