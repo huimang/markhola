@@ -4,6 +4,8 @@ use std::path::PathBuf;
 mod app;
 #[path = "interface/document.rs"]
 mod document;
+#[path = "interface/export_service.rs"]
+mod export_service;
 #[path = "interface/file_io.rs"]
 mod file_io;
 #[path = "interface/html_export.rs"]

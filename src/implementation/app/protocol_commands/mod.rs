@@ -5,10 +5,12 @@ mod schema;
 mod tests;
 
 use std::collections::{HashMap, VecDeque};
+use std::path::Path;
 
 use serde_json::{Value, json};
 
 use crate::app::{APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_VERSION};
+use crate::export_service::{self, ExportFormat};
 use crate::workspace::DocumentWorkspace;
 
 use super::protocol_transport::ProtocolIdentity;
@@ -100,8 +102,13 @@ impl ProtocolCommandRuntime {
         } else {
             self.execute(&request, workspace)
         };
+        if request.command.is_export() {
+            export_service::finish_export_cancellation(&request.request_id);
+        }
         let status = if response["ok"] == true {
             RequestStatus::Completed
+        } else if response["error_code"] == "cancelled" {
+            RequestStatus::Cancelled
         } else {
             RequestStatus::Failed
         };
@@ -117,6 +124,9 @@ impl ProtocolCommandRuntime {
             Command::GetDocumentState => self.document_state(request, workspace),
             Command::GetRequestStatus => self.request_status(request),
             Command::CancelRequest => self.cancel_request(request),
+            Command::ExportPng => self.export(request, workspace, ExportFormat::Png),
+            Command::ExportPdf => self.export(request, workspace, ExportFormat::Pdf),
+            Command::ExportHtml => self.export(request, workspace, ExportFormat::Html),
             command if !command.is_read_only() => error(
                 &request.request_id,
                 command.name(),
@@ -221,6 +231,84 @@ impl ProtocolCommandRuntime {
         )
     }
 
+    fn export(
+        &self,
+        request: &Request,
+        workspace: &DocumentWorkspace,
+        format: ExportFormat,
+    ) -> Value {
+        let Some(document_id) = request.target.document_id else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "missing_document",
+                "A document id is required.",
+            );
+        };
+        let Some(expected_version) = request.target.expected_version else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "missing_document_version",
+                "An expected document version is required.",
+            );
+        };
+        let Some(output) = &request.output else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "missing_output",
+                "An explicit output target is required.",
+            );
+        };
+        let Some(document) = workspace.document_by_id(document_id) else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "document_not_found",
+                "The document is not open.",
+            );
+        };
+        if document.version() != expected_version {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "stale_document_version",
+                "The expected document version is stale.",
+            );
+        }
+        let cancellation = export_service::begin_export_cancellation(&request.request_id);
+        let result = export_service::export_document_to_path(
+            document,
+            format,
+            Path::new(&output.path),
+            output.overwrite,
+            &cancellation,
+        );
+        match result {
+            Ok(result) => success(
+                request,
+                json!({
+                    "instance_id": self.identity.instance_id(),
+                    "document_id": document_id,
+                    "document_version": expected_version,
+                    "path": result.path,
+                    "sha256": result.sha256,
+                    "bytes": result.bytes,
+                    "width": result.width,
+                    "height": result.height,
+                    "page_count": result.page_count,
+                }),
+            ),
+            Err(failure) => error(
+                &request.request_id,
+                request.command.name(),
+                failure.code,
+                &failure.message,
+            ),
+        }
+    }
+
     fn cancel_request(&self, request: &Request) -> Value {
         let Some(reference) = &request.request else {
             return error(
@@ -239,7 +327,9 @@ impl ProtocolCommandRuntime {
             );
         };
         let status = match cached.status {
-            RequestStatus::Queued | RequestStatus::Running => RequestStatus::Cancelled,
+            RequestStatus::Queued | RequestStatus::Running | RequestStatus::Cancelled => {
+                RequestStatus::Cancelled
+            }
             _ => RequestStatus::TooLate,
         };
         success(

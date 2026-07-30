@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -23,6 +23,8 @@ pub(crate) use discovery::ProtocolIdentity;
 
 const MAX_REQUEST_BYTES: usize = 1024 * 1024;
 const PROTOCOL_VERSION: u32 = 1;
+const COMMAND_RESPONSE_TIMEOUT: Duration = Duration::from_secs(65);
+const MAX_ACTIVE_CONNECTIONS: usize = 16;
 const NOT_READY_RESPONSE: &[u8] = br#"{"ok":false,"error_code":"protocol_not_ready","message":"The command layer is not ready."}"#;
 
 pub(super) struct ProtocolTransport {
@@ -111,9 +113,32 @@ fn run_listener(
     proxy: Arc<Mutex<Option<EventLoopProxy<UserEvent>>>>,
     stopping: Arc<AtomicBool>,
 ) {
+    let active_connections = Arc::new(AtomicUsize::new(0));
     while !stopping.load(Ordering::Acquire) {
         match listener.accept() {
-            Ok((stream, _)) => handle_connection(stream, expected_uid, &expected_token, &proxy),
+            Ok((stream, _)) => {
+                if active_connections
+                    .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {
+                        (count < MAX_ACTIVE_CONNECTIONS).then_some(count + 1)
+                    })
+                    .is_err()
+                {
+                    continue;
+                }
+                let token = expected_token.clone();
+                let proxy = Arc::clone(&proxy);
+                let connections = Arc::clone(&active_connections);
+                if thread::Builder::new()
+                    .name("markhola-protocol-connection".to_string())
+                    .spawn(move || {
+                        handle_connection(stream, expected_uid, &token, &proxy);
+                        connections.fetch_sub(1, Ordering::AcqRel);
+                    })
+                    .is_err()
+                {
+                    active_connections.fetch_sub(1, Ordering::AcqRel);
+                }
+            }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(20));
             }
@@ -140,6 +165,8 @@ fn handle_connection(
     if !frame_has_exact_token(&payload, expected_token) {
         return;
     }
+    register_queued_export(&payload);
+    request_cooperative_cancellation(&payload);
 
     let response = dispatch_request(payload, proxy).unwrap_or_else(|| NOT_READY_RESPONSE.to_vec());
     let _ = stream.write_all(&response);
@@ -158,7 +185,7 @@ fn dispatch_request(
             response,
         }))
         .ok()?;
-    receiver.recv_timeout(Duration::from_secs(2)).ok()
+    receiver.recv_timeout(COMMAND_RESPONSE_TIMEOUT).ok()
 }
 
 fn read_frame(stream: &mut UnixStream) -> Result<Vec<u8>, ()> {
@@ -189,6 +216,46 @@ fn read_frame(stream: &mut UnixStream) -> Result<Vec<u8>, ()> {
 #[derive(Deserialize)]
 struct TransportEnvelope<'a> {
     instance_token: &'a str,
+}
+
+#[derive(Deserialize)]
+struct CancellationEnvelope<'a> {
+    command: &'a str,
+    request: Option<CancellationReference<'a>>,
+}
+
+#[derive(Deserialize)]
+struct CancellationReference<'a> {
+    request_id: &'a str,
+}
+
+#[derive(Deserialize)]
+struct ExportEnvelope<'a> {
+    request_id: &'a str,
+    command: &'a str,
+}
+
+fn register_queued_export(payload: &[u8]) {
+    let Ok(envelope) = serde_json::from_slice::<ExportEnvelope<'_>>(payload) else {
+        return;
+    };
+    if matches!(
+        envelope.command,
+        "export_png" | "export_pdf" | "export_html"
+    ) {
+        crate::export_service::begin_export_cancellation(envelope.request_id);
+    }
+}
+
+fn request_cooperative_cancellation(payload: &[u8]) {
+    let Ok(envelope) = serde_json::from_slice::<CancellationEnvelope<'_>>(payload) else {
+        return;
+    };
+    if envelope.command == "cancel_request"
+        && let Some(reference) = envelope.request
+    {
+        crate::export_service::request_export_cancellation(reference.request_id);
+    }
 }
 
 fn frame_has_exact_token(payload: &[u8], expected_token: &str) -> bool {

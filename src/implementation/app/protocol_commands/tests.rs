@@ -264,7 +264,8 @@ fn reports_failed_status_for_cached_error_responses() {
         "target": target(),
         "request": { "request_id": "missing-doc" },
     });
-    let status = response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
+    let status =
+        response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
     assert_eq!(status["result"]["status"], "failed");
 
     let cancel_payload = json!({
@@ -274,7 +275,8 @@ fn reports_failed_status_for_cached_error_responses() {
         "target": target(),
         "request": { "request_id": "missing-doc" },
     });
-    let cancel = response(&runtime.handle(&serde_json::to_vec(&cancel_payload).unwrap(), &workspace));
+    let cancel =
+        response(&runtime.handle(&serde_json::to_vec(&cancel_payload).unwrap(), &workspace));
     assert_eq!(cancel["result"]["status"], "too_late");
 }
 
@@ -310,9 +312,6 @@ fn allowlisted_side_effects_fail_closed_until_services_connect() {
         "replace_document_content",
         "set_document_mode",
         "wait_render_ready",
-        "export_png",
-        "export_pdf",
-        "export_html",
         "save_document",
         "save_document_as",
     ] {
@@ -329,11 +328,75 @@ fn allowlisted_side_effects_fail_closed_until_services_connect() {
             "target": target(),
             "request": { "request_id": format!("not-ready-{command}") },
         });
-        let status = response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
+        let status =
+            response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
         assert_eq!(status["result"]["status"], "failed");
     }
     let after_snapshot = workspace.active_document_snapshot().unwrap();
     assert_eq!(after_snapshot.document_id, before_snapshot.document_id);
     assert_eq!(after_snapshot.version, before_snapshot.version);
-    assert_eq!(after_snapshot.content_sha256, before_snapshot.content_sha256);
+    assert_eq!(
+        after_snapshot.content_sha256,
+        before_snapshot.content_sha256
+    );
+}
+
+#[test]
+fn html_export_uses_exact_document_identity_and_explicit_output() {
+    let workspace = workspace();
+    let mut runtime = runtime();
+    let output = std::env::temp_dir().join(format!(
+        "markhola-protocol-html-{}-{}.html",
+        std::process::id(),
+        CACHE_LIMIT,
+    ));
+    let _ = std::fs::remove_file(&output);
+    let payload = json!({
+        "request_id": "export-html",
+        "instance_token": TOKEN,
+        "command": "export_html",
+        "target": {
+            "instance_id": INSTANCE_ID,
+            "document_id": 7,
+            "expected_version": 1,
+        },
+        "output": {
+            "path": output,
+            "overwrite": false,
+        },
+    });
+    let result = response(&runtime.handle(&serde_json::to_vec(&payload).unwrap(), &workspace));
+
+    assert_eq!(result["ok"], true);
+    assert_eq!(result["result"]["document_id"], 7);
+    assert_eq!(result["result"]["sha256"].as_str().unwrap().len(), 64);
+    assert!(
+        std::fs::read_to_string(&output)
+            .unwrap()
+            .contains("Protocol")
+    );
+    std::fs::remove_file(output).unwrap();
+}
+
+#[test]
+fn export_rejects_format_mismatch_before_rendering() {
+    let workspace = workspace();
+    let mut runtime = runtime();
+    let payload = json!({
+        "request_id": "png-wrong-extension",
+        "instance_token": TOKEN,
+        "command": "export_png",
+        "target": {
+            "instance_id": INSTANCE_ID,
+            "document_id": 7,
+            "expected_version": 1,
+        },
+        "output": {
+            "path": std::env::temp_dir().join("markhola-wrong-extension.pdf"),
+            "overwrite": false,
+        },
+    });
+    let result = response(&runtime.handle(&serde_json::to_vec(&payload).unwrap(), &workspace));
+
+    assert_eq!(result["error_code"], "invalid_output_extension");
 }

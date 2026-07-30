@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use percent_encoding::percent_decode_str;
+use pulldown_cmark::{Event, Options, Parser, Tag};
 use url::Url;
 
 use crate::document::ActiveDocument;
@@ -28,6 +29,31 @@ pub(super) fn local_image_data_url(document: &ActiveDocument, destination: &str)
         "data:{mime};base64,{}",
         render_assets::encode_base64(&bytes)
     ))
+}
+
+pub(super) fn validate_local_images(document: &ActiveDocument) -> Result<(), String> {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    for event in Parser::new_ext(document.markdown(), options) {
+        let Event::Start(Tag::Image { dest_url, .. }) = event else {
+            continue;
+        };
+        let destination = dest_url.as_ref();
+        if destination.starts_with('#')
+            || destination.contains('?')
+            || Url::parse(destination)
+                .ok()
+                .is_some_and(|url| matches!(url.scheme(), "http" | "https" | "data"))
+        {
+            continue;
+        }
+        if local_image_data_url(document, destination).is_none() {
+            return Err(format!(
+                "missing_local_asset: Local image is unavailable: {destination}"
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn local_destination_path(destination: &str) -> Option<&str> {

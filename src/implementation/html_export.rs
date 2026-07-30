@@ -5,7 +5,6 @@ use rfd::FileDialog;
 
 use crate::app::log_event;
 use crate::document::ActiveDocument;
-use crate::markdown;
 use crate::render_assets;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -249,6 +248,6 @@ pub(crate) fn build_export_html(document: &ActiveDocument) -> String {
         )
         .replace(
             "__DOCUMENT_HTML__",
-            &markdown::render_html(document.markdown()),
+            &crate::pdf_export::render_export_document_html(document),
         )
 }

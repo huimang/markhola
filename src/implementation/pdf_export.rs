@@ -10,13 +10,14 @@ use lopdf::{Dictionary, Document as LoDocument, Object};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly};
-use objc2_app_kit::NSApplication;
+use objc2_app_kit::{NSApplication, NSBitmapImageFileType, NSBitmapImageRep, NSImage};
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::{
-    NSData, NSDate, NSDefaultRunLoopMode, NSError, NSNull, NSRunLoop, NSString, NSURL,
+    NSData, NSDate, NSDefaultRunLoopMode, NSDictionary, NSError, NSNull, NSRunLoop, NSString, NSURL,
 };
 use objc2_web_kit::{
-    WKContentWorld, WKPDFConfiguration, WKWebView, WKWebViewConfiguration, WKWebsiteDataStore,
+    WKContentWorld, WKPDFConfiguration, WKSnapshotConfiguration, WKWebView, WKWebViewConfiguration,
+    WKWebsiteDataStore,
 };
 use rfd::FileDialog;
 use serde::Deserialize;
@@ -408,11 +409,93 @@ pub(crate) struct ExportMeasurement {
 
 #[allow(dead_code)]
 pub(crate) fn render_document_pdf_data(document: &ActiveDocument) -> Result<Vec<u8>, String> {
+    export_assets::validate_local_images(document)?;
     let rendered_document_html = render_export_document_html(document);
     let html = build_export_html(document, &rendered_document_html);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let pdf_data = render_pdf_data(document, &html, preparation_mode)?;
     apply_pdf_metadata(document, pdf_data)
+}
+
+pub(crate) struct PngRender {
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) width: u64,
+    pub(crate) height: u64,
+}
+
+pub(crate) fn render_document_png_data(document: &ActiveDocument) -> Result<PngRender, String> {
+    export_assets::validate_local_images(document)?;
+    let (webview, measurement) = prepare_printable_webview_with_measurement(document)?;
+    let width = measurement.width.ceil().max(1.0) as u64;
+    let height = measurement.height.ceil().max(1.0) as u64;
+    if width > 65_535 || height > 65_535 || width.saturating_mul(height) > 100_000_000 {
+        return Err("render_resource_limit: PNG bitmap dimensions exceed the limit.".to_string());
+    }
+    if width.saturating_mul(height).saturating_mul(4) > 512 * 1024 * 1024 {
+        return Err("render_resource_limit: PNG working memory exceeds the limit.".to_string());
+    }
+
+    webview.setFrameSize(CGSize::new(width as f64, height as f64));
+    let mtm = MainThreadMarker::new().ok_or("PNG export must run on the main thread.")?;
+    let configuration = unsafe { WKSnapshotConfiguration::new(mtm) };
+    unsafe {
+        configuration.setRect(CGRect::new(
+            CGPoint::ZERO,
+            CGSize::new(width as f64, height as f64),
+        ));
+        configuration.setAfterScreenUpdates(true);
+    }
+    let outcome = Rc::new(RefCell::new(None));
+    let outcome_for_block = Rc::clone(&outcome);
+    let completion = RcBlock::new(move |image: *mut NSImage, error: *mut NSError| {
+        let result = if let Some(error) = unsafe { Retained::retain(error) } {
+            Err(error.localizedDescription().to_string())
+        } else if let Some(image) = unsafe { Retained::retain(image) } {
+            encode_png_image(&image)
+        } else {
+            Err("WKWebView returned no PNG snapshot.".to_string())
+        };
+        *outcome_for_block.borrow_mut() = Some(result);
+    });
+    unsafe {
+        webview.takeSnapshotWithConfiguration_completionHandler(Some(&configuration), &completion);
+    }
+    wait_for(
+        || outcome.borrow().is_some(),
+        "Timed out while creating the PNG file.",
+        EXPORT_TIMEOUT,
+    )?;
+    let png = outcome
+        .borrow_mut()
+        .take()
+        .ok_or("PNG export completed without a result.")??;
+    Ok(png)
+}
+
+fn encode_png_image(image: &NSImage) -> Result<PngRender, String> {
+    let tiff = image
+        .TIFFRepresentation()
+        .ok_or("Failed to create bitmap data from the PNG snapshot.")?;
+    let bitmap = NSBitmapImageRep::imageRepWithData(&tiff)
+        .ok_or("Failed to decode the PNG snapshot bitmap.")?;
+    let width = bitmap.pixelsWide().max(0) as u64;
+    let height = bitmap.pixelsHigh().max(0) as u64;
+    if width > 65_535 || height > 65_535 || width.saturating_mul(height) > 100_000_000 {
+        return Err("render_resource_limit: PNG bitmap dimensions exceed the limit.".to_string());
+    }
+    if width.saturating_mul(height).saturating_mul(4) > 512 * 1024 * 1024 {
+        return Err("render_resource_limit: PNG working memory exceeds the limit.".to_string());
+    }
+    let properties = NSDictionary::new();
+    let bytes = unsafe {
+        bitmap.representationUsingType_properties(NSBitmapImageFileType::PNG, &properties)
+    }
+    .ok_or("Failed to encode the PNG snapshot.")?;
+    Ok(PngRender {
+        bytes: bytes.to_vec(),
+        width,
+        height,
+    })
 }
 
 pub(crate) fn prepare_printable_webview(
@@ -870,6 +953,9 @@ fn run_prepare_script_fallback(
 
     let started_at = Instant::now();
     loop {
+        if crate::export_service::cooperative_cancellation_requested() {
+            return Err("cancelled: The export request was cancelled.".to_string());
+        }
         if started_at.elapsed() > timeout {
             let progress = export_progress_snapshot(webview, mtm)
                 .unwrap_or_else(|error| format!("progress-unavailable:{error}"));
@@ -919,7 +1005,9 @@ fn read_prepare_result_title(
         return Ok(Some(raw.to_string()));
     }
 
-    Err(format!("prepare-poll: unexpected fallback title state: {title}"))
+    Err(format!(
+        "prepare-poll: unexpected fallback title state: {title}"
+    ))
 }
 
 fn evaluate_javascript(webview: &WKWebView, label: &str, script: &str) -> Result<String, String> {
@@ -948,7 +1036,8 @@ fn evaluate_javascript(webview: &WKWebView, label: &str, script: &str) -> Result
     });
 
     unsafe {
-        webview.evaluateJavaScript_completionHandler(&NSString::from_str(script), Some(&completion));
+        webview
+            .evaluateJavaScript_completionHandler(&NSString::from_str(script), Some(&completion));
     }
 
     wait_for(
@@ -1087,6 +1176,9 @@ fn wait_for(
     let started_at = Instant::now();
 
     while !is_ready() {
+        if crate::export_service::cooperative_cancellation_requested() {
+            return Err("cancelled: The export request was cancelled.".to_string());
+        }
         if started_at.elapsed() > timeout {
             return Err(timeout_message.to_string());
         }
@@ -1159,10 +1251,14 @@ pub(crate) fn build_export_html(document: &ActiveDocument, rendered_html: &str) 
         .replace("__DOCUMENT_HTML__", rendered_html)
 }
 
-fn render_export_document_html(document: &ActiveDocument) -> String {
+pub(crate) fn render_export_document_html(document: &ActiveDocument) -> String {
     markdown::render_html_with_image_resolver(document.markdown(), |destination| {
         export_assets::local_image_data_url(document, destination)
     })
+}
+
+pub(crate) fn validate_export_local_images(document: &ActiveDocument) -> Result<(), String> {
+    export_assets::validate_local_images(document)
 }
 
 pub(crate) fn export_footer_text() -> String {

@@ -49,6 +49,10 @@ impl Command {
                 | Self::CancelRequest
         )
     }
+
+    pub(super) fn is_export(self) -> bool {
+        matches!(self, Self::ExportPng | Self::ExportPdf | Self::ExportHtml)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,6 +64,16 @@ pub(super) struct Request {
     pub(super) target: Target,
     #[serde(default)]
     pub(super) request: Option<RequestReference>,
+    #[serde(default)]
+    pub(super) output: Option<Output>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Output {
+    pub(super) path: String,
+    #[serde(default)]
+    pub(super) overwrite: bool,
 }
 
 #[derive(Debug, Deserialize)]
