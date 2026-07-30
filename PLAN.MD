@@ -258,12 +258,19 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Preserve the same rendered Markdown, theme, Mermaid, math, and local-image behavior used by
      the current document preview
    - Let the caller choose the output path and report the final path or a clear failure reason
-   - Keep PNG export separate from normal Markdown save behavior and existing PDF/HTML export
+   - Keep PNG export separate from normal Markdown save behavior while sharing the established
+     rendered-document export pipeline with PDF and HTML
 2. Add a local process-command protocol for export and save automation
    - Allow a local automation client to send structured commands to a running MarkHola process
      without taking keyboard focus or driving the visible UI
-   - Cover at least exporting the active document as PNG, saving the active writable document to
-     its current path, and saving the current in-memory document to another path
+   - Support exporting the active document as PNG, PDF, or standalone HTML through explicit
+     `export_png`, `export_pdf`, and `export_html` commands
+   - Support saving the active writable document to its current path and saving the current
+     in-memory document to another path through explicit `save_document` and `save_document_as`
+     commands
+   - Make protocol PDF and HTML export reuse the same production services as the existing
+     user-visible PDF and HTML actions, including current in-memory content, rendered Mermaid,
+     math, local images, styling, success paths, and stable failures
    - Make protocol Save As reuse the production Save As service without showing a save panel, so
      validation can write to an isolated temporary file instead of overwriting the source fixture
    - Keep the original source file unchanged after Save As, switch the active document to the new
@@ -277,13 +284,17 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Keep the protocol local-only and avoid exposing a network-listening service
    - Reuse the same application save and export paths as user-triggered actions so automated
      validation proves production behavior instead of a separate test-only implementation
-3. Add validation coverage for UI and non-UI PNG export
-   - Verify PNG export from the visible application action and through the local process-command
-     protocol against the exact packaged candidate
+3. Add validation coverage for UI and non-UI export and save operations
+   - Verify PNG, PDF, and HTML export from the visible application actions and through the local
+     process-command protocol against the exact packaged candidate
+   - Verify `save_document` and `save_document_as` through the protocol, including current-path
+     saves, isolated Save As targets, source preservation, and reopen/content identity
    - Verify deterministic request/response correlation, output-file identity, overwrite handling,
      Save As isolation from the source fixture, failure responses, and no-focus-stealing behavior
+   - Compare UI-triggered and protocol-triggered PNG, PDF, and HTML outputs at the production-service
+     boundary so the protocol cannot silently use a test-only export implementation
    - Use the protocol to accelerate release validation without treating protocol success alone as a
-     substitute for visual inspection of representative PNG output
+     substitute for visual inspection of representative PNG, PDF, and HTML output
 
 ### v1.0.0
 Start this milestone immediately after v0.9.1 is successfully published.
