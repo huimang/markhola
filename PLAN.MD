@@ -242,8 +242,14 @@ This is another markdown reader and exporter software.Written by AI, free are th
      - `MarkHola-0.9.0-intel.dmg`, containing an `x86_64` application
    - Do not publish the existing unlabeled Universal 2 DMG as a v0.9.0 release asset
    - Validate each exact architecture-specific DMG independently before publication
-   - Require the Intel DMG to pass native validation on a physical Intel Mac running macOS 14 or
-     later; Rosetta and an Apple Silicon virtual machine do not satisfy this gate
+   - Allow the Intel DMG to be validated either on a physical Intel Mac or in an x86_64 macOS 14+
+     virtual or fully emulated guest
+   - When a virtual or emulated guest is used, require proof that the guest and MarkHola process are
+     `x86_64`, that `sysctl.proc_translated=0`, and that the same Intel acceptance matrix passes
+   - Do not treat an arm64 macOS guest, Tart on Apple Silicon, or Rosetta translation as satisfying
+     the Intel gate
+   - If physical Intel hardware is not used, disclose the remaining Intel CPU/GPU and native window
+     system risk in the release notes
 
 ### v1.0.0
 Start this milestone immediately after v0.9.0 is successfully published; do not schedule v0.9.1 or v0.9.2 work in between.
