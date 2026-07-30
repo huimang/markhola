@@ -15,6 +15,16 @@ fn temp_file(name: &str, extension: &str) -> PathBuf {
     std::env::temp_dir().join(format!("markhola-{name}-{stamp}.{extension}"))
 }
 
+fn temp_dir(name: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("markhola-{name}-dir-{stamp}"));
+    fs::create_dir_all(&path).unwrap();
+    path
+}
+
 #[test]
 fn accepts_markdown_extensions() {
     let md_path = temp_file("accepts", "md");
@@ -92,7 +102,8 @@ fn save_as_allows_new_markdown_path() {
 
 #[test]
 fn save_replaces_existing_file_without_leaving_temp_siblings() {
-    let path = temp_file("atomic-save", "md");
+    let root = temp_dir("atomic-save");
+    let path = root.join("document.md");
     let parent = path.parent().unwrap().to_path_buf();
     let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
     fs::write(&path, "# before").unwrap();
@@ -108,7 +119,7 @@ fn save_replaces_existing_file_without_leaving_temp_siblings() {
 
     assert_eq!(entries, vec![file_name]);
     assert_eq!(load_markdown(&path).unwrap(), "# after");
-    let _ = fs::remove_file(&path);
+    let _ = fs::remove_dir_all(root);
 }
 
 #[test]
@@ -132,10 +143,7 @@ fn directory_base_url_ends_with_trailing_slash() {
     fs::write(&path, "# base").unwrap();
 
     let base = directory_base_url(&path).unwrap();
-    assert!(
-        base.ends_with('/'),
-        "base url should end with '/': {base}"
-    );
+    assert!(base.ends_with('/'), "base url should end with '/': {base}");
 
     let _ = fs::remove_file(&path);
 }

@@ -1,4 +1,7 @@
+use std::fs;
 use std::path::PathBuf;
+use std::thread;
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -10,6 +13,29 @@ use crate::app::implementation::protocol_transport::ProtocolIdentity;
 
 const INSTANCE_ID: &str = "test-instance";
 const TOKEN: &str = "test-token";
+const REGISTRY_LOCK: &str = "/tmp/markhola-export-registry-test-lock";
+
+struct RegistryGuard;
+
+impl RegistryGuard {
+    fn acquire() -> Self {
+        loop {
+            match fs::create_dir(REGISTRY_LOCK) {
+                Ok(()) => return Self,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to acquire export registry test lock: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for RegistryGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(REGISTRY_LOCK);
+    }
+}
 
 fn runtime() -> ProtocolCommandRuntime {
     ProtocolCommandRuntime::new(ProtocolIdentity::for_test(INSTANCE_ID, TOKEN))
@@ -343,6 +369,7 @@ fn allowlisted_side_effects_fail_closed_until_services_connect() {
 
 #[test]
 fn html_export_uses_exact_document_identity_and_explicit_output() {
+    let _guard = RegistryGuard::acquire();
     let workspace = workspace();
     let mut runtime = runtime();
     let output = std::env::temp_dir().join(format!(
@@ -380,6 +407,7 @@ fn html_export_uses_exact_document_identity_and_explicit_output() {
 
 #[test]
 fn export_rejects_format_mismatch_before_rendering() {
+    let _guard = RegistryGuard::acquire();
     let workspace = workspace();
     let mut runtime = runtime();
     let payload = json!({
@@ -403,6 +431,7 @@ fn export_rejects_format_mismatch_before_rendering() {
 
 #[test]
 fn export_requests_require_strict_output_schema_and_exact_document_identity() {
+    let _guard = RegistryGuard::acquire();
     let workspace = workspace();
     let mut runtime = runtime();
 
@@ -442,6 +471,7 @@ fn export_requests_require_strict_output_schema_and_exact_document_identity() {
 
 #[test]
 fn export_requests_cache_completed_and_failed_statuses_with_exact_identity() {
+    let _guard = RegistryGuard::acquire();
     let workspace = workspace();
     let mut runtime = runtime();
     let output = std::env::temp_dir().join(format!(

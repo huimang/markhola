@@ -1,9 +1,46 @@
+use std::fs;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::thread;
 use std::time::Duration;
 
 use super::{
     CancelOutcome, CancellationRegistry, ExportCancellation, ExportStatus, LIFECYCLE_LIMIT,
-    cancel_export_and_wait, export_status, insert_entry, register_queued_export,
+    cancel_export_and_wait, export_status, finish_export_cancellation, insert_entry,
+    register_queued_export,
 };
+
+const REGISTRY_LOCK: &str = "/tmp/markhola-export-registry-test-lock";
+static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1);
+
+struct RegistryGuard;
+
+impl RegistryGuard {
+    fn acquire() -> Self {
+        loop {
+            match fs::create_dir(REGISTRY_LOCK) {
+                Ok(()) => return Self,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to acquire export registry test lock: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for RegistryGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(REGISTRY_LOCK);
+    }
+}
+
+fn request_id(label: &str) -> String {
+    format!(
+        "{label}-{}-{}",
+        std::process::id(),
+        NEXT_REQUEST.fetch_add(1, Ordering::Relaxed),
+    )
+}
 
 #[test]
 fn rejects_new_registration_when_all_capacity_entries_are_active() {
@@ -51,8 +88,9 @@ fn rejects_new_registration_when_all_capacity_entries_are_active() {
 
 #[test]
 fn public_capacity_registration_keeps_active_entries_queryable_until_terminal_eviction() {
+    let _guard = RegistryGuard::acquire();
     let ids = (0..LIFECYCLE_LIMIT)
-        .map(|index| format!("public-capacity-{index}-{}", std::process::id()))
+        .map(|index| request_id(&format!("public-capacity-{index}")))
         .collect::<Vec<_>>();
 
     for (index, request_id) in ids.iter().enumerate() {
@@ -62,7 +100,7 @@ fn public_capacity_registration_keeps_active_entries_queryable_until_terminal_ev
         }
     }
 
-    let overflow = format!("public-capacity-overflow-{}", std::process::id());
+    let overflow = request_id("public-capacity-overflow");
     assert!(!register_queued_export(&overflow));
     assert!(export_status(&overflow).is_none());
     assert_eq!(export_status(&ids[0]), Some(ExportStatus::Queued));
@@ -77,4 +115,8 @@ fn public_capacity_registration_keeps_active_entries_queryable_until_terminal_ev
     assert!(register_queued_export(&overflow));
     assert_eq!(export_status(&overflow), Some(ExportStatus::Queued));
     assert_eq!(export_status(&ids[0]), None);
+    for request_id in ids.iter().skip(1) {
+        finish_export_cancellation(request_id);
+    }
+    finish_export_cancellation(&overflow);
 }

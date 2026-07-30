@@ -21,9 +21,6 @@ done
 
 markhola_prepare_rust_toolchain
 
-echo "==> Running thin architecture gate tests"
-"$ROOT_DIR/scripts/test_verify_macos_architectures.sh"
-
 require_file() {
   local path="$1"
   if [[ ! -f "$ROOT_DIR/$path" ]]; then
@@ -73,10 +70,55 @@ run_release_binary() {
   return 1
 }
 
+require_unix_socket_test_capability() {
+  case "${MARKHOLA_SOCKET_PREFLIGHT:-auto}" in
+    pass)
+      return 0
+      ;;
+    fail)
+      echo "Release regression requires Unix domain socket bind capability for protocol transport tests." >&2
+      echo "Current environment is not approved for this check (forced preflight failure)." >&2
+      echo "Run scripts/release_regression.sh in an allowed local environment, not a sandbox that denies AF_UNIX bind." >&2
+      exit 1
+      ;;
+  esac
+
+  if ! /usr/bin/python3 - <<'PY'
+import os
+import socket
+import tempfile
+
+root = tempfile.mkdtemp(prefix="markhola-socket-preflight-")
+path = os.path.join(root, "transport.sock")
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    sock.bind(path)
+finally:
+    sock.close()
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+    os.rmdir(root)
+PY
+  then
+    echo "Release regression requires Unix domain socket bind capability for protocol transport tests." >&2
+    echo "Current environment denied AF_UNIX bind (for example: sandbox Operation not permitted)." >&2
+    echo "Review and rerun scripts/release_regression.sh in an allowed environment instead of treating socket failures as PASS." >&2
+    exit 1
+  fi
+}
+
 is_known_sandbox_webkit_failure() {
   local log_path="$1"
   grep -q "unsupported type" "$log_path" || grep -q "Timed out while preparing the export page" "$log_path"
 }
+
+echo "==> Running thin architecture gate tests"
+"$ROOT_DIR/scripts/test_verify_macos_architectures.sh"
+
+echo "==> Checking Unix socket test capability"
+require_unix_socket_test_capability
 
 echo "==> Running automated regression tests"
 markhola_cargo test --locked --manifest-path "$ROOT_DIR/Cargo.toml"

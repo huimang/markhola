@@ -4,12 +4,47 @@ use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::export_service;
 
 use super::discovery::{EndpointPaths, EndpointRecord};
 use super::{NOT_READY_RESPONSE, PROTOCOL_VERSION, ProtocolTransport};
+
+const REGISTRY_LOCK: &str = "/tmp/markhola-export-registry-test-lock";
+static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1);
+
+struct RegistryGuard;
+
+impl RegistryGuard {
+    fn acquire() -> Self {
+        loop {
+            match fs::create_dir(REGISTRY_LOCK) {
+                Ok(()) => return Self,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to acquire export registry test lock: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for RegistryGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(REGISTRY_LOCK);
+    }
+}
+
+fn request_id(label: &str) -> String {
+    format!(
+        "{label}-{}-{}",
+        std::process::id(),
+        NEXT_REQUEST.fetch_add(1, Ordering::Relaxed),
+    )
+}
 
 fn temporary_paths(name: &str) -> (std::path::PathBuf, EndpointPaths) {
     let root = std::path::PathBuf::from("/tmp").join(format!("mhp-{name}-{}", std::process::id()));
@@ -240,17 +275,20 @@ fn publishing_endpoint_record_is_atomic_and_leaves_no_temporary_record() {
 
 #[test]
 fn all_active_export_capacity_fails_closed_before_dispatch() {
+    let _guard = RegistryGuard::acquire();
     let (root, paths) = temporary_paths("capacity");
     let transport = ProtocolTransport::start_with_paths(paths).unwrap();
+    let mut request_ids = Vec::new();
     for index in 0..256 {
-        let request_id = format!("transport-capacity-{index}-{}", std::process::id());
+        let request_id = request_id(&format!("transport-capacity-{index}"));
         assert!(export_service::register_queued_export(&request_id));
         if index % 2 == 1 {
             export_service::begin_export_cancellation(&request_id);
         }
+        request_ids.push(request_id);
     }
 
-    let request_id = format!("transport-capacity-overflow-{}", std::process::id());
+    let request_id = request_id("transport-capacity-overflow");
     let payload = format!(
         concat!(
             r#"{{"request_id":"{request_id}","instance_token":"{token}","command":"export_html","#,
@@ -267,6 +305,10 @@ fn all_active_export_capacity_fails_closed_before_dispatch() {
     assert_eq!(value["request_id"], request_id);
     assert_eq!(value["error_code"], "request_capacity_exceeded");
     assert!(export_service::export_status(&request_id).is_none());
+
+    for request_id in request_ids {
+        export_service::finish_export_cancellation(&request_id);
+    }
 
     drop(transport);
     let _ = fs::remove_dir_all(root);

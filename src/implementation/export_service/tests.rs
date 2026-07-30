@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::thread;
+use std::time::Duration;
 
 use crate::document::ActiveDocument;
 
@@ -11,6 +13,29 @@ use super::{
 };
 
 static NEXT_TEST: AtomicU64 = AtomicU64::new(1);
+const REGISTRY_LOCK: &str = "/tmp/markhola-export-registry-test-lock";
+
+struct RegistryGuard;
+
+impl RegistryGuard {
+    fn acquire() -> Self {
+        loop {
+            match fs::create_dir(REGISTRY_LOCK) {
+                Ok(()) => return Self,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to acquire export registry test lock: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for RegistryGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(REGISTRY_LOCK);
+    }
+}
 
 fn test_root(label: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
@@ -24,6 +49,7 @@ fn test_root(label: &str) -> PathBuf {
 
 #[test]
 fn registered_queued_export_applies_cancellation_cooperatively() {
+    let _guard = RegistryGuard::acquire();
     let request_id = format!(
         "queued-cancel-{}",
         NEXT_TEST.fetch_add(1, Ordering::Relaxed)

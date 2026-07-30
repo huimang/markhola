@@ -1,4 +1,5 @@
 use std::io::{Read, Write};
+use std::fs;
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -11,8 +12,33 @@ use crate::export_service::{self, ExportStatus};
 use super::super::{handle_connection, peer};
 use super::ExportControl;
 
+const REGISTRY_LOCK: &str = "/tmp/markhola-export-registry-test-lock";
+
+struct RegistryGuard;
+
+impl RegistryGuard {
+    fn acquire() -> Self {
+        loop {
+            match fs::create_dir(REGISTRY_LOCK) {
+                Ok(()) => return Self,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to acquire export registry test lock: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for RegistryGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir(REGISTRY_LOCK);
+    }
+}
+
 #[test]
 fn socket_control_stays_responsive_without_event_loop_dispatch() {
+    let _guard = RegistryGuard::acquire();
     let control = Arc::new(ExportControl::new("instance-a".to_string()));
     let export_id = format!("socket-export-{}", std::process::id());
     export_service::register_queued_export(&export_id);
@@ -52,10 +78,12 @@ fn socket_control_stays_responsive_without_event_loop_dispatch() {
     assert!(!waiter.is_finished());
     export_service::finish_export(&export_id, ExportStatus::Cancelled);
     assert_eq!(waiter.join().unwrap()["result"]["status"], "cancelled");
+    export_service::finish_export_cancellation(&export_id);
 }
 
 #[test]
 fn observes_export_lifecycle_and_waits_for_cancel_cleanup() {
+    let _guard = RegistryGuard::acquire();
     let export_id = format!("active-export-{}", std::process::id());
     let control = std::sync::Arc::new(ExportControl::new("instance-a".to_string()));
     export_service::register_queued_export(&export_id);
@@ -77,10 +105,12 @@ fn observes_export_lifecycle_and_waits_for_cancel_cleanup() {
     export_service::finish_export(&export_id, ExportStatus::Cancelled);
     assert_eq!(waiter.join().unwrap()["result"]["status"], "cancelled");
     assert_status(&control, "status-cancelled", &export_id, "cancelled");
+    export_service::finish_export_cancellation(&export_id);
 }
 
 #[test]
 fn cancel_after_atomic_commit_is_too_late_and_idempotent() {
+    let _guard = RegistryGuard::acquire();
     let export_id = format!("committed-export-{}", std::process::id());
     let control = ExportControl::new("instance-a".to_string());
     export_service::register_queued_export(&export_id);
@@ -93,6 +123,7 @@ fn cancel_after_atomic_commit_is_too_late_and_idempotent() {
     assert_eq!(first, second);
     assert_eq!(response(first)["result"]["status"], "too_late");
     assert_status(&control, "status-completed", &export_id, "completed");
+    export_service::finish_export_cancellation(&export_id);
 }
 
 fn assert_status(control: &ExportControl, request_id: &str, export_id: &str, expected: &str) {

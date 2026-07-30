@@ -332,6 +332,7 @@ test_release_regression_retries_packaging() {
 
   (
     export MARKHOLA_MOCK_LOG="$repo_root/mock.log"
+    export MARKHOLA_SOCKET_PREFLIGHT=pass
     cd "$repo_root"
     ./scripts/release_regression.sh --with-package >"$repo_root/stdout.log" 2>"$repo_root/stderr.log"
   )
@@ -356,6 +357,7 @@ test_release_regression_rejects_version_mismatch() {
 
   if (
     export MARKHOLA_MOCK_LOG="$repo_root/mock.log"
+    export MARKHOLA_SOCKET_PREFLIGHT=pass
     cd "$repo_root"
     ./scripts/release_regression.sh >"$repo_root/stdout.log" 2>"$repo_root/stderr.log"
   ); then
@@ -365,9 +367,27 @@ test_release_regression_rejects_version_mismatch() {
   assert_file_contains "$repo_root/stderr.log" "Bundled Help version mismatch: assets/help/Documentation.md must declare v0.9.0"
 }
 
+test_release_regression_fails_closed_without_socket_capability() {
+  local repo_root="$TEST_ROOT/release-socket-preflight"
+  setup_regression_repo "$repo_root"
+
+  if (
+    export MARKHOLA_MOCK_LOG="$repo_root/mock.log"
+    export MARKHOLA_SOCKET_PREFLIGHT=fail
+    cd "$repo_root"
+    ./scripts/release_regression.sh >"$repo_root/stdout.log" 2>"$repo_root/stderr.log"
+  ); then
+    fail "Expected release_regression.sh to fail closed without Unix socket capability"
+  fi
+
+  assert_file_contains "$repo_root/stderr.log" "Release regression requires Unix domain socket bind capability for protocol transport tests."
+  assert_file_contains "$repo_root/stderr.log" "Run scripts/release_regression.sh in an allowed local environment, not a sandbox that denies AF_UNIX bind."
+}
+
 test_package_without_signing
 test_package_with_signing_and_notary
 test_release_regression_retries_packaging
 test_release_regression_rejects_version_mismatch
+test_release_regression_fails_closed_without_socket_capability
 
 print -r -- "All release packaging logic tests passed."
