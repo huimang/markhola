@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::document::{ActiveDocument, DocumentMode};
 
-use super::{save_document, save_document_as, validate_save_as_target};
+use super::{atomic_write, save_document, save_document_as, validate_save_as_target};
 
 static NEXT_TEST: AtomicU64 = AtomicU64::new(1);
 
@@ -116,6 +116,86 @@ fn rejects_relative_wrong_extension_and_symlink_targets() {
     assert_eq!(
         validate_save_as_target(&link, true).unwrap_err().code,
         "unsafe_output_path"
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_draft_sources_app_bundle_targets_and_overwrites_existing_files() {
+    let root = root("draft-and-targets");
+    let draft = ActiveDocument::new_blank_with_id(9, 1);
+    assert_eq!(save_document(&mut draft.clone()).unwrap_err().code, "save_path_required");
+
+    let app_bundle = root.join("MarkHola.app");
+    fs::create_dir_all(&app_bundle).unwrap();
+    assert_eq!(
+        validate_save_as_target(&app_bundle.join("Contents/blocked.md"), false)
+            .unwrap_err()
+            .code,
+        "unsafe_output_path"
+    );
+
+    let source = root.join("source.md");
+    let target = root.join("existing.md");
+    let mut document = writable_document(&source, "# Original");
+    document.update_markdown("# Replaced".to_string());
+    fs::write(&target, "# Old target").unwrap();
+
+    assert_eq!(
+        save_document_as(&mut document, &target, true).unwrap(),
+        target.canonicalize().unwrap()
+    );
+    assert_eq!(fs::read_to_string(&source).unwrap(), "# Original");
+    assert_eq!(fs::read_to_string(&target).unwrap(), "# Replaced");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn preserves_original_and_cleans_up_temp_when_commit_target_changes() {
+    let root = root("path-swap");
+    let target = root.join("target.md");
+    fs::write(&target, "# Existing").unwrap();
+    let symlink = root.join("swapped.md");
+    std::os::unix::fs::symlink(&target, &symlink).unwrap();
+
+    let failure = atomic_write(&symlink, b"# New", true).unwrap_err();
+    assert_eq!(failure.code, "output_path_changed");
+    assert_eq!(fs::read_to_string(&target).unwrap(), "# Existing");
+    assert!(
+        fs::read_dir(&root).unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .contains(".markhola-save-")
+        }),
+        "temporary save artifacts must be cleaned up on commit failure"
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_symlinked_existing_source_and_same_target_save_as() {
+    let root = root("source-identity");
+    let real = root.join("real.md");
+    let link = root.join("source.md");
+    fs::write(&real, "# Original").unwrap();
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+
+    let mut document = ActiveDocument::open_with_id(
+        12,
+        link.clone(),
+        "# Original".to_string(),
+        crate::file_io::directory_base_url(&link).unwrap(),
+    );
+    document.toggle_mode();
+    document.update_markdown("# Current".to_string());
+    assert_eq!(save_document(&mut document).unwrap_err().code, "unsafe_source_path");
+
+    let same_target = document.canonical_path().to_path_buf();
+    assert_eq!(
+        save_document_as(&mut document, &same_target, true).unwrap_err().code,
+        "save_target_is_source"
     );
     fs::remove_dir_all(root).unwrap();
 }

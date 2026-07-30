@@ -867,3 +867,26 @@ fn app_shell_routes_local_markdown_links_through_ipc() {
     assert!(script.contains("pathname.endsWith(\".markdown\")"));
     assert!(script.contains("kind: \"open-markdown-link\""));
 }
+
+#[test]
+fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
+    let save_actions_source = include_str!("../implementation/app/save_actions.rs");
+    let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+
+    assert!(save_actions_source.contains("save_service::save_document(document)"));
+    assert!(save_actions_source.contains("save_service::save_document_as(document, path, overwrite)"));
+    assert!(save_actions_source.contains("let Some(path) = choose_save_as_path(&snapshot) else {"));
+    assert!(save_actions_source.contains("FileDialog::new()"));
+    assert!(!save_actions_source.contains("file_io::save_markdown"));
+    assert!(!save_actions_source.contains("document.replace_file_path"));
+
+    assert!(command_source.contains("save_service::save_document(document)"));
+    assert!(command_source.contains("save_service::validate_save_as_target("));
+    assert!(command_source.contains("save_service::save_document_as(document, &target, output.overwrite)"));
+    assert!(user_events_source.contains("use super::save_actions::{save_active_document, save_active_document_as};"));
+    assert!(user_events_source.contains("UserEvent::SaveDocument => {"));
+    assert!(user_events_source.contains("save_active_document("));
+    assert!(user_events_source.contains("UserEvent::SaveDocumentAs => {"));
+    assert!(user_events_source.contains("save_active_document_as("));
+}

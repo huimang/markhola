@@ -148,6 +148,95 @@ fn save_commands_fail_closed_for_stale_readonly_and_external_state() {
     fs::remove_dir_all(root).unwrap();
 }
 
+#[test]
+fn save_commands_preserve_request_idempotency_and_failed_status_semantics() {
+    let root = root("idempotency");
+    let source = root.join("source.md");
+    let target = root.join("copy.md");
+    let mut workspace = workspace(&source, "# Current memory");
+    let version = workspace.document_by_id(7).unwrap().version();
+    let mut runtime = runtime();
+
+    let save_as = request(
+        "save-as-idempotent",
+        "save_document_as",
+        version,
+        Some((&target, false)),
+    );
+    let first = response(runtime.handle_mut(&save_as, &mut workspace));
+    let replay = response(runtime.handle_mut(&save_as, &mut workspace));
+    assert_eq!(replay, first);
+
+    let conflict = response(runtime.handle_mut(
+        &request("save-as-idempotent", "save_document", workspace.document_by_id(7).unwrap().version(), None),
+        &mut workspace,
+    ));
+    assert_eq!(conflict["error_code"], "request_id_conflict");
+
+    let output_exists = response(runtime.handle_mut(
+        &request(
+            "save-as-output-exists",
+            "save_document_as",
+            workspace.document_by_id(7).unwrap().version(),
+            Some((&target, false)),
+        ),
+        &mut workspace,
+    ));
+    assert_eq!(output_exists["error_code"], "output_exists");
+
+    let status = response(runtime.handle_mut(
+        &control(
+            "save-as-output-exists-status",
+            "get_request_status",
+            "save-as-output-exists",
+        ),
+        &mut workspace,
+    ));
+    assert_eq!(status["result"]["status"], "failed");
+    let cancel = response(runtime.handle_mut(
+        &control(
+            "save-as-output-exists-cancel",
+            "cancel_request",
+            "save-as-output-exists",
+        ),
+        &mut workspace,
+    ));
+    assert_eq!(cancel["result"]["status"], "too_late");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn save_commands_reject_mismatched_and_open_targets() {
+    let root = root("targets");
+    let source = root.join("source.md");
+    let other = root.join("other.md");
+    fs::write(&other, "# Other").unwrap();
+
+    let mut workspace = workspace(&source, "# Current memory");
+    workspace.open_document(ActiveDocument::open_with_id(
+        8,
+        other.clone(),
+        "# Other".to_string(),
+        crate::file_io::directory_base_url(&other).unwrap(),
+    ));
+    workspace.activate_document(7);
+    let version = workspace.document_by_id(7).unwrap().version();
+    let mut runtime = runtime();
+
+    let mismatch = response(runtime.handle_mut(
+        &request("save-mismatch", "save_document", version, Some((&other, false))),
+        &mut workspace,
+    ));
+    assert_eq!(mismatch["error_code"], "save_target_mismatch");
+
+    let open_target = response(runtime.handle_mut(
+        &request("save-target-open", "save_document_as", version, Some((&other, true))),
+        &mut workspace,
+    ));
+    assert_eq!(open_target["error_code"], "save_target_open");
+    fs::remove_dir_all(root).unwrap();
+}
+
 fn request(
     request_id: &str,
     command: &str,
