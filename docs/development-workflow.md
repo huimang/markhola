@@ -31,6 +31,11 @@ work or supporting implementation/testing work. If the plan and acceptance are c
 is not core architecture or engine work, Architect dispatches it directly to the appropriate
 Engineering or Testing owner instead of implementing or testing it personally.
 
+For this triage, core work includes architectural boundaries and module structure, OS support and
+platform compatibility, technology-stack selection or migration, core framework integration, and
+foundational design-pattern or lifecycle decisions. Architect leads these decisions and reviews the
+resulting implementation even when another role owns the code changes.
+
 The handoff must identify one owner, a disjoint write scope, dependencies, acceptance evidence, and
 the next integration point. Architect retains responsibility for architecture boundaries, risk
 review, acceptance clarity, and follow-up review. This rule does not change the planning-only

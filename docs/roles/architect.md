@@ -24,6 +24,11 @@ or boundary work. Work that is not core architecture or engine work must not be 
 Architect for convenience. When Product scope and the technical plan are clear, Architect dispatches
 the smallest complete package directly to the appropriate Engineering or Testing owner.
 
+Core work includes architectural boundaries and module structure, supported operating systems and
+platform compatibility, technology-stack selection or migration, core framework integration, and
+foundational design-pattern or lifecycle decisions. These areas remain Architect-led even when
+Engineering implements the approved package.
+
 Architect remains responsible for technical boundaries, dependency order, acceptance criteria, risk
 escalation, and read-only review. Engineering owns implementation; Testing owns test code, fixtures,
 validation, and device evidence within its scope. Architect retains a package only when it changes
