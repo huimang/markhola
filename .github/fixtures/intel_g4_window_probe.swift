@@ -6,6 +6,7 @@ import Foundation
 struct ProbePayload: Encodable {
     let mode: String
     let pid: Int32
+    let windowOwnerPID: Int32?
     let axTrusted: Bool
     let visibleWindow: Bool
     let windowOwner: String?
@@ -21,11 +22,11 @@ func writeJSON(_ payload: ProbePayload) throws {
     FileHandle.standardOutput.write(Data("\n".utf8))
 }
 
-func windows(for pid: pid_t) -> (visible: Bool, owner: String?, titles: [String]) {
+func windows(for pid: pid_t) -> (visible: Bool, ownerPID: Int32?, owner: String?, titles: [String]) {
     guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]]
     else {
-        return (false, nil, [])
+        return (false, nil, nil, [])
     }
 
     let filtered = list.filter { entry in
@@ -43,13 +44,17 @@ func windows(for pid: pid_t) -> (visible: Bool, owner: String?, titles: [String]
         entry[kCGWindowOwnerName as String] as? String
     }.first
 
+    let ownerPID = filtered.compactMap { entry in
+        (entry[kCGWindowOwnerPID as String] as? Int).map(Int32.init)
+    }.first
+
     let visible = filtered.contains { entry in
         let layer = entry[kCGWindowLayer as String] as? Int ?? Int.max
         let alpha = entry[kCGWindowAlpha as String] as? Double ?? 0
         return layer == 0 && alpha > 0
     }
 
-    return (visible, owner, titles)
+    return (visible, ownerPID, owner, titles)
 }
 
 func runLoop(seconds: TimeInterval) {
@@ -81,6 +86,7 @@ func runProbeWindow() throws {
         ProbePayload(
             mode: "create-probe-window",
             pid: getpid(),
+            windowOwnerPID: visible.ownerPID,
             axTrusted: AXIsProcessTrusted(),
             visibleWindow: visible.visible,
             windowOwner: visible.owner,
@@ -96,6 +102,7 @@ func inspectExistingPID(_ pid: pid_t) throws {
         ProbePayload(
             mode: "inspect-existing-pid",
             pid: Int32(pid),
+            windowOwnerPID: visible.ownerPID,
             axTrusted: AXIsProcessTrusted(),
             visibleWindow: visible.visible,
             windowOwner: visible.owner,
@@ -111,6 +118,7 @@ func fail(_ message: String) -> Never {
             ProbePayload(
                 mode: "error",
                 pid: getpid(),
+                windowOwnerPID: nil,
                 axTrusted: AXIsProcessTrusted(),
                 visibleWindow: false,
                 windowOwner: nil,

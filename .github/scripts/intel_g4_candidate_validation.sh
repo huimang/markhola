@@ -15,6 +15,7 @@ UI_DIR="$ARTIFACT_ROOT/ui"
 SUMMARY_FILE="$ARTIFACT_ROOT/summary.txt"
 UI_MATRIX_FILE="$UI_DIR/ui-matrix.tsv"
 BLOCKERS_FILE="$UI_DIR/blockers.txt"
+STARTUP_LOG="$UI_DIR/startup.log"
 
 DMG_PATH="$CANDIDATE_DIR/$RELEASE_ASSET_NAME"
 MOUNT_ROOT="$RUNNER_TEMP/intel-g4-mount"
@@ -229,24 +230,27 @@ verify_bundle_machos() {
 
 verify_version_signature_and_resources() {
   local info_plist="$APP_COPY/Contents/Info.plist"
-  local expected_version short_version bundle_version bundle_exec
+  local expected_version short_version bundle_version bundle_exec minimum_system_version
 
   [[ -f "$info_plist" ]] || fail_closed "Missing Info.plist"
   expected_version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
   short_version="$(plutil -extract CFBundleShortVersionString raw -o - "$info_plist")"
   bundle_version="$(plutil -extract CFBundleVersion raw -o - "$info_plist")"
   bundle_exec="$(plutil -extract CFBundleExecutable raw -o - "$info_plist")"
+  minimum_system_version="$(plutil -extract LSMinimumSystemVersion raw -o - "$info_plist")"
 
   {
     echo "expected_version=$expected_version"
     echo "CFBundleShortVersionString=$short_version"
     echo "CFBundleVersion=$bundle_version"
     echo "CFBundleExecutable=$bundle_exec"
+    echo "LSMinimumSystemVersion=$minimum_system_version"
   } >"$BUNDLE_DIR/version.txt"
 
   [[ "$short_version" == "$expected_version" ]] || fail_closed "CFBundleShortVersionString mismatch"
   [[ "$bundle_version" == "$expected_version" ]] || fail_closed "CFBundleVersion mismatch"
   [[ "$bundle_exec" == "MarkHola" ]] || fail_closed "CFBundleExecutable mismatch"
+  [[ "$minimum_system_version" == "14.0" ]] || fail_closed "LSMinimumSystemVersion mismatch"
 
   codesign --verify --deep --strict --verbose=2 "$APP_COPY" >"$BUNDLE_DIR/codesign-verify.txt" 2>&1
 
@@ -281,7 +285,7 @@ check_gui_capabilities() {
   fi
 
   if "$WINDOW_PROBE_BIN" >"$UI_DIR/window-probe.json" 2>"$UI_DIR/window-probe.stderr"; then
-    local visible_window ax_trusted owner_name
+    local visible_window ax_trusted owner_name owner_pid probe_pid
     visible_window="$(
       ruby -rjson -e 'payload = JSON.parse(File.read(ARGV[0])); puts payload["visibleWindow"]' \
         "$UI_DIR/window-probe.json"
@@ -294,11 +298,19 @@ check_gui_capabilities() {
       ruby -rjson -e 'payload = JSON.parse(File.read(ARGV[0])); puts(payload["windowOwner"].to_s)' \
         "$UI_DIR/window-probe.json"
     )"
+    owner_pid="$(
+      ruby -rjson -e 'payload = JSON.parse(File.read(ARGV[0])); puts(payload["windowOwnerPID"].to_s)' \
+        "$UI_DIR/window-probe.json"
+    )"
+    probe_pid="$(
+      ruby -rjson -e 'payload = JSON.parse(File.read(ARGV[0])); puts payload["pid"]' \
+        "$UI_DIR/window-probe.json"
+    )"
 
-    if [[ "$visible_window" == "true" ]]; then
-      append_ui_result "visible_appkit_window" "PASS" "Probe window owner=${owner_name:-unknown}"
+    if [[ "$visible_window" == "true" && "$owner_pid" == "$probe_pid" ]]; then
+      append_ui_result "visible_appkit_window" "PASS" "Probe window owner=${owner_name:-unknown} owner_pid=$owner_pid"
     else
-      append_ui_result "visible_appkit_window" "BLOCKED" "Probe could not observe a visible AppKit window"
+      append_ui_result "visible_appkit_window" "BLOCKED" "Probe window visibility/owner PID mismatch owner_pid=${owner_pid:-missing} probe_pid=${probe_pid:-missing}"
       can_run_gui=0
     fi
 
@@ -318,6 +330,7 @@ check_gui_capabilities() {
 
 capture_blocked_ui_placeholders() {
   printf 'BLOCKED: GUI capability gate failed before launching MarkHola.\n' >"$UI_DIR/startup.txt"
+  printf 'BLOCKED: GUI capability gate failed before capturing startup log.\n' >"$STARTUP_LOG"
   printf 'BLOCKED: GUI capability gate failed before PID capture.\n' >"$UI_DIR/process.txt"
   printf 'BLOCKED: GUI capability gate failed before lsof capture.\n' >"$UI_DIR/lsof.txt"
   printf 'BLOCKED: GUI capability gate failed before sample capture.\n' >"$UI_DIR/sample.txt"
@@ -329,16 +342,25 @@ run_gui_matrix() {
   local sample_doc="$ROOT_DIR/examples/basic.md"
   local app_pid=""
 
-  open -na "$APP_COPY" --args "$sample_doc" >"$UI_DIR/open.stdout" 2>"$UI_DIR/open.stderr" || true
+  printf 'launch_command=%q %q\n' "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$UI_DIR/startup.txt"
+  "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$STARTUP_LOG" 2>&1 &
+  app_pid="$!"
+  echo "spawned_pid=$app_pid" >>"$UI_DIR/startup.txt"
 
   for _ in {1..30}; do
-    app_pid="$(ps -axo pid=,command= | awk -v target="$APP_COPY/Contents/MacOS/MarkHola" '$0 ~ target {print $1; exit}')"
-    [[ -n "$app_pid" ]] && break
+    if ps -p "$app_pid" >/dev/null 2>&1; then
+      if grep -q "stage=" "$STARTUP_LOG" 2>/dev/null; then
+        break
+      fi
+    else
+      app_pid=""
+      break
+    fi
     sleep 1
   done
 
   if [[ -z "$app_pid" ]]; then
-    append_ui_result "launch_markhola" "BLOCKED" "No MarkHola PID was observed after open -na"
+    append_ui_result "launch_markhola" "BLOCKED" "No exact MarkHola PID was observed after direct launch"
     capture_blocked_ui_placeholders
     return 1
   fi
@@ -352,37 +374,55 @@ run_gui_matrix() {
     echo "sample_document=$sample_doc"
     echo "app_pid=$app_pid"
     echo "app_binary=$APP_COPY/Contents/MacOS/MarkHola"
+    echo "startup_log=$STARTUP_LOG"
   } >"$UI_DIR/startup.txt"
 
   if "$WINDOW_PROBE_BIN" --inspect-pid "$app_pid" >"$UI_DIR/window-owner.json" 2>"$UI_DIR/window-owner.stderr"; then
     cat "$UI_DIR/window-owner.json" >"$UI_DIR/window-owner.txt"
-    append_ui_result "window_owner_binding" "PASS" "Captured window-owner JSON for pid=$app_pid"
+    local owner_pid
+    owner_pid="$(
+      ruby -rjson -e 'payload = JSON.parse(File.read(ARGV[0])); puts(payload["windowOwnerPID"].to_s)' \
+        "$UI_DIR/window-owner.json"
+    )"
+    if [[ "$owner_pid" == "$app_pid" ]]; then
+      append_ui_result "window_owner_binding" "PASS" "Captured window-owner JSON for pid=$app_pid"
+    else
+      append_ui_result "window_owner_binding" "BLOCKED" "CGWindow owner PID mismatch owner_pid=${owner_pid:-missing} app_pid=$app_pid"
+    fi
   else
     printf 'BLOCKED: unable to inspect CGWindow owner for pid=%s\n' "$app_pid" >"$UI_DIR/window-owner.txt"
     append_ui_result "window_owner_binding" "BLOCKED" "Unable to inspect visible window ownership"
   fi
 
-  if osascript >"$UI_DIR/about.txt" 2>"$UI_DIR/about.stderr" <<'APPLESCRIPT'
+  if osascript - "$app_pid" >"$UI_DIR/about.txt" 2>"$UI_DIR/about.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
 tell application "System Events"
-  tell process "MarkHola"
+  set targetProcess to first application process whose unix id is (targetPid as integer)
+  tell targetProcess
     click menu item "About MarkHola" of menu 1 of menu bar item "MarkHola" of menu bar 1
     delay 1
-    get name of every window
+    get {unix id, name of every window}
   end tell
 end tell
+end run
 APPLESCRIPT
   then
-    append_ui_result "about_panel" "PASS" "About MarkHola menu action succeeded"
+    append_ui_result "about_panel" "PASS" "About MarkHola menu action succeeded for pid=$app_pid"
   else
     append_ui_result "about_panel" "BLOCKED" "Unable to drive About MarkHola through System Events"
   fi
 
-  if osascript >"$UI_DIR/menu-tab.txt" 2>"$UI_DIR/menu-tab.stderr" <<'APPLESCRIPT'
+  if osascript - "$app_pid" >"$UI_DIR/menu-tab.txt" 2>"$UI_DIR/menu-tab.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
 tell application "System Events"
-  tell process "MarkHola"
+  set targetProcess to first application process whose unix id is (targetPid as integer)
+  tell targetProcess
     get name of every menu item of menu 1 of menu bar item "Tab" of menu bar 1
   end tell
 end tell
+end run
 APPLESCRIPT
   then
     append_ui_result "tab_menu" "PASS" "Tab menu items were enumerated"
@@ -390,12 +430,16 @@ APPLESCRIPT
     append_ui_result "tab_menu" "BLOCKED" "Unable to enumerate Tab menu items"
   fi
 
-  if osascript >"$UI_DIR/menu-window.txt" 2>"$UI_DIR/menu-window.stderr" <<'APPLESCRIPT'
+  if osascript - "$app_pid" >"$UI_DIR/menu-window.txt" 2>"$UI_DIR/menu-window.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
 tell application "System Events"
-  tell process "MarkHola"
+  set targetProcess to first application process whose unix id is (targetPid as integer)
+  tell targetProcess
     get name of every menu item of menu 1 of menu bar item "Window" of menu bar 1
   end tell
 end tell
+end run
 APPLESCRIPT
   then
     append_ui_result "window_menu" "PASS" "Window menu items were enumerated"
@@ -403,12 +447,16 @@ APPLESCRIPT
     append_ui_result "window_menu" "BLOCKED" "Unable to enumerate Window menu items"
   fi
 
-  if osascript >"$UI_DIR/menu-export.txt" 2>"$UI_DIR/menu-export.stderr" <<'APPLESCRIPT'
+  if osascript - "$app_pid" >"$UI_DIR/menu-export.txt" 2>"$UI_DIR/menu-export.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
 tell application "System Events"
-  tell process "MarkHola"
+  set targetProcess to first application process whose unix id is (targetPid as integer)
+  tell targetProcess
     get name of every menu item of menu 1 of menu item "Export" of menu 1 of menu bar item "File" of menu bar 1
   end tell
 end tell
+end run
 APPLESCRIPT
   then
     append_ui_result "export_menu" "PASS" "Export submenu items were enumerated"
@@ -416,12 +464,16 @@ APPLESCRIPT
     append_ui_result "export_menu" "BLOCKED" "Unable to enumerate Export submenu items"
   fi
 
-  if osascript >"$UI_DIR/menu-print.txt" 2>"$UI_DIR/menu-print.stderr" <<'APPLESCRIPT'
+  if osascript - "$app_pid" >"$UI_DIR/menu-print.txt" 2>"$UI_DIR/menu-print.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
 tell application "System Events"
-  tell process "MarkHola"
+  set targetProcess to first application process whose unix id is (targetPid as integer)
+  tell targetProcess
     exists menu item "Print" of menu 1 of menu bar item "File" of menu bar 1
   end tell
 end tell
+end run
 APPLESCRIPT
   then
     append_ui_result "print_menu" "PASS" "Print menu item probe completed"
@@ -457,6 +509,13 @@ write_step_summary() {
   } >>"$GITHUB_STEP_SUMMARY"
 }
 
+run_static_self_test() {
+  local test_script="$ROOT_DIR/.github/scripts/test_intel_g4_candidate_validation.sh"
+  if [[ -x "$test_script" ]]; then
+    "$test_script"
+  fi
+}
+
 require_command gh
 require_command shasum
 require_command hdiutil
@@ -471,6 +530,7 @@ require_command osascript
 require_command sample
 require_command lsof
 
+run_static_self_test
 validate_sha_input
 collect_provenance
 download_draft_asset
