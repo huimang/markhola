@@ -51,7 +51,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ### View
 
-- Theme > Follow System / Default / Dark
+- Theme > Follow System / Light / Dark
 - Language > English / 简体中文
 - Size > Zoom In / Zoom Out / Reset
 - Outline
@@ -68,8 +68,8 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Operating-system dialogs continue to use the language provided by macOS.
 - The Outline item is available for an opened document in readonly mode.
 - Use `Command + 1` through `Command + 9` to select native tabs by their visible order.
-- Follow System changes between Default and Dark when the macOS appearance changes.
+- Follow System changes between Light and Dark when the macOS appearance changes.
 - Rendered Markdown links do not use underlines.
-- Default and Dark use separate visually comfortable code palettes.
+- Light and Dark use separate visually comfortable code palettes.
 - The default empty state does not show a status prompt; successful PDF and HTML exports show the output path and an `Open` action.
 - MarkHola provides separately labeled Apple Silicon and Intel downloads for macOS 14.0 or later.

@@ -29,7 +29,7 @@ menu:
   close_all_tabs: "Close All Tabs"
   view: "View"
   theme: "Theme"
-  theme_default: "Default"
+  theme_default: "Light"
   theme_dark: "Dark"
   theme_system: "Follow System"
   size: "Size"

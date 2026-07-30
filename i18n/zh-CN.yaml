@@ -29,7 +29,7 @@ menu:
   close_all_tabs: "关闭所有标签页"
   view: "视图"
   theme: "主题"
-  theme_default: "默认"
+  theme_default: "浅色"
   theme_dark: "深色"
   theme_system: "跟随系统"
   size: "字号"

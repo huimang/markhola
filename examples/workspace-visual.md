@@ -62,7 +62,7 @@ Editor text and line numbers should resize together without changing the native 
 
 Verify the workspace with:
 
-1. Default
+1. Light
 2. Dark
 3. Follow System
 

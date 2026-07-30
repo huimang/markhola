@@ -33,5 +33,5 @@ fn palette(name: &str) -> &'static str {
 | dark | low-light reading |
 | system | follows the current macOS Light or Dark appearance |
 
-The code block should use a pale gray-violet surface in Default and a soft dark gray-violet
+The code block should use a pale gray-violet surface in Light and a soft dark gray-violet
 surface in Dark, with restrained syntax colors and readable line numbers.

@@ -1,5 +1,8 @@
 const LIGHT_THEME: &str = include_str!("../../themes/default/layout.css");
 const DARK_THEME: &str = include_str!("../../themes/dark/layout.css");
+const ENGLISH: &str = include_str!("../../i18n/en.yaml");
+const CHINESE: &str = include_str!("../../i18n/zh-CN.yaml");
+const APP_THEME: &str = include_str!("../implementation/app/app_theme.rs");
 
 #[test]
 fn markdown_dividers_use_the_accessible_violet_theme_token() {
@@ -12,6 +15,14 @@ fn markdown_dividers_use_the_accessible_violet_theme_token() {
     assert!(contrast("#6657E8", "#0D1117") >= 3.0);
     assert!(contrast("#8B81ED", "#FAFEFD") >= 3.0);
     assert!(contrast("#594DC9", "#0D1117") >= 3.0);
+}
+
+#[test]
+fn light_is_only_the_user_visible_name_for_the_default_theme_key() {
+    assert!(ENGLISH.contains("theme_default: \"Light\""));
+    assert!(CHINESE.contains("theme_default: \"浅色\""));
+    assert!(APP_THEME.contains("Self::Default => \"default\""));
+    assert!(APP_THEME.contains("\"default\" | \"light\" => Some(Self::Default)"));
 }
 
 fn contrast(foreground: &str, background: &str) -> f64 {

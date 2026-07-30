@@ -11,7 +11,7 @@ Use this file to verify the MarkHola palette and table header styling in `v0.8.1
 | Green Mid | `#81D9C3` | Green transition |
 | Green Tint | `#EAF9F5` | Markdown table header |
 
-The table header should use the same Green Tint background in the Default and Dark app themes.
+The table header should use the same Green Tint background in the Light and Dark app themes.
 
 ## Link and quote
 

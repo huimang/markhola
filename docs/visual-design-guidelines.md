@@ -17,7 +17,7 @@ avoidable visual load while preserving readability for people with low vision.
 
 ## Brand Color System
 
-The Violet, Green, and Gray scales are the shared source of truth across Default and Dark. Every
+The Violet, Green, and Gray scales are the shared source of truth across Light and Dark. Every
 defined color includes an HTML swatch so the specification shows the actual color instead of relying
 on its name or HEX value alone.
 
@@ -30,7 +30,7 @@ on its name or HEX value alone.
 | Green | `--markhola-green` | `#17B890` | <span title="MarkHola Green #17B890" aria-label="MarkHola Green #17B890" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#17B890;border:1px solid #94A3B8;"></span> | Active, selected, confirmed state |
 | Green | `--markhola-green-mid` | `#81D9C3` | <span title="Green Mid #81D9C3" aria-label="Green Mid #81D9C3" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#81D9C3;border:1px solid #94A3B8;"></span> | Active borders and syntax |
 | Green | `--markhola-green-tint` | `#EAF9F5` | <span title="Green Tint #EAF9F5" aria-label="Green Tint #EAF9F5" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#EAF9F5;border:1px solid #94A3B8;"></span> | Tabs, table headers, active background |
-| Green | `--markhola-green-subtle` | `#FAFEFD` | <span title="Green Subtle #FAFEFD" aria-label="Green Subtle #FAFEFD" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#FAFEFD;border:1px solid #94A3B8;"></span> | Default document surface |
+| Green | `--markhola-green-subtle` | `#FAFEFD` | <span title="Green Subtle #FAFEFD" aria-label="Green Subtle #FAFEFD" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#FAFEFD;border:1px solid #94A3B8;"></span> | Light document surface |
 | Gray | `--markhola-gray-strong` | `#1E293B` | <span title="Gray Strong #1E293B" aria-label="Gray Strong #1E293B" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#1E293B;border:1px solid #94A3B8;"></span> | Strong neutral text or dark surface |
 | Gray | `--markhola-gray` | `#475569` | <span title="Gray #475569" aria-label="Gray #475569" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#475569;border:1px solid #94A3B8;"></span> | Neutral application text |
 | Gray | `--markhola-gray-mid` | `#94A3B8` | <span title="Gray Mid #94A3B8" aria-label="Gray Mid #94A3B8" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#94A3B8;border:1px solid #64748B;"></span> | Secondary neutral content |
@@ -53,24 +53,25 @@ large surfaces where even a Tint would be too visually dominant.
 
 ## Theme Model
 
-The target theme model contains two rendering themes:
+The user-visible theme model contains two rendering themes:
 
-- Default, for the light appearance.
+- Light, for the light appearance.
 - Dark, for the dark appearance.
 
 Follow System is a preference rather than a third CSS theme:
 
-- macOS Light maps to Default.
+- macOS Light maps to Light.
 - macOS Dark maps to Dark.
-- Manual Default or Dark remains fixed until Follow System is selected again.
+- Manual Light or Dark remains fixed until Follow System is selected again.
 
-The separate Light theme is retired because its role substantially overlaps Default. Default and
-Dark must each define an appropriate palette instead of sharing colors that only work in one
-appearance.
+Light retains the canonical internal `Default` enum variant, persisted key `default`, and
+`themes/default` path for compatibility. The user-visible name must not leak those implementation
+identifiers. Light and Dark must each define an appropriate palette instead of sharing colors that
+only work in one appearance.
 
 ## Surface Hierarchy
 
-### Default
+### Light
 
 - Use a subtle Gray title-bar material so native chrome remains quiet.
 - Use Green Tint for the selected native tab and Green Subtle for the document surface.
@@ -81,7 +82,7 @@ appearance.
 ### Dark
 
 - Use low-saturation dark neutral or gray-violet surfaces rather than pure black.
-- Preserve the same semantic hierarchy as Default while selecting colors that remain comfortable
+- Preserve the same semantic hierarchy as Light while selecting colors that remain comfortable
   and legible in low-light conditions.
 - Avoid luminous near-white text on large dark areas unless an increased-contrast mode requires it.
 
@@ -166,7 +167,7 @@ References:
 - If a syntax color misses the minimum, adjust luminance or the background instead of relying on
   higher saturation.
 
-### Default Code Palette
+### Light Code Palette
 
 - Use a pale gray-violet or pale neutral code background.
 - Avoid placing a large deep purple-black block abruptly inside the light document surface.
@@ -175,17 +176,17 @@ References:
 
 | Role | Token | Value | HTML preview | Contrast |
 | --- | --- | --- | --- | ---: |
-| Code surface | `--code-surface` | `#F1F0F7` | <span title="Default code surface #F1F0F7" aria-label="Default code surface #F1F0F7" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#F1F0F7;border:1px solid #857E99;"></span> | — |
-| Gutter | `--code-gutter` | `#E8E6F0` | <span title="Default code gutter #E8E6F0" aria-label="Default code gutter #E8E6F0" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#E8E6F0;border:1px solid #857E99;"></span> | — |
-| Code text | `--code-text` | `#514B64` | <span title="Default code text #514B64" aria-label="Default code text #514B64" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#514B64;border:1px solid #94A3B8;"></span> | 7.30:1 |
-| Line number | `--code-line-number` | `#68627A` | <span title="Default line number #68627A" aria-label="Default line number #68627A" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#68627A;border:1px solid #94A3B8;"></span> | 4.70:1 |
-| Divider | `--code-divider` | `#857E99` | <span title="Default code divider #857E99" aria-label="Default code divider #857E99" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#857E99;border:1px solid #64748B;"></span> | 3.13:1 minimum |
-| Keyword | `--code-syntax-keyword` | `#6657E8` | <span title="Default keyword #6657E8" aria-label="Default keyword #6657E8" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6657E8;border:1px solid #94A3B8;"></span> | 4.53:1 |
-| String | `--code-syntax-string` | `#287B68` | <span title="Default string #287B68" aria-label="Default string #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;border:1px solid #94A3B8;"></span> | 4.50:1 |
-| Comment | `--code-syntax-comment` | `#6F687B` | <span title="Default comment #6F687B" aria-label="Default comment #6F687B" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6F687B;border:1px solid #94A3B8;"></span> | 4.70:1 |
-| Constant | `--code-syntax-constant` | `#855272` | <span title="Default constant #855272" aria-label="Default constant #855272" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#855272;border:1px solid #94A3B8;"></span> | 5.38:1 |
-| Entity | `--code-syntax-entity` | `#5F5682` | <span title="Default entity #5F5682" aria-label="Default entity #5F5682" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#5F5682;border:1px solid #94A3B8;"></span> | 5.91:1 |
-| Badge text/background | `--code-badge-text` / `--code-badge-background` | `#F1F0F7` / `#287B68` | <span title="Default badge #F1F0F7 on #287B68" aria-label="Default badge #F1F0F7 on #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;color:#F1F0F7;border:1px solid #94A3B8;text-align:center;">Aa</span> | 4.50:1 |
+| Code surface | `--code-surface` | `#F1F0F7` | <span title="Light code surface #F1F0F7" aria-label="Light code surface #F1F0F7" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#F1F0F7;border:1px solid #857E99;"></span> | — |
+| Gutter | `--code-gutter` | `#E8E6F0` | <span title="Light code gutter #E8E6F0" aria-label="Light code gutter #E8E6F0" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#E8E6F0;border:1px solid #857E99;"></span> | — |
+| Code text | `--code-text` | `#514B64` | <span title="Light code text #514B64" aria-label="Light code text #514B64" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#514B64;border:1px solid #94A3B8;"></span> | 7.30:1 |
+| Line number | `--code-line-number` | `#68627A` | <span title="Light line number #68627A" aria-label="Light line number #68627A" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#68627A;border:1px solid #94A3B8;"></span> | 4.70:1 |
+| Divider | `--code-divider` | `#857E99` | <span title="Light code divider #857E99" aria-label="Light code divider #857E99" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#857E99;border:1px solid #64748B;"></span> | 3.13:1 minimum |
+| Keyword | `--code-syntax-keyword` | `#6657E8` | <span title="Light keyword #6657E8" aria-label="Light keyword #6657E8" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6657E8;border:1px solid #94A3B8;"></span> | 4.53:1 |
+| String | `--code-syntax-string` | `#287B68` | <span title="Light string #287B68" aria-label="Light string #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;border:1px solid #94A3B8;"></span> | 4.50:1 |
+| Comment | `--code-syntax-comment` | `#6F687B` | <span title="Light comment #6F687B" aria-label="Light comment #6F687B" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#6F687B;border:1px solid #94A3B8;"></span> | 4.70:1 |
+| Constant | `--code-syntax-constant` | `#855272` | <span title="Light constant #855272" aria-label="Light constant #855272" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#855272;border:1px solid #94A3B8;"></span> | 5.38:1 |
+| Entity | `--code-syntax-entity` | `#5F5682` | <span title="Light entity #5F5682" aria-label="Light entity #5F5682" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#5F5682;border:1px solid #94A3B8;"></span> | 5.91:1 |
+| Badge text/background | `--code-badge-text` / `--code-badge-background` | `#F1F0F7` / `#287B68` | <span title="Light badge #F1F0F7 on #287B68" aria-label="Light badge #F1F0F7 on #287B68" style="display:inline-block;width:72px;height:20px;vertical-align:middle;background:#287B68;color:#F1F0F7;border:1px solid #94A3B8;text-align:center;">Aa</span> | 4.50:1 |
 
 ### Dark Code Palette
 
@@ -215,12 +216,12 @@ References:
 - Reduce bold keyword emphasis so color, luminance, and weight do not all create strong emphasis at
   the same time.
 - Avoid using several near-maximum-luminance colors in one code block.
-- Design and validate separate Default and Dark code palettes instead of reusing one fixed dark
+- Design and validate separate Light and Dark code palettes instead of reusing one fixed dark
   palette.
 
 ## Increased Contrast
 
-Default themes must meet minimum accessibility requirements while prioritizing visual comfort.
+Standard themes must meet minimum accessibility requirements while prioritizing visual comfort.
 A future version may respond to macOS Increase Contrast with a separate variant:
 
 - The increased-contrast variant may raise text, boundary, and state-indicator contrast.
@@ -234,7 +235,7 @@ Any color or visual-experience change must:
 
 1. Identify the semantic token and avoid introducing an unnecessary one-off color.
 2. List affected foreground/background pairs and calculate their actual contrast.
-3. Check the affected states in both Default and Dark.
+3. Check the affected states in both Light and Dark.
 4. Use real screenshots for layout, luminance transitions, spacing, and visual hierarchy.
 5. Check hover, focus, active, selected, visited, and disabled states as applicable.
 6. Check HTML, PDF, print, or native surfaces when they consume the changed visual rule.
