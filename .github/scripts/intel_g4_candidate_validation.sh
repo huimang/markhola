@@ -107,6 +107,9 @@ collect_provenance() {
     echo "release_tag=$RELEASE_TAG"
     echo "release_asset_name=$RELEASE_ASSET_NAME"
     echo "expected_sha256=$EXPECTED_SHA256"
+    echo "workflow_commit=${GITHUB_SHA:-}"
+    echo "permission_exception=validation-job-uses-contents-write-for-draft-read"
+    echo "token_injection=validate-step-only-gh-token"
   } >"$PROVENANCE_DIR/workflow-context.txt"
 
   uname -a >"$PROVENANCE_DIR/uname.txt"

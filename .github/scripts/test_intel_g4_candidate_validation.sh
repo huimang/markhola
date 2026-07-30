@@ -19,23 +19,31 @@ assert_contains() {
 assert_contains "$WORKFLOW" "runs-on: macos-15-intel"
 assert_contains "$WORKFLOW" "expected_sha256:"
 assert_contains "$WORKFLOW" "contents: write"
+assert_contains "$WORKFLOW" "persist-credentials: false"
 assert_contains "$WORKFLOW" 'env:'
 assert_contains "$WORKFLOW" 'ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence'
 assert_contains "$WORKFLOW" 'GH_TOKEN: ${{ github.token }}'
 if ruby -e '
   lines = File.readlines(ARGV[0])
+  top_level = lines[0..12].join
+  abort("workflow-global-contents-write") if top_level.include?("permissions:\n  contents: write")
+  job_block = lines[10..24].join
+  abort("missing-job-contents-write") unless job_block.include?("permissions:\n      contents: write")
   job_env = lines[18..22].join
   abort("job-env-runner-temp") if job_env.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
-  validate_step = lines[26..31].join
+  checkout_step = lines[24..29].join
+  abort("missing-persist-credentials-false") unless checkout_step.include?("persist-credentials: false")
+  abort("checkout-step-gh-token") if checkout_step.include?("GH_TOKEN: ${{ github.token }}")
+  validate_step = lines[30..35].join
   abort("missing-step-runner-temp") unless validate_step.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
   abort("job-env-gh-token") if job_env.include?("GH_TOKEN: ${{ github.token }}")
   abort("missing-step-gh-token") unless validate_step.include?("GH_TOKEN: ${{ github.token }}")
-  upload_step = lines[33..38].join
+  upload_step = lines[37..42].join
   abort("upload-step-gh-token") if upload_step.include?("GH_TOKEN: ${{ github.token }}")
 ' "$WORKFLOW"; then
   :
 else
-  echo "runner.temp or GH_TOKEN placement in workflow is invalid" >&2
+  echo "workflow permission or token placement is invalid" >&2
   exit 1
 fi
 if grep -Fq 'GH_TOKEN' "$HARNESS"; then
@@ -62,6 +70,8 @@ assert_contains "$HARNESS" 'gh api "repos/${GITHUB_REPOSITORY}/releases"'
 assert_contains "$HARNESS" '"repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" >"$DMG_PATH"'
 assert_contains "$HARNESS" 'release = releases.find { |entry| entry["draft"] && entry["tag_name"] == ENV.fetch("RELEASE_TAG") }'
 assert_contains "$HARNESS" 'asset = release.fetch("assets").find { |entry| entry["name"] == ENV.fetch("RELEASE_ASSET_NAME") }'
+assert_contains "$HARNESS" 'permission_exception=validation-job-uses-contents-write-for-draft-read'
+assert_contains "$HARNESS" 'token_injection=validate-step-only-gh-token'
 assert_contains "$HARNESS" '[[ ! "$EXPECTED_SHA256" =~ ^[A-Fa-f0-9]{64}$ ]]'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/var/log/markhola/markholo-${stamp}.log"'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/tmp/markhola.log"'
