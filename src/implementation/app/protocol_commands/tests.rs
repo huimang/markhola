@@ -400,3 +400,215 @@ fn export_rejects_format_mismatch_before_rendering() {
 
     assert_eq!(result["error_code"], "invalid_output_extension");
 }
+
+#[test]
+fn export_requests_require_strict_output_schema_and_exact_document_identity() {
+    let workspace = workspace();
+    let mut runtime = runtime();
+
+    let missing_output = response(&runtime.handle(
+        &request(
+            "missing-output",
+            "export_html",
+            json!({
+                "instance_id": INSTANCE_ID,
+                "document_id": 7,
+                "expected_version": 1,
+            }),
+        ),
+        &workspace,
+    ));
+    assert_eq!(missing_output["error_code"], "missing_output");
+
+    let missing_version = response(&runtime.handle(
+        &request(
+            "missing-export-version",
+            "export_html",
+            json!({
+                "instance_id": INSTANCE_ID,
+                "document_id": 7,
+            }),
+        ),
+        &workspace,
+    ));
+    assert_eq!(missing_version["error_code"], "missing_document_version");
+
+    let unknown_output_field = response(&runtime.handle(
+        br#"{"request_id":"bad-output","instance_token":"test-token","command":"export_html","target":{"instance_id":"test-instance","document_id":7,"expected_version":1},"output":{"path":"/tmp/protocol-bad-output.html","overwrite":false,"extra":true}}"#,
+        &workspace,
+    ));
+    assert_eq!(unknown_output_field["error_code"], "invalid_request");
+}
+
+#[test]
+fn export_requests_cache_completed_and_failed_statuses_with_exact_identity() {
+    let workspace = workspace();
+    let mut runtime = runtime();
+    let output = std::env::temp_dir().join(format!(
+        "markhola-protocol-status-{}-{}.html",
+        std::process::id(),
+        CACHE_LIMIT + 1,
+    ));
+    let _ = std::fs::remove_file(&output);
+
+    let success_payload = json!({
+        "request_id": "export-status-success",
+        "instance_token": TOKEN,
+        "command": "export_html",
+        "target": {
+            "instance_id": INSTANCE_ID,
+            "document_id": 7,
+            "expected_version": 1,
+        },
+        "output": {
+            "path": output,
+            "overwrite": false,
+        },
+    });
+    let success =
+        response(&runtime.handle(&serde_json::to_vec(&success_payload).unwrap(), &workspace));
+    assert_eq!(success["ok"], true);
+    assert_eq!(success["result"]["instance_id"], INSTANCE_ID);
+    assert_eq!(success["result"]["document_id"], 7);
+    assert_eq!(success["result"]["document_version"], 1);
+
+    let success_status = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-status-check",
+                "instance_token": TOKEN,
+                "command": "get_request_status",
+                "target": target(),
+                "request": { "request_id": "export-status-success" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(success_status["result"]["status"], "completed");
+
+    let success_cancel = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-cancel-check",
+                "instance_token": TOKEN,
+                "command": "cancel_request",
+                "target": target(),
+                "request": { "request_id": "export-status-success" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(success_cancel["result"]["status"], "too_late");
+
+    let replay =
+        response(&runtime.handle(&serde_json::to_vec(&success_payload).unwrap(), &workspace));
+    assert_eq!(replay, success);
+
+    let replay_status = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-replay-status-check",
+                "instance_token": TOKEN,
+                "command": "get_request_status",
+                "target": target(),
+                "request": { "request_id": "export-status-success" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(replay_status["result"]["status"], "completed");
+
+    let output_exists = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-status-output-exists",
+                "instance_token": TOKEN,
+                "command": "export_html",
+                "target": {
+                    "instance_id": INSTANCE_ID,
+                    "document_id": 7,
+                    "expected_version": 1,
+                },
+                "output": {
+                    "path": output,
+                    "overwrite": false,
+                },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(output_exists["error_code"], "output_exists");
+
+    let output_exists_status = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-output-exists-status-check",
+                "instance_token": TOKEN,
+                "command": "get_request_status",
+                "target": target(),
+                "request": { "request_id": "export-status-output-exists" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(output_exists_status["result"]["status"], "failed");
+
+    let overwrite_failure = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-status-failure",
+                "instance_token": TOKEN,
+                "command": "export_html",
+                "target": {
+                    "instance_id": INSTANCE_ID,
+                    "document_id": 7,
+                    "expected_version": 2,
+                },
+                "output": {
+                    "path": output,
+                    "overwrite": true,
+                },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(overwrite_failure["error_code"], "stale_document_version");
+
+    let failed_status = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-status-after-failure",
+                "instance_token": TOKEN,
+                "command": "get_request_status",
+                "target": target(),
+                "request": { "request_id": "export-status-failure" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(failed_status["result"]["status"], "failed");
+
+    let failed_cancel = response(
+        &runtime.handle(
+            &serde_json::to_vec(&json!({
+                "request_id": "export-cancel-after-failure",
+                "instance_token": TOKEN,
+                "command": "cancel_request",
+                "target": target(),
+                "request": { "request_id": "export-status-failure" },
+            }))
+            .unwrap(),
+            &workspace,
+        ),
+    );
+    assert_eq!(failed_cancel["result"]["status"], "too_late");
+
+    std::fs::remove_file(output).unwrap();
+}

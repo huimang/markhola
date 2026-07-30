@@ -1,9 +1,12 @@
 use std::fs;
+use std::io::ErrorKind;
 use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+
+use crate::export_service;
 
 use super::discovery::{EndpointPaths, EndpointRecord};
 use super::{NOT_READY_RESPONSE, PROTOCOL_VERSION, ProtocolTransport};
@@ -74,6 +77,39 @@ fn responds_after_one_frame_without_client_half_close() {
     assert_eq!(response, [NOT_READY_RESPONSE, b"\n"].concat());
 
     drop(stream);
+    drop(transport);
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn repeated_no_half_close_round_trips_keep_first_response_stable() {
+    let (root, paths) = temporary_paths("open-write-side-repeat");
+    let transport = ProtocolTransport::start_with_paths(paths).unwrap();
+
+    for _ in 0..8 {
+        let mut stream = UnixStream::connect(transport.socket_path()).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(1)))
+            .unwrap();
+        stream
+            .write_all(&request_frame(&record_token(&transport)))
+            .unwrap();
+
+        let mut response = vec![0; NOT_READY_RESPONSE.len() + 1];
+        stream.read_exact(&mut response).unwrap();
+        assert_eq!(response, [NOT_READY_RESPONSE, b"\n"].concat());
+
+        if let Err(error) = stream.write_all(b" ") {
+            assert!(
+                matches!(
+                    error.kind(),
+                    ErrorKind::BrokenPipe | ErrorKind::ConnectionReset | ErrorKind::NotConnected
+                ),
+                "unexpected write-side error after response: {error:?}"
+            );
+        }
+    }
+
     drop(transport);
     let _ = fs::remove_dir_all(root);
 }
@@ -197,6 +233,40 @@ fn publishing_endpoint_record_is_atomic_and_leaves_no_temporary_record() {
     assert!(record_path.exists());
     assert!(!temporary.exists());
     assert_private(&record_path, 0o600);
+
+    drop(transport);
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn all_active_export_capacity_fails_closed_before_dispatch() {
+    let (root, paths) = temporary_paths("capacity");
+    let transport = ProtocolTransport::start_with_paths(paths).unwrap();
+    for index in 0..256 {
+        let request_id = format!("transport-capacity-{index}-{}", std::process::id());
+        assert!(export_service::register_queued_export(&request_id));
+        if index % 2 == 1 {
+            export_service::begin_export_cancellation(&request_id);
+        }
+    }
+
+    let request_id = format!("transport-capacity-overflow-{}", std::process::id());
+    let payload = format!(
+        concat!(
+            r#"{{"request_id":"{request_id}","instance_token":"{token}","command":"export_html","#,
+            r#""target":{{"instance_id":"ignored","document_id":7,"expected_version":1}},"#,
+            r#""output":{{"path":"/tmp/overflow.html","overwrite":false}}}}"#
+        ),
+        request_id = request_id,
+        token = record_token(&transport),
+    );
+    let response = round_trip(&transport, format!("{payload}\n").as_bytes());
+    let value: serde_json::Value = serde_json::from_slice(&response[..response.len() - 1]).unwrap();
+
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["request_id"], request_id);
+    assert_eq!(value["error_code"], "request_capacity_exceeded");
+    assert!(export_service::export_status(&request_id).is_none());
 
     drop(transport);
     let _ = fs::remove_dir_all(root);
