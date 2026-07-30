@@ -329,6 +329,7 @@ EOF
 test_release_regression_retries_packaging() {
   local repo_root="$TEST_ROOT/release-retry"
   setup_regression_repo "$repo_root"
+  rm -rf "$repo_root/dist"
 
   (
     export MARKHOLA_MOCK_LOG="$repo_root/mock.log"
@@ -340,6 +341,7 @@ test_release_regression_retries_packaging() {
   assert_file_contains "$repo_root/mock.log" "test_verify:"
   assert_file_contains "$repo_root/mock.log" "markhola_cargo:test --locked --manifest-path "
   assert_file_contains "$repo_root/mock.log" "Cargo.toml --target x86_64-apple-darwin"
+  [[ -d "$repo_root/dist" ]] || fail "Expected release_regression.sh to create dist for release-retry"
   assert_file_contains "$repo_root/mock.log" "package_attempt:1"
   assert_file_contains "$repo_root/mock.log" "package_attempt:2"
   assert_file_contains "$repo_root/mock.log" "package_attempt:3"
@@ -370,6 +372,7 @@ test_release_regression_rejects_version_mismatch() {
 test_release_regression_fails_closed_without_socket_capability() {
   local repo_root="$TEST_ROOT/release-socket-preflight"
   setup_regression_repo "$repo_root"
+  rm -rf "$repo_root/dist"
 
   if (
     export MARKHOLA_MOCK_LOG="$repo_root/mock.log"

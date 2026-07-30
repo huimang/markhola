@@ -70,6 +70,18 @@ run_release_binary() {
   return 1
 }
 
+require_output_directory() {
+  local output_dir="$ROOT_DIR/dist"
+  if [[ -d "$output_dir" ]]; then
+    return 0
+  fi
+
+  if ! mkdir -p "$output_dir"; then
+    echo "Failed to create required output directory: $output_dir" >&2
+    exit 1
+  fi
+}
+
 require_unix_socket_test_capability() {
   case "${MARKHOLA_SOCKET_PREFLIGHT:-auto}" in
     pass)
@@ -119,6 +131,9 @@ echo "==> Running thin architecture gate tests"
 
 echo "==> Checking Unix socket test capability"
 require_unix_socket_test_capability
+
+echo "==> Preparing ignored output directory"
+require_output_directory
 
 echo "==> Running automated regression tests"
 markhola_cargo test --locked --manifest-path "$ROOT_DIR/Cargo.toml"
