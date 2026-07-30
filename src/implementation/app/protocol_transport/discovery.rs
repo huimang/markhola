@@ -39,6 +39,7 @@ pub(super) struct EndpointRecord {
 pub(super) struct PublishedEndpoint {
     socket_path: PathBuf,
     record_path: PathBuf,
+    instance_token: String,
 }
 
 impl PublishedEndpoint {
@@ -59,7 +60,7 @@ impl PublishedEndpoint {
             protocol_version,
             pid,
             instance_id,
-            instance_token: token,
+            instance_token: token.clone(),
             socket_path: socket_path.to_string_lossy().into_owned(),
         };
         write_record(&record_path, &record)?;
@@ -67,11 +68,16 @@ impl PublishedEndpoint {
         Ok(Self {
             socket_path,
             record_path,
+            instance_token: token,
         })
     }
 
     pub(super) fn socket_path(&self) -> &Path {
         &self.socket_path
+    }
+
+    pub(super) fn instance_token(&self) -> &str {
+        &self.instance_token
     }
 
     #[cfg(test)]
