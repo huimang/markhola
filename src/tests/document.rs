@@ -1,6 +1,17 @@
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::file_io::{directory_base_url, save_markdown};
 
 use super::{ActiveDocument, DocumentMode};
+
+fn temp_markdown_path(name: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("markhola-document-{name}-{stamp}.md"))
+}
 
 #[test]
 fn switching_to_readonly_rerenders_preview() {
@@ -75,4 +86,26 @@ fn blank_document_starts_writable_and_unsaved() {
     assert_eq!(snapshot.title, "Untitled-7");
     assert_eq!(snapshot.file_path, "Unsaved draft");
     assert_eq!(snapshot.save_status, "Unsaved");
+}
+
+#[test]
+fn replace_file_path_turns_draft_into_saved_document_at_new_path() {
+    let mut document = ActiveDocument::new_blank_with_id(42, 7);
+    let target = temp_markdown_path("save-as");
+    document.update_markdown("# Saved elsewhere\nbody".to_string());
+    save_markdown(&target, document.markdown()).unwrap();
+
+    let base_url = directory_base_url(&target).unwrap();
+    document.replace_file_path(target.clone(), base_url);
+    let snapshot = document.snapshot();
+
+    assert!(!document.is_draft());
+    assert!(!document.is_dirty());
+    assert_eq!(document.file_path(), target);
+    assert_eq!(snapshot.file_name, target.file_name().unwrap().to_string_lossy());
+    assert_eq!(snapshot.file_path, target.display().to_string());
+    assert_eq!(snapshot.title, "Saved elsewhere");
+    assert_eq!(snapshot.save_status, "Saved");
+
+    let _ = std::fs::remove_file(target);
 }

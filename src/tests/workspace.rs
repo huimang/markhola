@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::document::ActiveDocument;
+use crate::file_io::{directory_base_url, save_markdown};
 
 use super::{DocumentWorkspace, WorkspaceOpenResult};
 
@@ -11,6 +13,14 @@ fn document(id: u64, path: &str) -> ActiveDocument {
         format!("# {path}\ncontent"),
         "file:///tmp/".to_string(),
     )
+}
+
+fn temp_markdown_path(name: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("markhola-workspace-{name}-{stamp}.md"))
 }
 
 #[test]
@@ -84,4 +94,27 @@ fn find_by_path_excluding_skips_the_requested_document() {
         workspace.find_by_path_excluding(Path::new("/tmp/two.md"), 1),
         Some(2)
     );
+}
+
+#[test]
+fn save_as_repath_updates_workspace_lookup_to_new_canonical_path() {
+    let source = temp_markdown_path("source");
+    let target = temp_markdown_path("target");
+    save_markdown(&source, "# source").unwrap();
+
+    let mut workspace = DocumentWorkspace::new();
+    workspace.open_document(document(1, source.to_str().unwrap()));
+
+    let base_url = directory_base_url(&target).unwrap();
+    save_markdown(&target, "# source").unwrap();
+    workspace
+        .active_document_mut()
+        .unwrap()
+        .replace_file_path(target.clone(), base_url);
+
+    assert_eq!(workspace.find_by_path(&target), Some(1));
+    assert_eq!(workspace.find_by_path(&source), None);
+
+    let _ = std::fs::remove_file(source);
+    let _ = std::fs::remove_file(target);
 }
