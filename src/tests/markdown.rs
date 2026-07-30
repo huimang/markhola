@@ -242,3 +242,25 @@ fn example_angle_bracket_links_keeps_rendered_and_literal_cases_separate() {
     assert!(html.contains("&lt;README.md&gt;"));
     assert!(html.contains("<b>bold-like tag</b>"));
 }
+
+#[test]
+fn export_verification_example_keeps_disposable_copy_and_source_preservation_instructions() {
+    let source = include_str!("../../examples/v0.9.1-png-export-and-save-as.md");
+    let html = render_html(source);
+
+    assert!(source.contains("Do not edit or save this canonical file during verification."));
+    assert!(source.contains("Copy `examples/v0.9.1-png-export-and-save-as.md` and `examples/assets/` into a disposable"));
+    assert!(source.contains("The Git hashes of this canonical file and `examples/assets/diagram.svg`"));
+    assert!(source.contains("Save As preserves the original copied source"));
+    assert!(source.contains("Confirm the old source hash is unchanged."));
+    assert!(source.contains("Confirm the new file contains the current full Markdown source."));
+    assert!(source.contains("![MarkHola local export diagram](./assets/diagram.svg)"));
+    assert!(source.contains("```mermaid"));
+    assert!(source.contains("$E = mc^2$"));
+    assert!(source.contains("| Surface | Light expectation | Dark expectation |"));
+    assert!(source.contains("\n---\n"));
+    assert!(html.contains("class=\"mermaid-block\""));
+    assert!(html.contains("class=\"math math-inline\""));
+    assert!(html.contains("<table>"));
+    assert!(html.contains("assets/diagram.svg"));
+}

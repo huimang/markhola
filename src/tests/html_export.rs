@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::document::ActiveDocument;
-use crate::html_export::export_markdown_file_to_path;
 use crate::file_io::load_markdown;
+use crate::html_export::export_markdown_file_to_path;
 
 use super::build_export_html;
 
@@ -61,4 +61,26 @@ fn export_markdown_file_to_path_preserves_source_and_writes_html_document() {
 
     let _ = std::fs::remove_file(&input);
     let _ = std::fs::remove_file(&output);
+}
+
+#[test]
+fn export_verification_example_html_keeps_local_asset_and_full_render_features() {
+    let source = include_str!("../../examples/v0.9.1-png-export-and-save-as.md");
+    let document = ActiveDocument::open_with_id(
+        9,
+        PathBuf::from("/tmp/v0.9.1-png-export-and-save-as.md"),
+        source.to_string(),
+        "file:///tmp/examples/".to_string(),
+    );
+
+    let html = build_export_html(&document);
+
+    assert!(html.contains("./assets/diagram.svg"));
+    assert!(html.contains("window.mermaid.render(renderId, renderSource)"));
+    assert!(html.contains("window.MathJax"));
+    assert!(html.contains("temporary export verification"));
+    assert!(html.contains("Save As preserves the original copied source"));
+    assert!(html.contains("Light expectation"));
+    assert!(html.contains("Dark expectation"));
+    assert!(html.contains("full-document export"));
 }
