@@ -514,6 +514,9 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
     let tabs_source = include_str!("../implementation/app/native_tabs.rs");
     let window_events_source = include_str!("../implementation/app/window_events.rs");
+    let shortcuts_source = include_str!("../implementation/app/shortcuts.rs");
+    let navigation_source = include_str!("../implementation/app/navigation_actions.rs");
+    let close_actions_source = include_str!("../implementation/app/close_actions.rs");
     let document_window_configuration = tabs_source
         .split("pub(super) fn configure_document_window")
         .nth(1)
@@ -528,8 +531,32 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     assert!(tabs_source.contains("standardWindowButton(NSWindowButton::CloseButton)"));
     assert!(tabs_source.contains("sel!(exitApplication:)"));
     assert!(!document_window_configuration.contains("exitApplication:"));
-    assert!(window_events_source.contains("close_current_document"));
+    assert!(
+        window_events_source.contains(
+            "WindowEvent::CloseRequested => handle_close_requested(runtime, control_flow)"
+        )
+    );
+    assert!(
+        window_events_source
+            .contains("super::navigation_actions::exit_application(runtime, control_flow)")
+    );
+    assert!(
+        !window_events_source
+            .contains("super::navigation_actions::close_current_document(runtime, control_flow)")
+    );
     assert!(!window_events_source.contains("WindowEvent::CloseRequested => UserEvent::Exit"));
+    assert!(navigation_source.contains(
+        "if resolve_all_pending_changes(&runtime.window, &runtime.webview, &mut runtime.workspace)"
+    ));
+    assert!(navigation_source.contains("*control_flow = ControlFlow::Exit;"));
+    assert!(close_actions_source.contains("PendingChangesAction::Discard => true"));
+    assert!(close_actions_source.contains("PendingChangesAction::Cancel => false"));
+    assert!(close_actions_source.contains(
+        "Err(message) => {\n                render_error_status(webview, &message);\n                false"
+    ));
+    assert!(shortcuts_source.contains(
+        "KeyCode::KeyW => emit_shortcut(proxy, UserEvent::CloseCurrentDocument, \"Command+W\")"
+    ));
 }
 
 #[test]
