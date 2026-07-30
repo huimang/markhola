@@ -41,6 +41,8 @@ unsafe impl NSObjectProtocol for MenuTarget {}
         fn save_menu_document(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SaveDocument, "saveMenuDocument:"); }
         #[unsafe(method(saveMenuDocumentAs:))]
         fn save_menu_document_as(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::SaveDocumentAs, "saveMenuDocumentAs:"); }
+        #[unsafe(method(exportPngDocument:))]
+        fn export_png_document(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ExportPng, "exportPngDocument:"); }
         #[unsafe(method(exportPdfDocument:))]
         fn export_pdf_document(&self, _sender: Option<&AnyObject>) { emit(&self.ivars().proxy, UserEvent::ExportPdf, "exportPdfDocument:"); }
         #[unsafe(method(exportHtmlDocument:))]

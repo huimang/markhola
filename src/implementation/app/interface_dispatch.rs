@@ -139,6 +139,7 @@ fn describe_user_event(
         ),
         UserEvent::SaveDocument => (None, "SaveDocument", format!("source={stage_source}")),
         UserEvent::SaveDocumentAs => (None, "SaveDocumentAs", format!("source={stage_source}")),
+        UserEvent::ExportPng => (None, "ExportPng", format!("source={stage_source}")),
         UserEvent::ExportPdf => (None, "ExportPdf", format!("source={stage_source}")),
         UserEvent::ExportHtml => (None, "ExportHtml", format!("source={stage_source}")),
         UserEvent::PrintDocument => (None, "PrintDocument", format!("source={stage_source}")),

@@ -93,6 +93,7 @@ pub(super) fn handle_user_event(
                 &runtime.asset_access,
             );
         }
+        UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),
         UserEvent::ExportPdf => export_actions::export_pdf(&runtime.webview, &runtime.workspace),
         UserEvent::ExportHtml => export_actions::export_html(&runtime.webview, &runtime.workspace),
         UserEvent::PrintDocument => {

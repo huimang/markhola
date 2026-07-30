@@ -42,6 +42,7 @@ menu:
   help: "帮助"
   documentation: "文档"
 dialog:
+  export_png: "导出 PNG"
   open_markdown: "打开 Markdown 文件"
   save_markdown_as: "将 Markdown 文件另存为"
   unsaved_title: "未保存的更改"
@@ -86,6 +87,8 @@ status:
   unsaved: "有未保存的更改。"
   exported_pdf: "已导出 PDF：{path}"
   exported_html: "已导出 HTML：{path}"
+  exported_png: "已导出 PNG：{path}"
+  export_png_failed: "PNG 导出失败：{error}"
   drop_to_open: "放下以打开：{path}"
   failed_rebuild_menu: "重建菜单失败：{error}"
   failed_apply_theme: "应用主题失败：{error}"

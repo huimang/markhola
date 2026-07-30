@@ -4,12 +4,17 @@ use objc2::{MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{NSMenu, NSMenuItem};
 use objc2_foundation::{NSString, ns_string};
 
-use super::menu_state::{remember_export_html, remember_export_pdf};
+use super::menu_state::{remember_export_html, remember_export_pdf, remember_export_png};
 use crate::app::text;
 
 pub(super) fn build_export_menu(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSMenu> {
     let title = NSString::from_str(text("menu.export"));
     let export_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
+
+    let png = export_item(mtm, "PNG", Some(sel!(exportPngDocument:)), target);
+    png.setEnabled(false);
+    remember_export_png(&png);
+    export_menu.addItem(&png);
 
     let pdf = export_item(mtm, "PDF", Some(sel!(exportPdfDocument:)), target);
     pdf.setEnabled(false);
@@ -31,6 +36,14 @@ fn export_item(
     target: &AnyObject,
 ) -> Retained<NSMenuItem> {
     let item = match title {
+        "PNG" => unsafe {
+            NSMenuItem::initWithTitle_action_keyEquivalent(
+                NSMenuItem::alloc(mtm),
+                ns_string!("PNG"),
+                action,
+                ns_string!(""),
+            )
+        },
         "PDF" => unsafe {
             NSMenuItem::initWithTitle_action_keyEquivalent(
                 NSMenuItem::alloc(mtm),

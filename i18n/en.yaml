@@ -42,6 +42,7 @@ menu:
   help: "Help"
   documentation: "Documentation"
 dialog:
+  export_png: "Export PNG"
   open_markdown: "Open Markdown File"
   save_markdown_as: "Save Markdown File As"
   unsaved_title: "Unsaved changes"
@@ -86,6 +87,8 @@ status:
   unsaved: "Unsaved changes."
   exported_pdf: "Exported PDF: {path}"
   exported_html: "Exported HTML: {path}"
+  exported_png: "Exported PNG: {path}"
+  export_png_failed: "PNG export failed: {error}"
   drop_to_open: "Drop to open: {path}"
   failed_rebuild_menu: "Failed to rebuild menu: {error}"
   failed_apply_theme: "Failed to apply theme: {error}"

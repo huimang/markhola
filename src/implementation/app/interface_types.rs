@@ -25,6 +25,7 @@ pub(crate) enum UserEvent {
     OpenExternal(String),
     SaveDocument,
     SaveDocumentAs,
+    ExportPng,
     ExportPdf,
     ExportHtml,
     PrintDocument,

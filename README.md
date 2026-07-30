@@ -21,6 +21,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Reopen the app with the previously selected interface language still active
 - Open a heading outline panel from the checked `View > Outline` menu item in readonly mode
 - Use the compact read-only native bottom status bar with the file path on the left and right-aligned Words and Lines in one consistent neutral text color
+- Export the full rendered current document to PNG from `File > Export > PNG`
 - Export the current document to PDF from `File > Export > PDF`
 - Export the current document to HTML from `File > Export > HTML`
 - Show the exported path and an `Open` action after a successful PDF or HTML export while keeping the default empty state silent
