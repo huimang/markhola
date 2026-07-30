@@ -177,7 +177,14 @@ fn handle_connection(
     if !frame_has_exact_token(&payload, expected_token) {
         return;
     }
-    let queued_export = register_queued_export(&payload);
+    let queued_export = match register_queued_export(&payload) {
+        Ok(request_id) => request_id,
+        Err(response) => {
+            let _ = stream.write_all(&response);
+            let _ = stream.write_all(b"\n");
+            return;
+        }
+    };
     if let Some(response) = control.handle(&payload) {
         let _ = stream.write_all(&response);
         let _ = stream.write_all(b"\n");
@@ -243,18 +250,28 @@ struct ExportEnvelope<'a> {
     command: &'a str,
 }
 
-fn register_queued_export(payload: &[u8]) -> Option<String> {
+fn register_queued_export(payload: &[u8]) -> Result<Option<String>, Vec<u8>> {
     let Ok(envelope) = serde_json::from_slice::<ExportEnvelope<'_>>(payload) else {
-        return None;
+        return Ok(None);
     };
     if matches!(
         envelope.command,
         "export_png" | "export_pdf" | "export_html"
     ) {
-        crate::export_service::register_queued_export(envelope.request_id);
-        Some(envelope.request_id.to_string())
+        if crate::export_service::register_queued_export(envelope.request_id) {
+            Ok(Some(envelope.request_id.to_string()))
+        } else {
+            Err(serde_json::to_vec(&serde_json::json!({
+                "request_id": envelope.request_id,
+                "ok": false,
+                "command": envelope.command,
+                "error_code": "request_capacity_exceeded",
+                "message": "The process-lifetime export request cache is full.",
+            }))
+            .unwrap_or_else(|_| br#"{"ok":false,"error_code":"internal_error"}"#.to_vec()))
+        }
     } else {
-        None
+        Ok(None)
     }
 }
 

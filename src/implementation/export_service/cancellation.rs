@@ -109,7 +109,7 @@ pub(crate) fn begin_export_cancellation(request_id: &str) -> ExportCancellation 
         return entry.cancellation.clone();
     }
     let cancellation = ExportCancellation::default();
-    insert_entry(
+    let _ = insert_entry(
         &mut registry,
         request_id,
         cancellation.clone(),
@@ -119,18 +119,22 @@ pub(crate) fn begin_export_cancellation(request_id: &str) -> ExportCancellation 
     cancellation
 }
 
-pub(crate) fn register_queued_export(request_id: &str) {
+pub(crate) fn register_queued_export(request_id: &str) -> bool {
     let (registry, changed) = registry();
     let mut registry = registry.lock().unwrap_or_else(|error| error.into_inner());
-    if !registry.entries.contains_key(request_id) {
-        insert_entry(
-            &mut registry,
-            request_id,
-            ExportCancellation::default(),
-            ExportStatus::Queued,
-        );
+    if registry.entries.contains_key(request_id) {
+        return true;
+    }
+    let inserted = insert_entry(
+        &mut registry,
+        request_id,
+        ExportCancellation::default(),
+        ExportStatus::Queued,
+    );
+    if inserted {
         changed.notify_all();
     }
+    inserted
 }
 
 pub(crate) fn finish_export(request_id: &str, status: ExportStatus) {
@@ -233,7 +237,7 @@ fn insert_entry(
     request_id: &str,
     cancellation: ExportCancellation,
     status: ExportStatus,
-) {
+) -> bool {
     while registry.entries.len() >= LIFECYCLE_LIMIT {
         let candidates = registry.order.len();
         let mut removed = false;
@@ -253,7 +257,7 @@ fn insert_entry(
             registry.order.push_back(candidate);
         }
         if !removed {
-            break;
+            return false;
         }
     }
     registry.order.push_back(request_id.to_string());
@@ -264,8 +268,13 @@ fn insert_entry(
             status,
         },
     );
+    true
 }
 
 fn registry() -> &'static (Mutex<CancellationRegistry>, Condvar) {
     CANCELLATIONS.get_or_init(|| (Mutex::new(CancellationRegistry::default()), Condvar::new()))
 }
+
+#[cfg(test)]
+#[path = "cancellation/tests.rs"]
+mod tests;
