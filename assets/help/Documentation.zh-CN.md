@@ -1,6 +1,6 @@
 # MarkHola 文档
 
-Current version: `v0.9.0`
+Current version: `v0.9.1`
 
 ## MarkHola 是什么
 
