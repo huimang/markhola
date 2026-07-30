@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::document::{ActiveDocument, suggested_pdf_export_path};
 use crate::markdown;
@@ -20,6 +21,14 @@ fn document(path: &str, markdown: &str) -> ActiveDocument {
     )
 }
 
+fn temp_path(name: &str, extension: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("markhola-pdf-export-{name}-{stamp}.{extension}"))
+}
+
 #[test]
 fn suggested_pdf_path_replaces_markdown_extension() {
     assert_eq!(
@@ -34,6 +43,16 @@ fn suggested_pdf_path_replaces_markdown_extension() {
         suggested_pdf_export_path(PathBuf::from("/tmp/notes").as_path()),
         PathBuf::from("/tmp/notes.pdf")
     );
+}
+
+#[test]
+fn suggested_pdf_path_keeps_source_document_path_unchanged() {
+    let document = document("/tmp/source-preserved.md", "# Source");
+
+    let export_path = document.suggested_pdf_export_path();
+
+    assert_eq!(document.file_path(), PathBuf::from("/tmp/source-preserved.md"));
+    assert_eq!(export_path, PathBuf::from("/tmp/source-preserved.pdf"));
 }
 
 #[test]
@@ -58,6 +77,17 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(!html.contains("<div class=\"tabs-bar\""));
     assert!(!html.contains("<div class=\"editor-pane\""));
     assert!(!html.contains("<div class=\"about-overlay\""));
+}
+
+#[test]
+fn export_markdown_file_to_path_rejects_missing_source_without_creating_output() {
+    let input = temp_path("missing", "md");
+    let output = temp_path("missing-output", "pdf");
+
+    let error = crate::pdf_export::export_markdown_file_to_path(&input, &output).unwrap_err();
+
+    assert!(error.contains("Failed to canonicalize input path"));
+    assert!(!output.exists());
 }
 
 #[test]

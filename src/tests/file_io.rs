@@ -91,6 +91,42 @@ fn save_as_allows_new_markdown_path() {
 }
 
 #[test]
+fn save_replaces_existing_file_without_leaving_temp_siblings() {
+    let path = temp_file("atomic-save", "md");
+    let parent = path.parent().unwrap().to_path_buf();
+    let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+    fs::write(&path, "# before").unwrap();
+
+    save_markdown(&path, "# after").unwrap();
+
+    let entries = fs::read_dir(&parent)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name == &file_name || name.contains(".markhola-"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(entries, vec![file_name]);
+    assert_eq!(load_markdown(&path).unwrap(), "# after");
+    let _ = fs::remove_file(&path);
+}
+
+#[test]
+fn save_as_copy_preserves_original_source_file() {
+    let source = temp_file("save-as-source", "md");
+    let target = temp_file("save-as-target", "md");
+    fs::write(&source, "# original\nkeep me").unwrap();
+
+    let original = load_markdown(&source).unwrap();
+    save_markdown(&target, &original).unwrap();
+
+    assert_eq!(load_markdown(&source).unwrap(), original);
+    assert_eq!(load_markdown(&target).unwrap(), original);
+    let _ = fs::remove_file(&source);
+    let _ = fs::remove_file(&target);
+}
+
+#[test]
 fn directory_base_url_ends_with_trailing_slash() {
     let path = temp_file("base-url", "md");
     fs::write(&path, "# base").unwrap();
