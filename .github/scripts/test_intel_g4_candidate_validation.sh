@@ -18,6 +18,7 @@ assert_contains() {
 
 assert_contains "$WORKFLOW" "runs-on: macos-15-intel"
 assert_contains "$WORKFLOW" "expected_sha256:"
+assert_contains "$WORKFLOW" "contents: write"
 assert_contains "$WORKFLOW" 'env:'
 assert_contains "$WORKFLOW" 'ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence'
 assert_contains "$WORKFLOW" 'GH_TOKEN: ${{ github.token }}'
@@ -41,6 +42,26 @@ if grep -Fq 'GH_TOKEN' "$HARNESS"; then
   echo "Harness should not reference GH_TOKEN directly." >&2
   exit 1
 fi
+if rg -n 'gh api .* (-X|--method) ' "$HARNESS" >/dev/null; then
+  echo "Harness must not use non-GET gh api methods." >&2
+  exit 1
+fi
+if rg -n 'gh release (create|edit|delete|upload|verify-asset)' "$HARNESS" >/dev/null; then
+  echo "Harness must not perform release mutations." >&2
+  exit 1
+fi
+if rg -n 'releases/(generate-notes|assets\?name=|[0-9]+/(assets|upload)|[0-9]+$)' "$HARNESS" >/dev/null; then
+  echo "Harness references an unexpected release mutation endpoint." >&2
+  exit 1
+fi
+if rg -n 'curl .*api.github.com|gh api .* -f |gh api .* --field |gh api .* -F |gh api .* --raw-field ' "$HARNESS" >/dev/null; then
+  echo "Harness must not send API write payloads." >&2
+  exit 1
+fi
+assert_contains "$HARNESS" 'gh api "repos/${GITHUB_REPOSITORY}/releases"'
+assert_contains "$HARNESS" '"repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" >"$DMG_PATH"'
+assert_contains "$HARNESS" 'release = releases.find { |entry| entry["draft"] && entry["tag_name"] == ENV.fetch("RELEASE_TAG") }'
+assert_contains "$HARNESS" 'asset = release.fetch("assets").find { |entry| entry["name"] == ENV.fetch("RELEASE_ASSET_NAME") }'
 assert_contains "$HARNESS" '[[ ! "$EXPECTED_SHA256" =~ ^[A-Fa-f0-9]{64}$ ]]'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/var/log/markhola/markholo-${stamp}.log"'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/tmp/markhola.log"'
