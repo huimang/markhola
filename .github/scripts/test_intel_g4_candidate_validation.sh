@@ -20,16 +20,25 @@ assert_contains "$WORKFLOW" "runs-on: macos-15-intel"
 assert_contains "$WORKFLOW" "expected_sha256:"
 assert_contains "$WORKFLOW" 'env:'
 assert_contains "$WORKFLOW" 'ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence'
+assert_contains "$WORKFLOW" 'GH_TOKEN: ${{ github.token }}'
 if ruby -e '
   lines = File.readlines(ARGV[0])
   job_env = lines[18..22].join
   abort("job-env-runner-temp") if job_env.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
   validate_step = lines[26..31].join
   abort("missing-step-runner-temp") unless validate_step.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
+  abort("job-env-gh-token") if job_env.include?("GH_TOKEN: ${{ github.token }}")
+  abort("missing-step-gh-token") unless validate_step.include?("GH_TOKEN: ${{ github.token }}")
+  upload_step = lines[33..38].join
+  abort("upload-step-gh-token") if upload_step.include?("GH_TOKEN: ${{ github.token }}")
 ' "$WORKFLOW"; then
   :
 else
-  echo "runner.temp placement in workflow is invalid" >&2
+  echo "runner.temp or GH_TOKEN placement in workflow is invalid" >&2
+  exit 1
+fi
+if grep -Fq 'GH_TOKEN' "$HARNESS"; then
+  echo "Harness should not reference GH_TOKEN directly." >&2
   exit 1
 fi
 assert_contains "$HARNESS" '[[ ! "$EXPECTED_SHA256" =~ ^[A-Fa-f0-9]{64}$ ]]'

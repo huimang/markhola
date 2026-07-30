@@ -28,6 +28,7 @@ jobs:
         shell: bash
         env:
           ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence
+          GH_TOKEN: ${{ github.token }}
         run: bash ./.github/scripts/intel_g4_candidate_validation.sh
 
       - name: Upload Intel G4 Evidence
