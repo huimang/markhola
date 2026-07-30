@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="48" viewBox="0 0 120 48">
+  <rect width="120" height="48" rx="10" fill="#E7F7EF"/>
+  <rect x="10" y="10" width="100" height="28" rx="8" fill="#17B890"/>
+  <text x="60" y="29" text-anchor="middle" font-family="Menlo, monospace" font-size="12" fill="#0B1F17">
+    CLI Fixture
+  </text>
+</svg>

@@ -126,6 +126,36 @@ fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity()
 }
 
 #[test]
+fn hidden_smoke_flags_return_before_app_launch() {
+    let main_source = include_str!("../main.rs");
+    let app_run = main_source
+        .find("if let Err(error) = app::run()")
+        .expect("main must still launch the app");
+
+    for snippet in [
+        "if args.len() == 4 && args[1] == \"--smoke-export\" {",
+        "if args.len() == 3 && args[1] == \"--smoke-print-prepare\" {",
+        "if args.len() == 3 && args[1] == \"--smoke-print-pages\" {",
+        "if args.len() == 4 && args[1] == \"--smoke-export-html\" {",
+    ] {
+        let position = main_source
+            .find(snippet)
+            .unwrap_or_else(|| panic!("missing smoke entrypoint: {snippet}"));
+        assert!(
+            position < app_run,
+            "smoke entrypoint must stay isolated before app launch: {snippet}"
+        );
+    }
+
+    let private_parser_region = &main_source[..app_run];
+    assert_eq!(
+        private_parser_region.matches("return;").count(),
+        4,
+        "every hidden smoke entrypoint should exit before reaching app::run()"
+    );
+}
+
+#[test]
 fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
     let save_actions_source = include_str!("../implementation/app/save_actions.rs");
     let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
