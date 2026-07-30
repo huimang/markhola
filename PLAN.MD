@@ -438,6 +438,7 @@ Start this milestone immediately after v0.9.2 is successfully published.
    - Use the resulting foundation for future AI workflows such as Confluence-to-Markdown import, external content ingestion, and in-app AI entry points
    - Keep direct AI chat UI as a later optional product layer on top of these integration capabilities
 
-## Tech architecture
-1. Written by Rust.
-2. Embbed a chrominum browser for display markdown, support H5 labels.
+## Technical architecture reference
+
+See [`docs/technical-architecture.md`](docs/technical-architecture.md) for the
+current tracked architecture and technology-stack description.
