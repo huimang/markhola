@@ -61,7 +61,7 @@ fn run_export(options: ExportOptions) -> i32 {
             return EXIT_SOURCE;
         }
     };
-    let markdown = match crate::file_io::load_markdown(&source) {
+    let markdown = match crate::file_io::load_markdown_without_path_swap(&source) {
         Ok(markdown) => markdown,
         Err(message) => {
             output::print_failure(

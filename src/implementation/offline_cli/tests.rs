@@ -2,8 +2,11 @@ use std::ffi::OsString;
 use std::fs;
 
 use super::parser::{CliTheme, Command, parse};
-use super::{EXIT_SOURCE, EXIT_USAGE, run_if_requested};
-use crate::export_service::ExportFormat;
+use super::{
+    EXIT_INTERNAL, EXIT_RENDER, EXIT_RESOURCE, EXIT_SOURCE, EXIT_TARGET, EXIT_USAGE,
+    classify_export_error, run_if_requested,
+};
+use crate::export_service::{ExportError, ExportFormat};
 
 fn args(values: &[&str]) -> Vec<OsString> {
     values.iter().map(OsString::from).collect()
@@ -104,4 +107,62 @@ fn offline_exports_use_a_prohibited_unattached_runtime_without_app_bootstrap() {
     assert!(!runtime.contains("NSWindow"));
     assert!(!cli.contains("ProtocolTransport"));
     assert!(!cli.contains("FileDialog"));
+}
+
+#[test]
+fn symlink_source_and_existing_target_fail_closed() {
+    use std::os::unix::fs::symlink;
+
+    let root = std::env::temp_dir().join(format!("markhola-cli-paths-{}", std::process::id()));
+    fs::create_dir_all(&root).unwrap();
+    let root = root.canonicalize().unwrap();
+    let source = root.join("source.md");
+    let source_link = root.join("source-link.md");
+    let target = root.join("output.html");
+    fs::write(&source, "# Source remains unchanged").unwrap();
+    symlink(&source, &source_link).unwrap();
+    fs::write(&target, "existing").unwrap();
+    let before = fs::read(&source).unwrap();
+
+    assert_eq!(
+        run_if_requested(&args(&[
+            "export-html",
+            &format!("--source={}", source_link.display()),
+            &format!("--target={}", root.join("linked.html").display()),
+        ])),
+        Some(EXIT_SOURCE)
+    );
+    assert_eq!(
+        run_if_requested(&args(&[
+            "export-html",
+            &format!("--source={}", source.display()),
+            &format!("--target={}", target.display()),
+        ])),
+        Some(EXIT_TARGET)
+    );
+    assert_eq!(fs::read(&source).unwrap(), before);
+    assert_eq!(fs::read_to_string(&target).unwrap(), "existing");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn export_errors_map_to_the_frozen_exit_code_classes() {
+    for (code, expected) in [
+        ("invalid_output_path", EXIT_TARGET),
+        ("output_exists", EXIT_TARGET),
+        ("render_failed", EXIT_RENDER),
+        ("missing_local_asset", EXIT_RENDER),
+        ("render_timeout", EXIT_RESOURCE),
+        ("render_resource_limit", EXIT_RESOURCE),
+        ("unexpected", EXIT_INTERNAL),
+    ] {
+        let error = ExportError {
+            code,
+            message: "fixture".to_string(),
+        };
+        assert_eq!(
+            classify_export_error(&error, std::path::Path::new("/tmp/output.pdf")).0,
+            expected
+        );
+    }
 }

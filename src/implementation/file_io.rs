@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Read;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -9,6 +10,42 @@ pub fn load_markdown(path: &Path) -> Result<String, String> {
     ensure_supported_markdown_path(path)?;
     let bytes = fs::read(path).map_err(|error| format!("Failed to read file: {error}"))?;
     decode_markdown(&bytes)
+}
+
+pub fn load_markdown_without_path_swap(path: &Path) -> Result<String, String> {
+    ensure_supported_markdown_path(path)?;
+    let mut file =
+        fs::File::open(path).map_err(|error| format!("Failed to open source file: {error}"))?;
+    let opened_metadata = file
+        .metadata()
+        .map_err(|error| format!("Failed to inspect opened source file: {error}"))?;
+    let current_metadata = fs::symlink_metadata(path)
+        .map_err(|error| format!("Failed to recheck source path: {error}"))?;
+    if !opened_metadata.is_file()
+        || !current_metadata.is_file()
+        || current_metadata.file_type().is_symlink()
+        || !same_file_identity(&opened_metadata, &current_metadata)
+    {
+        return Err("The source path changed while it was being opened.".to_string());
+    }
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(|error| format!("Failed to read source file: {error}"))?;
+    decode_markdown(&bytes)
+}
+
+#[cfg(unix)]
+fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+#[cfg(not(unix))]
+fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    left.len() == right.len()
+        && left.modified().ok() == right.modified().ok()
+        && left.created().ok() == right.created().ok()
 }
 
 fn decode_markdown(bytes: &[u8]) -> Result<String, String> {
