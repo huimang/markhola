@@ -890,3 +890,14 @@ fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
     assert!(user_events_source.contains("UserEvent::SaveDocumentAs => {"));
     assert!(user_events_source.contains("save_active_document_as("));
 }
+
+#[test]
+fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+
+    assert!(user_events_source.contains("if protocol_request_changes_active_document("));
+    assert!(user_events_source.contains("let response_ok = serde_json::from_slice::<serde_json::Value>(response)"));
+    assert!(user_events_source.contains("if !response_ok {"));
+    assert!(user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")"));
+    assert!(user_events_source.contains("== workspace.active_document_id()"));
+    assert!(user_events_source.contains("super::surface_actions::sync_active_surface(runtime, \"\", true);"));
