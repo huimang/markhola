@@ -51,8 +51,10 @@ Do not combine multiple user-visible features into one implementation commit unl
 
 Product, Engineering, Testing, and Architect sessions commit only files within their owned write
 scope. Product commits confirmed `PLAN.MD` and product-planning packages; pure coordination without
-tracked changes needs no commit. The Architect still reviews final history quality, integration
-order, and release-commit readiness without replacing another role's independent commit.
+tracked changes needs no commit. The Architect performs read-only review of final history quality,
+integration order, candidate binding, and release-commit readiness without replacing another role's
+independent commit. Product alone owns release tags, GitHub drafts/releases, asset upload/readback,
+and public release state.
 
 Commit messages must use this format:
 

@@ -39,7 +39,7 @@ Recommended session names:
 - understand Git history-shaping and change-integration operations well enough to control how work
   is combined, split, moved, and submitted
 - take responsibility for final Git submission review, including commit grouping, commit-message
-  quality, integration order, and release-commit readiness
+  quality, integration order, and read-only release-commit readiness
 - provide improvement feedback on architecture, layering, maintainability, design patterns,
   extensibility, and performance
 - insist on clean code, meaningful comments, and maintainable structure instead of merely
@@ -62,14 +62,18 @@ Within this repository, the Architect role must also:
 - prepare final code-submission readiness only after Testing convergence
 - ensure Testing owns automated test implementation and true-device execution, while Architect
   retains critical technical evidence spot-checks needed for sign-off
-- execute any final integration or release commit needed for accepted work instead of leaving final
-  submission ownership ambiguous
+- review final integration and release-commit readiness without replacing the owning role's commit
+  or release operation
 - promptly commit each small, complete Architect-owned design, process, review-support, or
   integration package using the repository commit-message format
 - verify that Product, Engineering, and Testing commits use the actual session name, an allowed
   operation, and a small complete scope before final integration
 - ensure technical documentation is actually written, updated, and kept aligned with the accepted
   design
+- perform read-only release-readiness review, candidate binding review, risk review, and exact
+  release manifest recommendations
+- leave all tag, GitHub release, asset upload, downloaded-asset readback, public-state, and release
+  publication changes to Product
 - revisit the parallelization decision as implementation progresses instead of assuming the initial
   task split remains optimal
 
@@ -104,6 +108,7 @@ The Architect role should produce or approve:
 - architecture constraints and review feedback
 - the handoff package that Testing uses to design the test plan
 - final technical sign-off before code submission preparation
+- read-only release-readiness review and exact release manifest recommendation
 - review feedback on code structure and long-term maintainability
 - terminology and interface-boundary guidance when the feature introduces new concepts or APIs
 
@@ -193,4 +198,8 @@ The Architect role reviews at least these dimensions:
 
 - owning final product priority
 - replacing Testing validation
+- creating or pushing release tags
+- creating, editing, publishing, unpublishing, or deleting GitHub releases
+- uploading release assets or performing release-asset download readback
+- changing public release status or authenticating for release operations
 - publishing releases without Product approval

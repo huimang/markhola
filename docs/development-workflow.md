@@ -105,8 +105,10 @@ Use:
 
 The session name must be the actual responsibility-oriented task name. Each role commits only its
 owned write scope. Product does not submit design, implementation, test, or workflow documentation.
-Architect reviews the resulting history, integration order, and final release-commit readiness
-without replacing another role's independent commit.
+Architect reviews the resulting history, integration order, and read-only release-commit readiness
+without replacing another role's independent commit. Architect does not create or modify release
+tags, GitHub drafts/releases, release assets, public release state, or downloaded release readback;
+Product is the single owner of those release operations.
 
 ### Repository storage guard
 
@@ -140,9 +142,14 @@ version.
 
 - build release artifacts
 - run release validation
-- create tags
-- push release-related changes
-- publish the GitHub release after validation passes
+- perform technical release-readiness review and prepare an exact release manifest
+
+Only Product may:
+
+- create or push release tags
+- create, edit, publish, unpublish, or delete GitHub drafts and releases
+- upload release assets or perform downloaded-asset SHA/readback checks
+- change public release state or publish the GitHub release after validation passes
 
 ## 5. Task switching rules
 

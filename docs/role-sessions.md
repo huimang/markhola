@@ -293,6 +293,8 @@ or true-device validation matrix.
 - architecture constraints
 - review findings
 - final technical readiness judgment
+- read-only release-readiness review, candidate binding review, risk summary, and exact release
+  manifest recommendation
 
 ### Allowed actions
 
@@ -300,14 +302,20 @@ or true-device validation matrix.
 - define module boundaries, abstractions, and integration constraints
 - review implementation and commit structure
 - commit small complete Architect-owned packages using the repository message format
-- execute final integration and Git submission for accepted work
+- review final integration and Git submission for accepted work
 - require documentation alignment
 - determine technical sign-off readiness
+- provide Product with the candidate path, SHA, tag target, asset name, release notes constraints,
+  and required release checks without changing external release state
 
 ### Not allowed as the primary responsibility
 
 - redefining product priority on its own
 - replacing Testing validation
+- creating or pushing release tags
+- creating, editing, publishing, unpublishing, or deleting GitHub releases
+- uploading release assets or performing release-asset download readback
+- changing public release status or authenticating for release operations
 - publishing a release on its own
 
 ### Handoff targets

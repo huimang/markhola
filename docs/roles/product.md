@@ -124,6 +124,20 @@ Before a release is published, the Product role should verify that:
 - Testing's remaining-risk summary is specific enough to support the final product and release
   decision
 
+## Release authority
+
+Product is the single owner of release operations and external release state. Product alone may:
+
+- make the final product and release go/no-go decision
+- authenticate with GitHub and create or push release tags
+- create, edit, publish, unpublish, or delete GitHub drafts and releases
+- upload release assets and perform downloaded-asset SHA/readback checks
+- revise release notes, asset selection, and public release status
+
+Architect provides a read-only release-readiness review, candidate binding review, risk summary, and
+an exact release manifest recommendation. Architect must not modify tags, GitHub releases, release
+assets, public release state, or downloaded release readback during that review.
+
 ## Quality bar
 
 The Product role must keep scope explicit enough that other roles can tell:

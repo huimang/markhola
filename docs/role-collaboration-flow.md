@@ -468,11 +468,14 @@ split when deciding who should drive each part of the process.
 - every commit uses `[update|remove|add|bugfix] <session-name>: <English summary>`
 - Architect verifies code quality, commit scope, message format, and integration order
 - Product dispatches final history review, integration, or release-commit readiness to Architect
-- Architect completes any final integration or release commit and confirms submission readiness
+- Architect reviews final integration and release-commit readiness and confirms technical submission
+  readiness; Product retains all release operations and external release state
 
 ### Release flow
 
 - Engineering prepares the release candidate build
 - Testing validates the exact candidate artifact and executes true-device validation
-- Architect confirms technical convergence and release readiness
-- Product reviews Testing's evidence and makes the final product and publish decision
+- Architect performs a read-only technical convergence, candidate binding, risk, and release-manifest
+  review
+- Product owns the final product and publish decision and all tag, GitHub release, asset upload,
+  downloaded-asset readback, and public-state operations
