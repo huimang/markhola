@@ -18,6 +18,8 @@ mod pdf_export;
 mod printing;
 #[path = "interface/render_assets.rs"]
 mod render_assets;
+#[path = "interface/save_service.rs"]
+mod save_service;
 #[path = "interface/workspace.rs"]
 mod workspace;
 

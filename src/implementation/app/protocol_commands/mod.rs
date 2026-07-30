@@ -3,6 +3,9 @@ mod schema;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+#[path = "save_tests.rs"]
+mod save_tests;
 
 use std::collections::{HashMap, VecDeque};
 use std::path::Path;
@@ -11,6 +14,7 @@ use serde_json::{Value, json};
 
 use crate::app::{APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_VERSION};
 use crate::export_service::{self, ExportFormat};
+use crate::save_service;
 use crate::workspace::DocumentWorkspace;
 
 use super::protocol_transport::ProtocolIdentity;
@@ -117,6 +121,63 @@ impl ProtocolCommandRuntime {
             };
             export_service::finish_export(&request.request_id, export_status);
         }
+        let encoded = encode(response);
+        self.remember(request.request_id, fingerprint, encoded.clone(), status);
+        encoded
+    }
+
+    pub(super) fn handle_mut(
+        &mut self,
+        payload: &[u8],
+        workspace: &mut DocumentWorkspace,
+    ) -> Vec<u8> {
+        let Ok(request) = serde_json::from_slice::<Request>(payload) else {
+            return self.handle(payload, workspace);
+        };
+        if !matches!(
+            request.command,
+            Command::SaveDocument | Command::SaveDocumentAs
+        ) {
+            return self.handle(payload, workspace);
+        }
+
+        let fingerprint = sha256(payload);
+        if request.request_id.is_empty() {
+            return encode(error(
+                "",
+                request.command.name(),
+                "invalid_request",
+                "Missing request id.",
+            ));
+        }
+        if let Some(cached) = self.cache.get(&request.request_id) {
+            if cached.fingerprint == fingerprint {
+                return cached.response.clone();
+            }
+            return encode(error(
+                &request.request_id,
+                request.command.name(),
+                "request_id_conflict",
+                "The request id was already used for a different request.",
+            ));
+        }
+        let response = if request.target.instance_id != self.identity.instance_id()
+            || request.instance_token != self.identity.exact_instance_token()
+        {
+            error(
+                &request.request_id,
+                request.command.name(),
+                "instance_mismatch",
+                "The selected application instance does not match.",
+            )
+        } else {
+            self.save(&request, workspace)
+        };
+        let status = if response["ok"] == true {
+            RequestStatus::Completed
+        } else {
+            RequestStatus::Failed
+        };
         let encoded = encode(response);
         self.remember(request.request_id, fingerprint, encoded.clone(), status);
         encoded
@@ -312,6 +373,129 @@ impl ProtocolCommandRuntime {
                 &failure.message,
             ),
         }
+    }
+
+    fn save(&self, request: &Request, workspace: &mut DocumentWorkspace) -> Value {
+        let Some(document_id) = request.target.document_id else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "missing_document",
+                "A document id is required.",
+            );
+        };
+        let Some(expected_version) = request.target.expected_version else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "missing_document_version",
+                "An expected document version is required.",
+            );
+        };
+        let Some(document) = workspace.document_by_id(document_id) else {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "document_not_found",
+                "The document is not open.",
+            );
+        };
+        if document.version() != expected_version {
+            return error(
+                &request.request_id,
+                request.command.name(),
+                "stale_document_version",
+                "The expected document version is stale.",
+            );
+        }
+
+        let result = match request.command {
+            Command::SaveDocument => {
+                if let Some(output) = &request.output {
+                    let requested = Path::new(&output.path);
+                    let matches_source = requested
+                        .canonicalize()
+                        .is_ok_and(|path| path == document.canonical_path());
+                    if !matches_source {
+                        return error(
+                            &request.request_id,
+                            request.command.name(),
+                            "save_target_mismatch",
+                            "save_document must use the existing document path.",
+                        );
+                    }
+                }
+                let document = workspace
+                    .document_by_id_mut(document_id)
+                    .expect("validated document remains open");
+                save_service::save_document(document)
+            }
+            Command::SaveDocumentAs => {
+                let Some(output) = &request.output else {
+                    return error(
+                        &request.request_id,
+                        request.command.name(),
+                        "missing_output",
+                        "An explicit Save As target is required.",
+                    );
+                };
+                let target = match save_service::validate_save_as_target(
+                    Path::new(&output.path),
+                    output.overwrite,
+                ) {
+                    Ok(target) => target,
+                    Err(failure) => {
+                        return error(
+                            &request.request_id,
+                            request.command.name(),
+                            failure.code,
+                            &failure.message,
+                        );
+                    }
+                };
+                if workspace
+                    .find_by_path_excluding(&target, document_id)
+                    .is_some()
+                {
+                    return error(
+                        &request.request_id,
+                        request.command.name(),
+                        "save_target_open",
+                        "The Save As target is already open.",
+                    );
+                }
+                let document = workspace
+                    .document_by_id_mut(document_id)
+                    .expect("validated document remains open");
+                save_service::save_document_as(document, &target, output.overwrite)
+            }
+            _ => unreachable!("save is called only for save commands"),
+        };
+        let path = match result {
+            Ok(path) => path,
+            Err(failure) => {
+                return error(
+                    &request.request_id,
+                    request.command.name(),
+                    failure.code,
+                    &failure.message,
+                );
+            }
+        };
+        let document = workspace
+            .document_by_id(document_id)
+            .expect("saved document remains open");
+        success(
+            request,
+            json!({
+                "instance_id": self.identity.instance_id(),
+                "document_id": document.id(),
+                "document_version": document.version(),
+                "path": path,
+                "content_sha256": document.content_sha256(),
+                "bytes": document.markdown().len(),
+            }),
+        )
     }
 
     fn cancel_request(&self, request: &Request) -> Value {

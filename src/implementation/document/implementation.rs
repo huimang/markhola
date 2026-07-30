@@ -134,6 +134,10 @@ impl ActiveDocument {
         &self.markdown
     }
 
+    pub(crate) fn saved_markdown(&self) -> &str {
+        &self.saved_markdown
+    }
+
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
