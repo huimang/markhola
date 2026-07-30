@@ -1,0 +1,39 @@
+name: Intel G4 Candidate Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha256:
+        description: Expected SHA-256 for Product's Intel draft asset MarkHola-0.9.0-intel.dmg
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-intel-g4:
+    name: Validate Intel G4 Candidate
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    env:
+      ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence
+      EXPECTED_SHA256: ${{ github.event.inputs.expected_sha256 }}
+      RELEASE_ASSET_NAME: MarkHola-0.9.0-intel.dmg
+      RELEASE_TAG: v0.9.0
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Intel Draft Candidate
+        shell: bash
+        run: bash ./.github/scripts/intel_g4_candidate_validation.sh
+
+      - name: Upload Intel G4 Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intel-g4-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/intel-g4-evidence
+          if-no-files-found: error
+          retention-days: 14
