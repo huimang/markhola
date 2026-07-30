@@ -901,3 +901,31 @@ fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
     assert!(user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")"));
     assert!(user_events_source.contains("== workspace.active_document_id()"));
     assert!(user_events_source.contains("super::surface_actions::sync_active_surface(runtime, \"\", true);"));
+
+#[test]
+fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service() {
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+    let menu_source = include_str!("../implementation/app/menu_file_export.rs");
+    let menu_target_source = include_str!("../implementation/app/menu_target.rs");
+    let menu_state_source = include_str!("../implementation/app/menu_state.rs");
+    let dispatch_source = include_str!("../implementation/app/interface_dispatch.rs");
+    let interface_types_source = include_str!("../implementation/app/interface_types.rs");
+    let export_actions_source = include_str!("../implementation/app/export_actions.rs");
+    let en_strings = include_str!("../../i18n/en.yaml");
+    let zh_strings = include_str!("../../i18n/zh-CN.yaml");
+
+    assert!(interface_types_source.contains("ExportPng,"));
+    assert!(dispatch_source.contains("UserEvent::ExportPng => (None, \"ExportPng\","));
+    assert!(menu_target_source.contains("fn export_png_document(&self"));
+    assert!(menu_target_source.contains("UserEvent::ExportPng"));
+    assert!(menu_source.contains("let png = export_item(mtm, \"PNG\", Some(sel!(exportPngDocument:)), target);"));
+    assert!(menu_source.contains("remember_export_png(&png);"));
+    assert!(menu_state_source.contains("static EXPORT_PNG_ITEM"));
+    assert!(menu_state_source.contains("pub(super) fn remember_export_png(item: &Retained<NSMenuItem>)"));
+    assert!(menu_state_source.contains("EXPORT_PNG_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()))"));
+    assert!(user_events_source.contains("UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),"));
+    assert!(export_actions_source.contains("export_service::export_document_to_path("));
+    assert!(export_actions_source.contains("ExportFormat::Png"));
+    assert!(en_strings.contains("dialog:\n  export_png: \"Export PNG\""));
+    assert!(en_strings.contains("exported_png: \"Exported PNG: {path}\""));
+    assert!(zh_strings.contains("dialog:\n  export_png: \"导出 PNG\""));
