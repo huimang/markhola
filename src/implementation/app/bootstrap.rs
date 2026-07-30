@@ -15,6 +15,7 @@ use super::asset_access::{AssetAccessRegistry, new_registry, resolve_asset};
 use super::document_surface::DocumentSurface;
 use super::native_footer::NativeFooter;
 use super::native_tabs;
+use super::protocol_transport::ProtocolTransport;
 use super::runtime::AppRuntime;
 use super::shell::{app_shell_html, should_dispatch_shell_recovery};
 use super::theme_preferences;
@@ -74,6 +75,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
     #[cfg(target_os = "macos")]
     macos_menu::install(&proxy)?;
 
+    let protocol_transport = ProtocolTransport::start()?;
     let runtime = AppRuntime::new(
         proxy,
         window,
@@ -85,6 +87,7 @@ pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<
         theme_preference,
         language,
         document_size,
+        protocol_transport,
     );
     Ok((event_loop, runtime))
 }
