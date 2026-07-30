@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use lopdf::Document as PdfDocument;
 use sha2::{Digest, Sha256};
 
+use crate::app::AppTheme;
 use crate::document::ActiveDocument;
 
 const MAX_WORKING_BYTES: u64 = 512 * 1024 * 1024;
@@ -13,6 +14,9 @@ const EXPORT_TIMEOUT: Duration = Duration::from_secs(60);
 mod cancellation;
 #[path = "export_service/output.rs"]
 mod output;
+#[cfg(test)]
+#[path = "export_service/theme_tests.rs"]
+mod theme_tests;
 
 pub use cancellation::ExportCancellation;
 use cancellation::run_with_cancellation;
@@ -74,10 +78,28 @@ pub fn export_document_to_path(
     overwrite: bool,
     cancellation: &ExportCancellation,
 ) -> Result<ExportResult, ExportError> {
+    export_document_to_path_with_theme(
+        document,
+        AppTheme::Default,
+        format,
+        requested_path,
+        overwrite,
+        cancellation,
+    )
+}
+
+pub fn export_document_to_path_with_theme(
+    document: &ActiveDocument,
+    theme: AppTheme,
+    format: ExportFormat,
+    requested_path: &Path,
+    overwrite: bool,
+    cancellation: &ExportCancellation,
+) -> Result<ExportResult, ExportError> {
     let started_at = Instant::now();
     cancellation.check()?;
     let target = validate_target(requested_path, format, overwrite)?;
-    let rendered = run_with_cancellation(cancellation, || render(document, format))
+    let rendered = run_with_cancellation(cancellation, || render(document, theme, format))
         .map_err(map_render_error)?;
     if started_at.elapsed() > EXPORT_TIMEOUT {
         return Err(ExportError::new(
@@ -112,10 +134,15 @@ struct RenderedExport {
     page_count: Option<usize>,
 }
 
-fn render(document: &ActiveDocument, format: ExportFormat) -> Result<RenderedExport, String> {
+fn render(
+    document: &ActiveDocument,
+    theme: AppTheme,
+    format: ExportFormat,
+) -> Result<RenderedExport, String> {
     match format {
         ExportFormat::Png => {
-            let png = crate::pdf_export::render_document_png_data(document)?;
+            let png =
+                crate::pdf_export::render_document_png_data_with_theme(document, theme.key())?;
             Ok(RenderedExport {
                 bytes: png.bytes,
                 width: Some(png.width),
@@ -124,7 +151,8 @@ fn render(document: &ActiveDocument, format: ExportFormat) -> Result<RenderedExp
             })
         }
         ExportFormat::Pdf => {
-            let bytes = crate::pdf_export::render_document_pdf_data(document)?;
+            let bytes =
+                crate::pdf_export::render_document_pdf_data_with_theme(document, theme.key())?;
             let page_count = PdfDocument::load_mem(&bytes)
                 .map_err(|error| format!("invalid_output: {error}"))?
                 .get_pages()
@@ -139,7 +167,8 @@ fn render(document: &ActiveDocument, format: ExportFormat) -> Result<RenderedExp
         ExportFormat::Html => {
             crate::pdf_export::validate_export_local_images(document)?;
             Ok(RenderedExport {
-                bytes: crate::html_export::build_export_html(document).into_bytes(),
+                bytes: crate::html_export::build_export_html_with_theme(document, theme.key())
+                    .into_bytes(),
                 width: None,
                 height: None,
                 page_count: None,

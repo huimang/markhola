@@ -93,9 +93,17 @@ pub(super) fn handle_user_event(
                 &runtime.asset_access,
             );
         }
-        UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),
-        UserEvent::ExportPdf => export_actions::export_pdf(&runtime.webview, &runtime.workspace),
-        UserEvent::ExportHtml => export_actions::export_html(&runtime.webview, &runtime.workspace),
+        UserEvent::ExportPng => {
+            export_actions::export_png(&runtime.webview, &runtime.workspace, runtime.selected_theme)
+        }
+        UserEvent::ExportPdf => {
+            export_actions::export_pdf(&runtime.webview, &runtime.workspace, runtime.selected_theme)
+        }
+        UserEvent::ExportHtml => export_actions::export_html(
+            &runtime.webview,
+            &runtime.workspace,
+            runtime.selected_theme,
+        ),
         UserEvent::PrintDocument => {
             export_actions::print_document(&runtime.webview, &runtime.workspace)
         }
@@ -125,10 +133,11 @@ pub(super) fn handle_user_event(
         UserEvent::ShowAbout => render_about(&runtime.webview),
         UserEvent::OpenDocumentation => open_documentation(runtime),
         UserEvent::ProtocolRequest(request) => {
-            let response = runtime.protocol_commands.handle_app_mut(
+            let response = runtime.protocol_commands.handle_app_mut_with_theme(
                 &request.payload,
                 &mut runtime.workspace,
                 &runtime.asset_access,
+                runtime.selected_theme,
             );
             if protocol_request_changes_active_document(
                 &request.payload,

@@ -57,7 +57,7 @@ const HTML_EXPORT_TEMPLATE: &str = r#"<!DOCTYPE html>
         window.mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
-          theme: "default"
+          theme: "__MERMAID_THEME__"
         });
       };
 
@@ -152,7 +152,10 @@ pub enum HtmlExportOutcome {
     Exported(PathBuf),
 }
 
-pub fn export_document(document: &ActiveDocument) -> Result<HtmlExportOutcome, String> {
+pub fn export_document(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<HtmlExportOutcome, String> {
     let Some(export_path) = choose_export_path(document) else {
         log_event(
             "html_export.cancelled",
@@ -163,7 +166,7 @@ pub fn export_document(document: &ActiveDocument) -> Result<HtmlExportOutcome, S
         return Ok(HtmlExportOutcome::Cancelled);
     };
 
-    write_export(document, &export_path)?;
+    write_export(document, &export_path, theme_name)?;
 
     Ok(HtmlExportOutcome::Exported(export_path))
 }
@@ -179,11 +182,15 @@ pub fn export_markdown_file_to_path(input_path: &Path, output_path: &Path) -> Re
     let markdown = crate::file_io::load_markdown(&input_path)?;
     let base_url = crate::file_io::directory_base_url(&input_path)?;
     let document = ActiveDocument::open_with_id(1, input_path, markdown, base_url);
-    write_export(&document, output_path)
+    write_export(&document, output_path, "default")
 }
 
-fn write_export(document: &ActiveDocument, export_path: &Path) -> Result<(), String> {
-    let html = build_export_html(document);
+fn write_export(
+    document: &ActiveDocument,
+    export_path: &Path,
+    theme_name: &str,
+) -> Result<(), String> {
+    let html = build_export_html_with_theme(document, theme_name);
     fs::write(export_path, html).map_err(|error| format!("Failed to write HTML file: {error}"))?;
     log_event(
         "html_export.end",
@@ -229,13 +236,25 @@ fn suggested_html_export_path(path: &Path) -> PathBuf {
 }
 
 pub(crate) fn build_export_html(document: &ActiveDocument) -> String {
+    build_export_html_with_theme(document, "default")
+}
+
+pub(crate) fn build_export_html_with_theme(document: &ActiveDocument, theme_name: &str) -> String {
     HTML_EXPORT_TEMPLATE
         .replace("__TITLE__", document.file_name())
         .replace("__BASE_URL__", document.base_url())
         .replace("__APP_VERSION__", APP_VERSION)
         .replace(
             "__APP_THEME__",
-            &render_assets::load_app_theme_css_for_inline_style("default"),
+            &render_assets::load_app_theme_css_for_inline_style(theme_name),
+        )
+        .replace(
+            "__MERMAID_THEME__",
+            if theme_name == "dark" {
+                "dark"
+            } else {
+                "default"
+            },
         )
         .replace("__EXPORT_CSS__", HTML_EXPORT_CSS)
         .replace(

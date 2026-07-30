@@ -175,7 +175,7 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         window.mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
-          theme: "default"
+          theme: "__MERMAID_THEME__"
         });
         mermaidInitialized = true;
       };
@@ -409,9 +409,16 @@ pub(crate) struct ExportMeasurement {
 
 #[allow(dead_code)]
 pub(crate) fn render_document_pdf_data(document: &ActiveDocument) -> Result<Vec<u8>, String> {
+    render_document_pdf_data_with_theme(document, "default")
+}
+
+pub(crate) fn render_document_pdf_data_with_theme(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<Vec<u8>, String> {
     export_assets::validate_local_images(document)?;
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html(document, &rendered_document_html);
+    let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let pdf_data = render_pdf_data(document, &html, preparation_mode)?;
     apply_pdf_metadata(document, pdf_data)
@@ -424,8 +431,16 @@ pub(crate) struct PngRender {
 }
 
 pub(crate) fn render_document_png_data(document: &ActiveDocument) -> Result<PngRender, String> {
+    render_document_png_data_with_theme(document, "default")
+}
+
+pub(crate) fn render_document_png_data_with_theme(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<PngRender, String> {
     export_assets::validate_local_images(document)?;
-    let (webview, measurement) = prepare_printable_webview_with_measurement(document)?;
+    let (webview, measurement) =
+        prepare_printable_webview_with_measurement_with_theme(document, theme_name)?;
     let width = measurement.width.ceil().max(1.0) as u64;
     let height = measurement.height.ceil().max(1.0) as u64;
     if width > 65_535 || height > 65_535 || width.saturating_mul(height) > 100_000_000 {
@@ -508,9 +523,16 @@ pub(crate) fn prepare_printable_webview(
 pub(crate) fn prepare_printable_webview_with_measurement(
     document: &ActiveDocument,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_printable_webview_with_measurement_with_theme(document, "default")
+}
+
+pub(crate) fn prepare_printable_webview_with_measurement_with_theme(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
     let started_at = Instant::now();
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html(document, &rendered_document_html);
+    let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let webview = prepare_webview(document, &html, preparation_mode)?;
     let measurement = measure_prepared_webview(&webview, preparation_mode, started_at)?;
@@ -527,7 +549,10 @@ pub(crate) fn printable_page_count_for_height(height: f64) -> usize {
     ((height.max(EXPORT_WEBVIEW_HEIGHT)) / EXPORT_WEBVIEW_HEIGHT).ceil() as usize
 }
 
-pub fn export_document(document: &ActiveDocument) -> Result<PdfExportOutcome, String> {
+pub fn export_document(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<PdfExportOutcome, String> {
     log_event(
         "pdf_export.begin",
         None,
@@ -549,7 +574,7 @@ pub fn export_document(document: &ActiveDocument) -> Result<PdfExportOutcome, St
         return Ok(PdfExportOutcome::Cancelled);
     };
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html(document, &rendered_document_html);
+    let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     log_event(
         "pdf_export.html",
@@ -1231,13 +1256,29 @@ pub(crate) fn timeout_for_mode(
 }
 
 pub(crate) fn build_export_html(document: &ActiveDocument, rendered_html: &str) -> String {
+    build_export_html_with_theme(document, rendered_html, "default")
+}
+
+pub(crate) fn build_export_html_with_theme(
+    document: &ActiveDocument,
+    rendered_html: &str,
+    theme_name: &str,
+) -> String {
     EXPORT_HTML_TEMPLATE
         .replace("__TITLE__", document.file_name())
         .replace("__BASE_URL__", document.base_url())
         .replace("__EXPORT_FOOTER__", &export_footer_text())
         .replace(
             "__APP_THEME__",
-            &render_assets::load_app_theme_css_for_inline_style("default"),
+            &render_assets::load_app_theme_css_for_inline_style(theme_name),
+        )
+        .replace(
+            "__MERMAID_THEME__",
+            if theme_name == "dark" {
+                "dark"
+            } else {
+                "default"
+            },
         )
         .replace("__EXPORT_PRINT_CSS__", EXPORT_PRINT_CSS)
         .replace(

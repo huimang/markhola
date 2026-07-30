@@ -116,7 +116,7 @@ fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity()
     assert!(runtime_source.contains("protocol_commands,"));
     assert!(user_events_source.contains("UserEvent::ProtocolRequest(request) => {"));
     assert!(user_events_source.contains(".protocol_commands"));
-    assert!(user_events_source.contains(".handle_app_mut("));
+    assert!(user_events_source.contains(".handle_app_mut_with_theme("));
     assert!(user_events_source.contains("let _ = request.response.send(response);"));
     assert!(
         command_source.contains("request.instance_token != self.identity.exact_instance_token()")
@@ -132,7 +132,9 @@ fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
     let user_events_source = include_str!("../implementation/app/user_events.rs");
 
     assert!(save_actions_source.contains("save_service::save_document(document)"));
-    assert!(save_actions_source.contains("save_service::save_document_as(document, path, overwrite)"));
+    assert!(
+        save_actions_source.contains("save_service::save_document_as(document, path, overwrite)")
+    );
     assert!(save_actions_source.contains("let Some(path) = choose_save_as_path(&snapshot) else {"));
     assert!(save_actions_source.contains("FileDialog::new()"));
     assert!(!save_actions_source.contains("file_io::save_markdown"));
@@ -140,8 +142,14 @@ fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
 
     assert!(command_source.contains("save_service::save_document(document)"));
     assert!(command_source.contains("save_service::validate_save_as_target("));
-    assert!(command_source.contains("save_service::save_document_as(document, &target, output.overwrite)"));
-    assert!(user_events_source.contains("use super::save_actions::{save_active_document, save_active_document_as};"));
+    assert!(
+        command_source
+            .contains("save_service::save_document_as(document, &target, output.overwrite)")
+    );
+    assert!(
+        user_events_source
+            .contains("use super::save_actions::{save_active_document, save_active_document_as};")
+    );
     assert!(user_events_source.contains("UserEvent::SaveDocument => {"));
     assert!(user_events_source.contains("save_active_document("));
     assert!(user_events_source.contains("UserEvent::SaveDocumentAs => {"));
@@ -153,11 +161,19 @@ fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
     let user_events_source = include_str!("../implementation/app/user_events.rs");
 
     assert!(user_events_source.contains("if protocol_request_changes_active_document("));
-    assert!(user_events_source.contains("let response_ok = serde_json::from_slice::<serde_json::Value>(response)"));
+    assert!(
+        user_events_source
+            .contains("let response_ok = serde_json::from_slice::<serde_json::Value>(response)")
+    );
     assert!(user_events_source.contains("if !response_ok {"));
-    assert!(user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")"));
+    assert!(
+        user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")")
+    );
     assert!(user_events_source.contains("== workspace.active_document_id()"));
-    assert!(user_events_source.contains("super::surface_actions::sync_active_surface(runtime, \"\", true);"));
+    assert!(
+        user_events_source
+            .contains("super::surface_actions::sync_active_surface(runtime, \"\", true);")
+    );
 }
 
 #[test]
@@ -176,13 +192,25 @@ fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service
     assert!(dispatch_source.contains("UserEvent::ExportPng => (None, \"ExportPng\","));
     assert!(menu_target_source.contains("fn export_png_document(&self"));
     assert!(menu_target_source.contains("UserEvent::ExportPng"));
-    assert!(menu_source.contains("let png = export_item(mtm, \"PNG\", Some(sel!(exportPngDocument:)), target);"));
+    assert!(
+        menu_source.contains(
+            "let png = export_item(mtm, \"PNG\", Some(sel!(exportPngDocument:)), target);"
+        )
+    );
     assert!(menu_source.contains("remember_export_png(&png);"));
     assert!(menu_state_source.contains("static EXPORT_PNG_ITEM"));
-    assert!(menu_state_source.contains("pub(super) fn remember_export_png(item: &Retained<NSMenuItem>)"));
-    assert!(menu_state_source.contains("EXPORT_PNG_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()))"));
-    assert!(user_events_source.contains("UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),"));
-    assert!(export_actions_source.contains("export_service::export_document_to_path("));
+    assert!(
+        menu_state_source
+            .contains("pub(super) fn remember_export_png(item: &Retained<NSMenuItem>)")
+    );
+    assert!(
+        menu_state_source
+            .contains("EXPORT_PNG_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()))")
+    );
+    assert!(user_events_source.contains("UserEvent::ExportPng => {"));
+    assert!(user_events_source.contains("export_actions::export_png("));
+    assert!(user_events_source.contains("runtime.selected_theme"));
+    assert!(export_actions_source.contains("export_service::export_document_to_path_with_theme("));
     assert!(export_actions_source.contains("ExportFormat::Png"));
     assert!(en_strings.contains("export_png: \"Export PNG\""));
     assert!(en_strings.contains("dialog:\n  export_png: \"Export PNG\""));

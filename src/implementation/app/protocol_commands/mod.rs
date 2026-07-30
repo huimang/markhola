@@ -15,7 +15,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
-use crate::app::{APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_VERSION};
+use crate::app::{APP_BUILD_PLATFORM, APP_BUILD_TARGET, APP_VERSION, AppTheme};
 use crate::document::DocumentMode;
 use crate::export_service::{self, ExportFormat};
 use crate::file_io;
@@ -76,6 +76,15 @@ impl ProtocolCommandRuntime {
     }
 
     pub(super) fn handle(&mut self, payload: &[u8], workspace: &DocumentWorkspace) -> Vec<u8> {
+        self.handle_with_theme(payload, workspace, AppTheme::Default)
+    }
+
+    fn handle_with_theme(
+        &mut self,
+        payload: &[u8],
+        workspace: &DocumentWorkspace,
+        theme: AppTheme,
+    ) -> Vec<u8> {
         let fingerprint = sha256(payload);
         let request = match serde_json::from_slice::<Request>(payload) {
             Ok(request) => request,
@@ -111,7 +120,7 @@ impl ProtocolCommandRuntime {
                 "The selected application instance does not match.",
             )
         } else {
-            self.execute(&request, workspace)
+            self.execute(&request, workspace, theme)
         };
         let status = if response["ok"] == true {
             RequestStatus::Completed
@@ -138,7 +147,7 @@ impl ProtocolCommandRuntime {
         payload: &[u8],
         workspace: &mut DocumentWorkspace,
     ) -> Vec<u8> {
-        self.handle_mut_with_assets(payload, workspace, None)
+        self.handle_mut_with_assets(payload, workspace, None, AppTheme::Default)
     }
 
     pub(super) fn handle_app_mut(
@@ -147,7 +156,17 @@ impl ProtocolCommandRuntime {
         workspace: &mut DocumentWorkspace,
         asset_access: &AssetAccessRegistry,
     ) -> Vec<u8> {
-        self.handle_mut_with_assets(payload, workspace, Some(asset_access))
+        self.handle_app_mut_with_theme(payload, workspace, asset_access, AppTheme::Default)
+    }
+
+    pub(super) fn handle_app_mut_with_theme(
+        &mut self,
+        payload: &[u8],
+        workspace: &mut DocumentWorkspace,
+        asset_access: &AssetAccessRegistry,
+        theme: AppTheme,
+    ) -> Vec<u8> {
+        self.handle_mut_with_assets(payload, workspace, Some(asset_access), theme)
     }
 
     fn handle_mut_with_assets(
@@ -155,9 +174,10 @@ impl ProtocolCommandRuntime {
         payload: &[u8],
         workspace: &mut DocumentWorkspace,
         asset_access: Option<&AssetAccessRegistry>,
+        theme: AppTheme,
     ) -> Vec<u8> {
         let Ok(request) = serde_json::from_slice::<Request>(payload) else {
-            return self.handle(payload, workspace);
+            return self.handle_with_theme(payload, workspace, theme);
         };
         if !matches!(
             request.command,
@@ -168,7 +188,7 @@ impl ProtocolCommandRuntime {
                 | Command::SetDocumentMode
                 | Command::WaitRenderReady
         ) {
-            return self.handle(payload, workspace);
+            return self.handle_with_theme(payload, workspace, theme);
         }
 
         let fingerprint = sha256(payload);
@@ -476,16 +496,16 @@ impl ProtocolCommandRuntime {
         )
     }
 
-    fn execute(&self, request: &Request, workspace: &DocumentWorkspace) -> Value {
+    fn execute(&self, request: &Request, workspace: &DocumentWorkspace, theme: AppTheme) -> Value {
         match request.command {
             Command::GetInstanceState => self.instance_state(request, workspace),
             Command::ListDocumentState => self.list_documents(request, workspace),
             Command::GetDocumentState => self.document_state(request, workspace),
             Command::GetRequestStatus => self.request_status(request),
             Command::CancelRequest => self.cancel_request(request),
-            Command::ExportPng => self.export(request, workspace, ExportFormat::Png),
-            Command::ExportPdf => self.export(request, workspace, ExportFormat::Pdf),
-            Command::ExportHtml => self.export(request, workspace, ExportFormat::Html),
+            Command::ExportPng => self.export(request, workspace, ExportFormat::Png, theme),
+            Command::ExportPdf => self.export(request, workspace, ExportFormat::Pdf, theme),
+            Command::ExportHtml => self.export(request, workspace, ExportFormat::Html, theme),
             command if !command.is_read_only() => error(
                 &request.request_id,
                 command.name(),
@@ -595,6 +615,7 @@ impl ProtocolCommandRuntime {
         request: &Request,
         workspace: &DocumentWorkspace,
         format: ExportFormat,
+        theme: AppTheme,
     ) -> Value {
         let Some(document_id) = request.target.document_id else {
             return error(
@@ -637,8 +658,9 @@ impl ProtocolCommandRuntime {
             );
         }
         let cancellation = export_service::begin_export_cancellation(&request.request_id);
-        let result = export_service::export_document_to_path(
+        let result = export_service::export_document_to_path_with_theme(
             document,
+            theme,
             format,
             Path::new(&output.path),
             output.overwrite,

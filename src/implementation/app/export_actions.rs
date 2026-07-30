@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use rfd::FileDialog;
 
-use crate::app::text;
+use crate::app::{AppTheme, text};
 use crate::document::ActiveDocument;
 use crate::export_service::{self, ExportCancellation, ExportFormat};
 use crate::html_export::{self, HtmlExportOutcome};
@@ -13,7 +13,7 @@ use wry::WebView;
 
 use super::workspace_view::{render_error_status, render_export_success};
 
-pub(super) fn export_png(webview: &WebView, workspace: &DocumentWorkspace) {
+pub(super) fn export_png(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
     let Some(document) = workspace.active_document() else {
         render_error_status(webview, text("status.no_document"));
         return;
@@ -21,8 +21,9 @@ pub(super) fn export_png(webview: &WebView, workspace: &DocumentWorkspace) {
     let Some(path) = choose_png_export_path(document) else {
         return;
     };
-    match export_service::export_document_to_path(
+    match export_service::export_document_to_path_with_theme(
         document,
+        theme,
         ExportFormat::Png,
         &path,
         true,
@@ -65,9 +66,9 @@ fn suggested_png_path(path: &Path) -> PathBuf {
     output
 }
 
-pub(super) fn export_pdf(webview: &WebView, workspace: &DocumentWorkspace) {
+pub(super) fn export_pdf(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
     match workspace.active_document() {
-        Some(document) => match pdf_export::export_document(document) {
+        Some(document) => match pdf_export::export_document(document, theme.key()) {
             Ok(PdfExportOutcome::Exported(path)) => render_export_success(
                 webview,
                 &text("status.exported_pdf").replace("{path}", &path.display().to_string()),
@@ -81,9 +82,9 @@ pub(super) fn export_pdf(webview: &WebView, workspace: &DocumentWorkspace) {
     }
 }
 
-pub(super) fn export_html(webview: &WebView, workspace: &DocumentWorkspace) {
+pub(super) fn export_html(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
     match workspace.active_document() {
-        Some(document) => match html_export::export_document(document) {
+        Some(document) => match html_export::export_document(document, theme.key()) {
             Ok(HtmlExportOutcome::Exported(path)) => render_export_success(
                 webview,
                 &text("status.exported_html").replace("{path}", &path.display().to_string()),
