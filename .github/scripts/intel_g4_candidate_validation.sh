@@ -573,7 +573,7 @@ on run argv
       set end of evidenceLines to "language_items=" & ((name of every menu item of menu 1 of menu item "Language" of menu 1 of menu bar item "View" of menu bar 1) as text)
       click menu item "Dark" of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1
       delay 1
-      click menu item "Default" of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1
+      click menu item "Light" of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1
       delay 1
       click menu item "Documentation" of menu 1 of menu bar item "Help" of menu bar 1
       delay 3
@@ -648,6 +648,9 @@ run_gui_matrix() {
   local app_log_path=""
   local startup_ready=0
   local candidate_path
+  local expected_version
+
+  expected_version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT_DIR/Cargo.toml" | head -n1)"
 
   cp "$ROOT_DIR/examples/pdf-export.md" "$sample_doc"
   mkdir -p "$UI_DIR/assets"
@@ -752,7 +755,7 @@ run_gui_matrix() {
     append_ui_result "window_owner_binding" "BLOCKED" "Unable to inspect visible window ownership"
   fi
 
-  capture_about_identity "$app_pid" "0.9.0"
+  capture_about_identity "$app_pid" "$expected_version"
   run_open_edit_save_and_readonly "$app_pid" "$sample_doc"
 
   if osascript - "$app_pid" >"$UI_DIR/menu-tab.txt" 2>"$UI_DIR/menu-tab.stderr" <<'APPLESCRIPT'

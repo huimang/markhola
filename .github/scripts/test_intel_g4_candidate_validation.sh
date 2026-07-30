@@ -19,6 +19,8 @@ assert_contains() {
 
 assert_contains "$WORKFLOW" "runs-on: macos-15-intel"
 assert_contains "$WORKFLOW" "expected_sha256:"
+assert_contains "$WORKFLOW" "MarkHola-0.9.1-intel.dmg"
+assert_contains "$WORKFLOW" "RELEASE_TAG: v0.9.1"
 assert_contains "$WORKFLOW" "contents: write"
 assert_contains "$WORKFLOW" "persist-credentials: false"
 assert_contains "$WORKFLOW" 'env:'
@@ -106,6 +108,12 @@ do
   assert_contains "$HARNESS" "append_ui_result \"$behavior_row\" \"BLOCKED\""
 done
 assert_contains "$HARNESS" 'grep -Fqi "macos / x86_64" "$UI_DIR/about.txt"'
+assert_contains "$HARNESS" 'capture_about_identity "$app_pid" "$expected_version"'
+assert_contains "$HARNESS" 'click menu item "Light" of menu 1 of menu item "Theme"'
+if grep -Fq '0.9.0' "$WORKFLOW" "$HARNESS"; then
+  echo "Intel G4 workflow or harness retains a v0.9.0 candidate binding." >&2
+  exit 1
+fi
 assert_contains "$HARNESS" 'set editorArea to missing value'
 assert_contains "$HARNESS" 'if role of uiItem is "AXTextArea"'
 assert_contains "$HARNESS" '"$candidate_executable" --smoke-export'

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_sha256:
-        description: Expected SHA-256 for Product's Intel draft asset MarkHola-0.9.0-intel.dmg
+        description: Expected SHA-256 for Product's Intel draft asset MarkHola-0.9.1-intel.dmg
         required: true
         type: string
 
@@ -17,8 +17,8 @@ jobs:
       contents: write
     env:
       EXPECTED_SHA256: ${{ github.event.inputs.expected_sha256 }}
-      RELEASE_ASSET_NAME: MarkHola-0.9.0-intel.dmg
-      RELEASE_TAG: v0.9.0
+      RELEASE_ASSET_NAME: MarkHola-0.9.1-intel.dmg
+      RELEASE_TAG: v0.9.1
     steps:
       - name: Check Out Repository
         uses: actions/checkout@v4
