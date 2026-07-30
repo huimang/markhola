@@ -12,6 +12,9 @@ mod shell;
 #[cfg(test)]
 #[path = "../tests/app.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "../tests/visual_package.rs"]
+mod visual_package_tests;
 #[path = "../implementation/app/web_localization.rs"]
 mod web_localization;
 

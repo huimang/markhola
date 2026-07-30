@@ -113,6 +113,16 @@ appearance.
 - Use straight table corners.
 - Keep borders, padding, and alignment restrained so the header color does not dominate the page.
 
+### Markdown Dividers
+
+- Use a one-pixel left-to-right Violet gradient so a divider remains more vivid than a neutral
+  border without resembling an interactive state.
+- Keep the deepest Violet at the leading edge and fade only to the lowest opacity that preserves
+  `3:1` non-text contrast across the full divider.
+- Against Green Subtle `#FAFEFD`, Violet at 75% opacity resolves to approximately `#8B81ED`
+  (`3.20:1`). Against Dark `#0D1117`, Violet at 85% opacity resolves to approximately `#594DC9`
+  (`3.00:1`).
+
 ### Footer
 
 - Use the Gray scale rather than Green.

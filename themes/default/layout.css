@@ -494,6 +494,17 @@ body.workspace-empty #modeState {
   text-decoration: none;
 }
 
+.markdown-body hr {
+  margin: 1.6em 0;
+  border: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--markhola-violet) 0%,
+    color-mix(in srgb, var(--markhola-violet) 75%, transparent) 100%
+  );
+}
+
 .markdown-body img {
   display: block;
   max-width: 100%;
