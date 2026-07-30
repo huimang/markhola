@@ -6,7 +6,7 @@ use wry::WebView;
 
 use crate::app::text;
 use crate::document::ActiveDocument;
-use crate::file_io;
+use crate::save_service;
 use crate::workspace::DocumentWorkspace;
 
 use super::asset_access::{AssetAccessRegistry, register_document};
@@ -14,12 +14,17 @@ use super::native_footer::NativeFooter;
 use super::workspace_view::{render_error_status, sync_workspace_state};
 
 pub(super) fn save_document(document: &mut ActiveDocument) -> Result<(), String> {
-    if document.is_draft() {
-        return Err("Draft documents must choose a save path first.".to_string());
-    }
-    file_io::save_markdown(document.file_path(), document.markdown())?;
-    document.mark_saved();
-    Ok(())
+    save_service::save_document(document)
+        .map(|_| ())
+        .map_err(|failure| failure.message)
+}
+
+fn save_document_as(
+    document: &mut ActiveDocument,
+    path: &std::path::Path,
+    overwrite: bool,
+) -> Result<PathBuf, String> {
+    save_service::save_document_as(document, path, overwrite).map_err(|failure| failure.message)
 }
 
 pub(super) fn save_active_document(
@@ -78,24 +83,22 @@ pub(super) fn save_active_document_as(
         render_error_status(webview, text("status.save_target_open"));
         return false;
     }
-    if let Err(error) = file_io::save_markdown(&path, &snapshot.markdown) {
-        render_error_status(webview, &error);
+    let Some(document) = workspace.active_document_mut() else {
+        render_error_status(webview, text("status.no_document_to_save"));
         return false;
-    }
-    let Ok(base_url) = file_io::directory_base_url(&path) else {
-        render_error_status(webview, text("status.invalid_file_url"));
-        return false;
+    };
+    let path = match save_document_as(document, &path, true) {
+        Ok(path) => path,
+        Err(failure) => {
+            render_error_status(webview, &failure);
+            return false;
+        }
     };
     if let Err(error) = register_document(asset_access, snapshot.document_id, &path) {
         let message = text("status.failed_local_assets").replace("{error}", &error.to_string());
         render_error_status(webview, &message);
         return false;
     }
-    let Some(document) = workspace.active_document_mut() else {
-        render_error_status(webview, text("status.no_document_to_save"));
-        return false;
-    };
-    document.replace_file_path(path, base_url);
     sync_workspace_state(
         window,
         webview,
@@ -110,7 +113,6 @@ struct SaveAsSnapshot {
     document_id: u64,
     directory: PathBuf,
     file_name: String,
-    markdown: String,
 }
 
 impl SaveAsSnapshot {
@@ -123,7 +125,6 @@ impl SaveAsSnapshot {
                 .unwrap_or(document.file_path())
                 .to_path_buf(),
             file_name: document.file_name().to_string(),
-            markdown: document.markdown().to_string(),
         }
     }
 }
@@ -136,3 +137,7 @@ fn choose_save_as_path(snapshot: &SaveAsSnapshot) -> Option<PathBuf> {
         .set_file_name(&snapshot.file_name)
         .save_file()
 }
+
+#[cfg(test)]
+#[path = "save_actions/tests.rs"]
+mod tests;
