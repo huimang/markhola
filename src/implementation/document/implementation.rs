@@ -185,6 +185,17 @@ impl ActiveDocument {
         self.advance_version();
     }
 
+    pub(crate) fn set_mode(&mut self, mode: DocumentMode) {
+        if self.mode == mode {
+            return;
+        }
+        self.mode = mode;
+        if self.mode == DocumentMode::Readonly {
+            self.refresh_html();
+        }
+        self.advance_version();
+    }
+
     pub fn mark_saved(&mut self) {
         self.saved_markdown = self.markdown.clone();
         self.refresh_metadata();

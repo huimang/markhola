@@ -102,6 +102,7 @@ impl DocumentWorkspace {
         }
 
         let document_id = document.id();
+        self.next_document_id = self.next_document_id.max(document_id.saturating_add(1));
         self.documents.push(document);
         self.active_index = Some(self.documents.len() - 1);
         WorkspaceOpenResult::OpenedNew(document_id)

@@ -66,6 +66,21 @@ pub(super) struct Request {
     pub(super) request: Option<RequestReference>,
     #[serde(default)]
     pub(super) output: Option<Output>,
+    #[serde(default)]
+    pub(super) path: Option<String>,
+    #[serde(default)]
+    pub(super) content: Option<String>,
+    #[serde(default)]
+    pub(super) mode: Option<DocumentModeRequest>,
+    #[serde(default)]
+    pub(super) render_generation: Option<u64>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum DocumentModeRequest {
+    Readonly,
+    Edit,
 }
 
 #[derive(Debug, Deserialize)]

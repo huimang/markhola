@@ -124,13 +124,46 @@ pub(super) fn handle_user_event(
         UserEvent::ShowAbout => render_about(&runtime.webview),
         UserEvent::OpenDocumentation => open_documentation(runtime),
         UserEvent::ProtocolRequest(request) => {
-            let response = runtime
-                .protocol_commands
-                .handle_mut(&request.payload, &mut runtime.workspace);
+            let response = runtime.protocol_commands.handle_app_mut(
+                &request.payload,
+                &mut runtime.workspace,
+                &runtime.asset_access,
+            );
+            if protocol_request_changes_active_document(
+                &request.payload,
+                &response,
+                &runtime.workspace,
+            ) {
+                super::surface_actions::sync_active_surface(runtime, "", true);
+            }
             let _ = request.response.send(response);
         }
         UserEvent::Exit => exit_application(runtime, control_flow),
     }
+}
+
+fn protocol_request_changes_active_document(
+    payload: &[u8],
+    response: &[u8],
+    workspace: &crate::workspace::DocumentWorkspace,
+) -> bool {
+    let response_ok = serde_json::from_slice::<serde_json::Value>(response)
+        .ok()
+        .and_then(|value| value.get("ok").and_then(serde_json::Value::as_bool))
+        .unwrap_or(false);
+    if !response_ok {
+        return false;
+    }
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(payload) else {
+        return false;
+    };
+    matches!(
+        value.get("command").and_then(serde_json::Value::as_str),
+        Some("replace_document_content" | "set_document_mode")
+    ) && value
+        .pointer("/target/document_id")
+        .and_then(serde_json::Value::as_u64)
+        == workspace.active_document_id()
 }
 
 fn activate_event_surface(window_id: tao::window::WindowId, runtime: &mut AppRuntime) {

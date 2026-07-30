@@ -109,7 +109,7 @@ fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity()
     assert!(runtime_source.contains("protocol_commands,"));
     assert!(user_events_source.contains("UserEvent::ProtocolRequest(request) => {"));
     assert!(user_events_source.contains(".protocol_commands"));
-    assert!(user_events_source.contains(".handle_mut(&request.payload, &mut runtime.workspace)"));
+    assert!(user_events_source.contains(".handle_app_mut("));
     assert!(user_events_source.contains("let _ = request.response.send(response);"));
     assert!(command_source.contains("request.instance_token != self.identity.exact_instance_token()"));
     assert!(command_source.contains("\"request_id_conflict\""));
