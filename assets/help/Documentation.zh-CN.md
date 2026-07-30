@@ -1,6 +1,6 @@
 # MarkHola 文档
 
-Current version: `v0.9.1`
+Current version: `v0.9.2`
 
 ## MarkHola 是什么
 
@@ -16,7 +16,9 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - 在只读模式查找文本，在编辑模式查找或替换文本
 - 在只读模式打开右侧文档大纲
 - 渲染 Mermaid（包括字面 `\n` 换行）、公式、表格、链接、图片和高亮代码
-- 将当前文档导出为 PDF 或 HTML，成功后显示导出路径与“打开”操作，并支持打印
+- 将当前文档导出为 PNG、PDF 或 HTML，成功后显示导出路径与“打开”操作，并支持打印
+- 通过一次性的应用二进制命令，将规范化绝对路径的 Markdown 源文件导出为 PNG、PDF
+  或 HTML，而不打开常规应用工作区
 - 点击主窗口左上角红色关闭按钮退出 MarkHola，标签页关闭命令仍只关闭当前文档
 - 为 macOS 14.0 或更高版本分别提供 Apple Silicon 与 Intel 架构专用应用
 
@@ -29,7 +31,7 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - 保存
 - 另存为
 - 打印
-- 导出 > PDF / HTML
+- 导出 > PNG / PDF / HTML
 - 关闭
 - 退出
 
@@ -61,6 +63,34 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 
 - 文档
 
+## 离线 CLI 导出
+
+每个进程只执行一个命令，请使用 `MarkHola.app` 内的可执行文件：
+
+```bash
+MARKHOLA_BIN="/absolute/path/to/MarkHola.app/Contents/MacOS/MarkHola"
+"$MARKHOLA_BIN" export-png \
+  --source=/absolute/input.md \
+  --target=/absolute/output.png \
+  --theme=light \
+  --json
+```
+
+公开命令包括 `export-png`、`export-pdf`、`export-html`、`version` 和 `help`。`--source`
+与 `--target` 必须使用绝对、规范化且已 canonicalize 的路径。默认主题为 `light`；
+`--theme=dark` 选择深色主题。除非明确提供 `--overwrite`，否则不会覆盖已有输出。
+JSON 响应使用 `schema_version: 1`。
+
+稳定退出码如下：
+
+- `0`：成功
+- `2`：命令、参数或 schema 无效
+- `3`：源文件无效或不可读
+- `4`：目标路径不安全、不可用或存在冲突
+- `5`：渲染或导出失败
+- `6`：资源限制或超时
+- `7`：内部错误或隐藏 runtime 失败
+
 ## 说明
 
 - 切换界面语言会立即生效，不会重新加载当前文档。
@@ -71,5 +101,5 @@ MarkHola 是一款基于 AI 构建的免费 Markdown 阅读与编辑器。
 - 跟随系统会在 macOS 外观变化时自动切换浅色或深色主题。
 - 渲染后的 Markdown 链接不显示下划线。
 - 浅色与深色主题使用各自的护眼代码色板。
-- 浅色空白状态不显示状态提示；PDF 或 HTML 导出成功后显示输出路径与“打开”操作。
+- 浅色空白状态不显示状态提示；PNG、PDF 或 HTML 导出成功后显示输出路径与“打开”操作。
 - MarkHola 为 macOS 14.0 或更高版本分别提供带明确标记的 Apple Silicon 与 Intel 下载。

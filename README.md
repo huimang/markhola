@@ -6,7 +6,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.9.1`
+- `v0.9.2`
 
 ## Features
 
@@ -24,6 +24,10 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Export the full rendered current document to PNG from `File > Export > PNG`
 - Export the current document to PDF from `File > Export > PDF`
 - Export the current document to HTML from `File > Export > HTML`
+- Export a canonical Markdown source to PNG, PDF, or HTML with the one-shot application-binary
+  commands `export-png`, `export-pdf`, and `export-html`
+- Use stable CLI exit codes and optional `--json` responses without opening the normal app
+  workspace, file panels, or a resident command server
 - Show the exported path and an `Open` action after a successful PDF or HTML export while keeping the default empty state silent
 - Print the current document from `File > Print`
 - Switch app shell themes from `View > Theme > Follow System / Light / Dark`
@@ -122,6 +126,21 @@ Run release regression checks with packaging:
 ./scripts/release_regression.sh --with-package
 ```
 
+Run a one-shot offline export through a built app binary:
+
+```bash
+MARKHOLA_BIN="/absolute/path/to/MarkHola.app/Contents/MacOS/MarkHola"
+"$MARKHOLA_BIN" export-png \
+  --source=/absolute/input.md \
+  --target=/absolute/output.png \
+  --theme=light \
+  --json
+```
+
+The CLI also supports `export-pdf`, `export-html`, `version`, and `help`. Export paths must be
+absolute, normalized, and canonical. Existing targets are preserved unless `--overwrite` is
+explicitly supplied.
+
 Use the full release publish workflow before uploading a GitHub release:
 
 ```bash
@@ -187,6 +206,7 @@ Release order for GitHub publishing:
 - `assets/`: logo and icon sources
 - `examples/`: sample Markdown files for manual verification
 - `examples/v0.9.1-png-export-and-save-as.md`: full PNG/PDF/HTML and Save As verification fixture
+- `examples/v0.9.2-offline-cli-export.md`: one-shot offline CLI export verification fixture
 - `scripts/`: packaging scripts
 - `scripts/release_publish_workflow.md`: pre-publish sandbox validation and GitHub release workflow
 - `themes/`: directly editable app theme files
