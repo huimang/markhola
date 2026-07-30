@@ -296,8 +296,46 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Use the protocol to accelerate release validation without treating protocol success alone as a
      substitute for visual inspection of representative PNG, PDF, and HTML output
 
+### v0.9.3
+Start this milestone after v0.9.1 is successfully published. Keep v0.9.2 unassigned until Product
+defines its scope.
+
+1. Add one-shot command-line document export through the MarkHola application binary
+   - Support `export-png`, `export-pdf`, and `export-html` commands without opening a visible
+     MarkHola window, taking keyboard focus, or showing native file panels
+   - Accept an explicit Markdown source and output target, for example:
+     `markhola export-pdf --source=/Users/ronnie/a.md --target=/tmp/a.pdf`
+   - Reuse the same production rendering and export services as the visible application and the
+     v0.9.1 local process-command protocol instead of introducing a CLI-only renderer
+   - Preserve Markdown, theme, syntax highlighting, Mermaid, math, and local-image behavior, with
+     relative local assets resolved from the source document directory
+   - Allow the implementation to initialize non-visible AppKit or WebKit infrastructure when
+     required for rendering, but do not create visible windows or remain running after completion
+2. Define a safe and automation-friendly CLI contract
+   - Require a canonical, absolute, readable `.md` source path and a format-correct absolute target
+     path whose canonical parent already exists and is writable
+   - Preserve the source file byte-for-byte and reject directories, application bundles, symlinks,
+     unsafe path changes, and existing targets unless `--overwrite` is explicitly supplied
+   - Write output atomically, clean temporary files on failure or cancellation, and return only
+     after the final output has been committed or a stable failure has been reported
+   - Support `help` and `version`, concise human-readable output, optional machine-readable JSON,
+     and documented stable process exit codes
+   - Execute exactly one command per process and do not start the v0.9.1 socket server or a
+     long-running application event loop
+3. Keep the first CLI release intentionally bounded
+   - Do not add document editing, save, Save As, running-instance control, arbitrary filesystem
+     access, shell execution, WebView JavaScript, stdin streaming, batch, watch mode, or global
+     command installation in v0.9.3
+   - Keep running-instance automation in the v0.9.1 Unix-domain-socket protocol and offline
+     source-to-artifact conversion in the v0.9.3 CLI
+   - Add paired technical design and test documents before implementation and provide a tracked
+     example Markdown file that validates CLI PNG, PDF, and HTML output
+   - Verify no visible window or focus change, exact source and output identity, source
+     preservation, overwrite and path safety, stable exit codes and JSON responses, representative
+     visual output, and parity with the shared production export services
+
 ### v1.0.0
-Start this milestone immediately after v0.9.1 is successfully published.
+Start this milestone immediately after v0.9.3 is successfully published.
 
 1. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
