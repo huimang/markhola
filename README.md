@@ -181,6 +181,7 @@ Release order for GitHub publishing:
 ## Project Structure
 
 - `src/`: desktop app source code
+- `docs/technical-architecture.md`: current technical stack and architecture boundaries
 - `src/bin/make_icns.rs`: macOS icon generation helper
 - `assets/`: logo and icon sources
 - `examples/`: sample Markdown files for manual verification
