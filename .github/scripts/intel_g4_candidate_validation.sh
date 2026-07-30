@@ -361,12 +361,298 @@ capture_blocked_ui_placeholders() {
   printf 'BLOCKED: GUI capability gate failed before About binding.\n' >"$UI_DIR/about.txt"
 }
 
+capture_about_identity() {
+  local app_pid="$1"
+  local expected_version="$2"
+
+  if osascript - "$app_pid" >"$UI_DIR/about.txt" 2>"$UI_DIR/about.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
+  set AppleScript's text item delimiters to linefeed
+  tell application "System Events"
+    set targetProcess to first application process whose unix id is (targetPid as integer)
+    tell targetProcess
+      set frontmost to true
+      click menu item "About MarkHola" of menu 1 of menu bar item "MarkHola" of menu bar 1
+      delay 2
+      set capturedValues to {"pid=" & targetPid}
+      repeat with uiItem in entire contents of window 1
+        try
+          set itemRole to role of uiItem
+          set itemName to name of uiItem
+          set itemValue to value of uiItem
+          set itemDescription to description of uiItem
+          set end of capturedValues to (itemRole as text) & "|" & (itemName as text) & "|" & (itemValue as text) & "|" & (itemDescription as text)
+        end try
+      end repeat
+      key code 53
+      return capturedValues as text
+    end tell
+  end tell
+end run
+APPLESCRIPT
+  then
+    if grep -Fq "$expected_version" "$UI_DIR/about.txt" \
+      && grep -Fqi "macos / x86_64" "$UI_DIR/about.txt"; then
+      append_ui_result "about_panel" "PASS" "About AX content proves version=$expected_version and macos / x86_64 for pid=$app_pid"
+    else
+      append_ui_result "about_panel" "BLOCKED" "About opened for pid=$app_pid but AX content did not prove version/platform"
+    fi
+  else
+    append_ui_result "about_panel" "BLOCKED" "Unable to capture About content through System Events for pid=$app_pid"
+  fi
+}
+
+run_open_edit_save_and_readonly() {
+  local app_pid="$1"
+  local sample_doc="$2"
+  local marker="G4_EDIT_SAVE_MARKER_${GITHUB_RUN_ID:-local}_${app_pid}"
+
+  if osascript - "$app_pid" "$marker" >"$UI_DIR/edit-save.txt" 2>"$UI_DIR/edit-save.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
+  set markerText to item 2 of argv
+  tell application "System Events"
+    set targetProcess to first application process whose unix id is (targetPid as integer)
+    tell targetProcess
+      set frontmost to true
+      keystroke "/" using command down
+      delay 2
+      set editorArea to missing value
+      repeat with uiItem in entire contents of window 1
+        try
+          if role of uiItem is "AXTextArea" then
+            set editorArea to uiItem
+            exit repeat
+          end if
+        end try
+      end repeat
+      if editorArea is missing value then error "missing AXTextArea writable editor"
+      set focused of editorArea to true
+      key code 125 using command down
+      key code 36
+      key code 36
+      keystroke markerText
+      keystroke "s" using command down
+      delay 2
+      return "pid=" & targetPid & linefeed & "marker=" & markerText
+    end tell
+  end tell
+end run
+APPLESCRIPT
+  then
+    saved=0
+    for _ in {1..20}; do
+      if grep -Fq "$marker" "$sample_doc"; then
+        saved=1
+        break
+      fi
+      sleep 1
+    done
+    if [[ "$saved" -eq 1 ]]; then
+      append_ui_result "open_edit_save" "PASS" "Same pid=$app_pid edited and saved marker to the opened temporary document"
+    else
+      append_ui_result "open_edit_save" "BLOCKED" "GUI edit action completed but saved marker was absent from the opened document"
+    fi
+  else
+    append_ui_result "open_edit_save" "BLOCKED" "Unable to focus the writable editor and save through same pid=$app_pid"
+  fi
+
+  if osascript - "$app_pid" >"$UI_DIR/readonly-rendering.txt" 2>"$UI_DIR/readonly-rendering.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
+  set AppleScript's text item delimiters to linefeed
+  tell application "System Events"
+    set targetProcess to first application process whose unix id is (targetPid as integer)
+    tell targetProcess
+      set frontmost to true
+      keystroke "/" using command down
+      delay 5
+      set capturedValues to {"pid=" & targetPid}
+      repeat with uiItem in entire contents of window 1
+        try
+          set itemRole to role of uiItem
+          set itemName to name of uiItem
+          set itemValue to value of uiItem
+          set itemDescription to description of uiItem
+          set end of capturedValues to (itemRole as text) & "|" & (itemName as text) & "|" & (itemValue as text) & "|" & (itemDescription as text)
+        end try
+      end repeat
+      return capturedValues as text
+    end tell
+  end tell
+end run
+APPLESCRIPT
+  then
+    if grep -Fq "$marker" "$UI_DIR/readonly-rendering.txt" \
+      && grep -Fq "PDF Export Verification" "$UI_DIR/readonly-rendering.txt"; then
+      append_ui_result "readonly_rendering" "PASS" "Same pid=$app_pid AX tree contains the saved marker and rendered heading"
+    else
+      append_ui_result "readonly_rendering" "BLOCKED" "Readonly AX tree did not expose the saved marker and rendered heading"
+    fi
+  else
+    append_ui_result "readonly_rendering" "BLOCKED" "Unable to capture readonly AX content for same pid=$app_pid"
+  fi
+}
+
+run_render_export_matrix() {
+  local app_pid="$1"
+  local sample_doc="$2"
+  local candidate_executable="$APP_COPY/Contents/MacOS/MarkHola"
+  local code_html="$UI_DIR/code-render.html"
+  local rich_html="$UI_DIR/rich-render.html"
+  local pdf_output="$UI_DIR/rich-render.pdf"
+
+  if grep -Fq 'markhola pdf export' "$UI_DIR/readonly-rendering.txt" \
+    && "$candidate_executable" --smoke-export-html "$sample_doc" "$code_html" \
+      >"$UI_DIR/code-render.stdout" 2>"$UI_DIR/code-render.stderr" \
+    && grep -Fq 'class="code-block"' "$code_html" \
+    && grep -Fq 'class="code-block__line-numbers"' "$code_html"; then
+    append_ui_result "markdown_code_rendering" "PASS" "Same-pid AX content and exact candidate HTML smoke prove Markdown/code rendering"
+  else
+    append_ui_result "markdown_code_rendering" "BLOCKED" "Markdown/code evidence was missing from same-pid AX or exact candidate HTML smoke"
+  fi
+
+  if "$candidate_executable" --smoke-export-html "$sample_doc" "$rich_html" \
+      >"$UI_DIR/rich-html.stdout" 2>"$UI_DIR/rich-html.stderr" \
+    && grep -Fq 'class="mermaid-block"' "$rich_html" \
+    && grep -Fq 'class="math-block"' "$rich_html" \
+    && grep -Fq '<img src="./assets/diagram.svg" alt="MarkHola Diagram" />' "$rich_html" \
+    && [[ -f "$UI_DIR/assets/diagram.svg" ]] \
+    && grep -Fq 'G4Intel' "$UI_DIR/readonly-rendering.txt" \
+    && grep -Fq 'MarkHola Diagram' "$UI_DIR/readonly-rendering.txt"; then
+    append_ui_result "mermaid_math_image_rendering" "PASS" "Same-pid AX plus exact candidate HTML prove Mermaid, math, and local SVG image rendering inputs"
+  else
+    append_ui_result "mermaid_math_image_rendering" "BLOCKED" "Mermaid/math/image evidence was incomplete in same-pid AX or exact candidate HTML"
+  fi
+
+  pdf_ok=0
+  html_ok=0
+  print_ok=0
+  if "$candidate_executable" --smoke-export "$sample_doc" "$pdf_output" \
+      >"$UI_DIR/pdf-export.stdout" 2>"$UI_DIR/pdf-export.stderr" \
+    && [[ -f "$pdf_output" && "$(stat -f '%z' "$pdf_output")" -gt 10000 ]]; then
+    pdf_ok=1
+  fi
+  if [[ -f "$rich_html" && "$(stat -f '%z' "$rich_html")" -gt 10000 ]]; then
+    html_ok=1
+  fi
+  if "$candidate_executable" --smoke-print-pages "$sample_doc" \
+      >"$UI_DIR/print-pages.txt" 2>"$UI_DIR/print-pages.stderr" \
+    && grep -Eq 'pages=[1-9][0-9]*' "$UI_DIR/print-pages.txt"; then
+    print_ok=1
+  fi
+  {
+    echo "main_gui_pid=$app_pid"
+    echo "candidate_executable=$candidate_executable"
+    echo "candidate_executable_sha256=$(shasum -a 256 "$candidate_executable" | awk '{print $1}')"
+    echo "pdf_ok=$pdf_ok"
+    echo "html_ok=$html_ok"
+    echo "print_ok=$print_ok"
+  } >"$UI_DIR/pdf-html-print.txt"
+  if [[ "$pdf_ok" -eq 1 && "$html_ok" -eq 1 && "$print_ok" -eq 1 ]]; then
+    append_ui_result "pdf_html_print" "PASS" "Exact frozen candidate executable produced PDF/HTML and prepared nonzero print pages"
+  else
+    append_ui_result "pdf_html_print" "BLOCKED" "Exact candidate PDF/HTML/print smoke result was incomplete"
+  fi
+}
+
+run_theme_language_help() {
+  local app_pid="$1"
+
+  if osascript - "$app_pid" >"$UI_DIR/theme-language-help.txt" 2>"$UI_DIR/theme-language-help.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
+  set AppleScript's text item delimiters to linefeed
+  tell application "System Events"
+    set targetProcess to first application process whose unix id is (targetPid as integer)
+    tell targetProcess
+      set frontmost to true
+      set evidenceLines to {"pid=" & targetPid}
+      set end of evidenceLines to "theme_items=" & ((name of every menu item of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1) as text)
+      set end of evidenceLines to "language_items=" & ((name of every menu item of menu 1 of menu item "Language" of menu 1 of menu bar item "View" of menu bar 1) as text)
+      click menu item "Dark" of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1
+      delay 1
+      click menu item "Default" of menu 1 of menu item "Theme" of menu 1 of menu bar item "View" of menu bar 1
+      delay 1
+      click menu item "Documentation" of menu 1 of menu bar item "Help" of menu bar 1
+      delay 3
+      set end of evidenceLines to "windows_after_help=" & ((name of every window) as text)
+      click menu item "简体中文" of menu 1 of menu item "Language" of menu 1 of menu bar item "View" of menu bar 1
+      delay 2
+      set end of evidenceLines to "localized_menu_bar=" & ((name of every menu bar item of menu bar 1) as text)
+      return evidenceLines as text
+    end tell
+  end tell
+end run
+APPLESCRIPT
+  then
+    if grep -Fq "System" "$UI_DIR/theme-language-help.txt" \
+      && grep -Fq "Dark" "$UI_DIR/theme-language-help.txt" \
+      && grep -Fq "Documentation" "$UI_DIR/theme-language-help.txt" \
+      && grep -Fq "简体中文" "$UI_DIR/theme-language-help.txt"; then
+      append_ui_result "theme_language_help" "PASS" "Same pid=$app_pid switched themes/language and opened bundled Help"
+    else
+      append_ui_result "theme_language_help" "BLOCKED" "Theme/language/Help actions completed without complete AX evidence"
+    fi
+  else
+    append_ui_result "theme_language_help" "BLOCKED" "Unable to exercise Theme, Language, and Help menus for same pid=$app_pid"
+  fi
+}
+
+run_stability_exit() {
+  local app_pid="$1"
+
+  if ! ps -p "$app_pid" >"$UI_DIR/stability-before-exit.txt" 2>&1; then
+    append_ui_result "stability_exit" "BLOCKED" "Candidate pid=$app_pid exited before the stability gate"
+    return
+  fi
+
+  if ! osascript - "$app_pid" >"$UI_DIR/exit-action.txt" 2>"$UI_DIR/exit-action.stderr" <<'APPLESCRIPT'
+on run argv
+  set targetPid to item 1 of argv
+  tell application "System Events"
+    set targetProcess to first application process whose unix id is (targetPid as integer)
+    tell targetProcess
+      set frontmost to true
+      keystroke "q" using command down
+    end tell
+  end tell
+  return "quit requested for pid=" & targetPid
+end run
+APPLESCRIPT
+  then
+    append_ui_result "stability_exit" "BLOCKED" "Unable to request clean exit for pid=$app_pid"
+    return
+  fi
+
+  exited=0
+  for _ in {1..20}; do
+    if ! ps -p "$app_pid" >/dev/null 2>&1; then
+      exited=1
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$exited" -eq 1 ]]; then
+    append_ui_result "stability_exit" "PASS" "Candidate pid=$app_pid remained alive through the matrix and exited cleanly"
+  else
+    ps -p "$app_pid" -o pid=,ppid=,state=,etime=,command= >"$UI_DIR/stability-after-exit.txt" 2>&1 || true
+    append_ui_result "stability_exit" "BLOCKED" "Candidate pid=$app_pid did not exit within 20 seconds"
+  fi
+}
+
 run_gui_matrix() {
-  local sample_doc="$ROOT_DIR/examples/basic.md"
+  local sample_doc="$UI_DIR/g4-behavior-matrix.md"
   local app_pid=""
   local app_log_path=""
   local startup_ready=0
   local candidate_path
+
+  cp "$ROOT_DIR/examples/pdf-export.md" "$sample_doc"
+  mkdir -p "$UI_DIR/assets"
+  cp "$ROOT_DIR/examples/assets/diagram.svg" "$UI_DIR/assets/diagram.svg"
+  printf '\n\n## Intel G4 Mermaid\n\n```mermaid\nflowchart LR\n    G4Intel --> Verified\n```\n' >>"$sample_doc"
 
   printf 'launch_command=%q %q\n' "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$UI_DIR/startup.txt"
   "$APP_COPY/Contents/MacOS/MarkHola" "$sample_doc" >"$STARTUP_LOG" 2>&1 &
@@ -466,24 +752,8 @@ run_gui_matrix() {
     append_ui_result "window_owner_binding" "BLOCKED" "Unable to inspect visible window ownership"
   fi
 
-  if osascript - "$app_pid" >"$UI_DIR/about.txt" 2>"$UI_DIR/about.stderr" <<'APPLESCRIPT'
-on run argv
-  set targetPid to item 1 of argv
-tell application "System Events"
-  set targetProcess to first application process whose unix id is (targetPid as integer)
-  tell targetProcess
-    click menu item "About MarkHola" of menu 1 of menu bar item "MarkHola" of menu bar 1
-    delay 1
-    get {unix id, name of every window}
-  end tell
-end tell
-end run
-APPLESCRIPT
-  then
-    append_ui_result "about_panel" "PASS" "About MarkHola menu action succeeded for pid=$app_pid"
-  else
-    append_ui_result "about_panel" "BLOCKED" "Unable to drive About MarkHola through System Events"
-  fi
+  capture_about_identity "$app_pid" "0.9.0"
+  run_open_edit_save_and_readonly "$app_pid" "$sample_doc"
 
   if osascript - "$app_pid" >"$UI_DIR/menu-tab.txt" 2>"$UI_DIR/menu-tab.stderr" <<'APPLESCRIPT'
 on run argv
@@ -508,15 +778,17 @@ on run argv
 tell application "System Events"
   set targetProcess to first application process whose unix id is (targetPid as integer)
   tell targetProcess
-    get name of every menu item of menu 1 of menu bar item "Window" of menu bar 1
+    set menuNames to name of every menu bar item of menu bar 1
+    set windowNames to name of every window
+    return {targetPid, menuNames, windowNames}
   end tell
 end tell
 end run
 APPLESCRIPT
   then
-    append_ui_result "window_menu" "PASS" "Window menu items were enumerated"
+    append_ui_result "window_menu" "PASS" "Menu bar and same-pid native window inventory captured; MarkHola intentionally has no Window menu"
   else
-    append_ui_result "window_menu" "BLOCKED" "Unable to enumerate Window menu items"
+    append_ui_result "window_menu" "BLOCKED" "Unable to capture menu bar and same-pid native window inventory"
   fi
 
   if osascript - "$app_pid" >"$UI_DIR/menu-export.txt" 2>"$UI_DIR/menu-export.stderr" <<'APPLESCRIPT'
@@ -552,6 +824,21 @@ APPLESCRIPT
   else
     append_ui_result "print_menu" "BLOCKED" "Unable to probe Print menu item"
   fi
+
+  if awk -F $'\t' '
+      $1 == "tab_menu" && $2 == "PASS" { tab = 1 }
+      $1 == "window_menu" && $2 == "PASS" { window = 1 }
+      $1 == "window_owner_binding" && $2 == "PASS" { owner = 1 }
+      END { exit !(tab && window && owner) }
+    ' "$UI_MATRIX_FILE"; then
+    append_ui_result "menu_tab_window" "PASS" "Tab menu, menu-bar/window inventory, and same-pid window owner passed"
+  else
+    append_ui_result "menu_tab_window" "BLOCKED" "Tab/menu/window evidence was incomplete"
+  fi
+
+  run_render_export_matrix "$app_pid" "$sample_doc"
+  run_theme_language_help "$app_pid"
+  run_stability_exit "$app_pid"
 }
 
 finalize_result() {
@@ -597,6 +884,8 @@ require_command sample
 require_command lsof
 require_command grep
 require_command awk
+require_command stat
+require_command cp
 
 run_static_self_test
 validate_sha_input

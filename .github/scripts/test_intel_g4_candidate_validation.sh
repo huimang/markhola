@@ -91,6 +91,27 @@ assert_contains "$HARNESS" 'append_ui_result "runtime_architecture" "BLOCKED"'
 assert_contains "$HARNESS" 'append_ui_result "runtime_architecture" "PASS"'
 assert_contains "$HARNESS" 'append_ui_result "executable_path_binding" "BLOCKED"'
 assert_contains "$HARNESS" 'append_ui_result "lsof_binding" "BLOCKED"'
+for behavior_row in \
+  about_panel \
+  open_edit_save \
+  readonly_rendering \
+  markdown_code_rendering \
+  mermaid_math_image_rendering \
+  pdf_html_print \
+  menu_tab_window \
+  theme_language_help \
+  stability_exit
+do
+  assert_contains "$HARNESS" "append_ui_result \"$behavior_row\" \"PASS\""
+  assert_contains "$HARNESS" "append_ui_result \"$behavior_row\" \"BLOCKED\""
+done
+assert_contains "$HARNESS" 'grep -Fqi "macos / x86_64" "$UI_DIR/about.txt"'
+assert_contains "$HARNESS" 'set editorArea to missing value'
+assert_contains "$HARNESS" 'if role of uiItem is "AXTextArea"'
+assert_contains "$HARNESS" '"$candidate_executable" --smoke-export'
+assert_contains "$HARNESS" '"$candidate_executable" --smoke-export-html'
+assert_contains "$HARNESS" '"$candidate_executable" --smoke-print-pages'
+assert_contains "$HARNESS" 'MarkHola intentionally has no Window menu'
 assert_contains "$HARNESS" 'first application process whose unix id is (targetPid as integer)'
 assert_contains "$HARNESS" 'CGWindow owner PID mismatch'
 assert_contains "$HARNESS" '[[ "$can_run_gui" -eq 1 ]]'
