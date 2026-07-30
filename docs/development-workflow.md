@@ -24,6 +24,18 @@ Product continuously tracks the active phase and critical path. A completed pack
 as closed until its downstream owner has consumed the handoff and the relevant acceptance exit is
 either passed or explicitly blocked.
 
+## 0. Architect core-work triage
+
+Before assigning or performing work, Architect classifies the package as core architecture/engine
+work or supporting implementation/testing work. If the plan and acceptance are clear and the package
+is not core architecture or engine work, Architect dispatches it directly to the appropriate
+Engineering or Testing owner instead of implementing or testing it personally.
+
+The handoff must identify one owner, a disjoint write scope, dependencies, acceptance evidence, and
+the next integration point. Architect retains responsibility for architecture boundaries, risk
+review, acceptance clarity, and follow-up review. This rule does not change the planning-only
+boundary: implementation starts only after explicit authorization.
+
 ## 1. Task types
 
 Every task must be treated as one of these modes before work begins:

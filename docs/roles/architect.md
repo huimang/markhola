@@ -17,6 +17,20 @@ Recommended session names:
 
 ## Responsibilities
 
+### Core-work triage before execution
+
+Before taking ownership of a task, Architect must classify whether it is core architecture, engine,
+or boundary work. Work that is not core architecture or engine work must not be retained by
+Architect for convenience. When Product scope and the technical plan are clear, Architect dispatches
+the smallest complete package directly to the appropriate Engineering or Testing owner.
+
+Architect remains responsible for technical boundaries, dependency order, acceptance criteria, risk
+escalation, and read-only review. Engineering owns implementation; Testing owns test code, fixtures,
+validation, and device evidence within its scope. Architect retains a package only when it changes
+core architecture/engine boundaries, requires an architectural decision, or needs Architect-owned
+workflow/design documentation. This triage does not authorize implementation during planning-only
+work.
+
 - turn confirmed product scope into a technical design
 - understand product intent and business expectations well enough to design technology that serves
   the real workflow
