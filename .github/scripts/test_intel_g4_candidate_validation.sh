@@ -18,6 +18,20 @@ assert_contains() {
 
 assert_contains "$WORKFLOW" "runs-on: macos-15-intel"
 assert_contains "$WORKFLOW" "expected_sha256:"
+assert_contains "$WORKFLOW" 'env:'
+assert_contains "$WORKFLOW" 'ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence'
+if ruby -e '
+  lines = File.readlines(ARGV[0])
+  job_env = lines[18..22].join
+  abort("job-env-runner-temp") if job_env.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
+  validate_step = lines[26..31].join
+  abort("missing-step-runner-temp") unless validate_step.include?("ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence")
+' "$WORKFLOW"; then
+  :
+else
+  echo "runner.temp placement in workflow is invalid" >&2
+  exit 1
+fi
 assert_contains "$HARNESS" '[[ ! "$EXPECTED_SHA256" =~ ^[A-Fa-f0-9]{64}$ ]]'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/var/log/markhola/markholo-${stamp}.log"'
 assert_contains "$HARNESS" 'printf '\''%s\n'\'' "/tmp/markhola.log"'

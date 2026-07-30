@@ -17,7 +17,6 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 60
     env:
-      ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence
       EXPECTED_SHA256: ${{ github.event.inputs.expected_sha256 }}
       RELEASE_ASSET_NAME: MarkHola-0.9.0-intel.dmg
       RELEASE_TAG: v0.9.0
@@ -27,6 +26,8 @@ jobs:
 
       - name: Validate Intel Draft Candidate
         shell: bash
+        env:
+          ARTIFACT_ROOT: ${{ runner.temp }}/intel-g4-evidence
         run: bash ./.github/scripts/intel_g4_candidate_validation.sh
 
       - name: Upload Intel G4 Evidence
