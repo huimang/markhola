@@ -295,6 +295,17 @@ This is another markdown reader and exporter software.Written by AI, free are th
      boundary so the protocol cannot silently use a test-only export implementation
    - Use the protocol to accelerate release validation without treating protocol success alone as a
      substitute for visual inspection of representative PNG, PDF, and HTML output
+4. Rename the user-visible Default theme to Light
+   - Show `Light` instead of `Default` in the Theme menu, Help, README, examples, status text, and
+     other user-visible surfaces
+   - Preserve the internal and persisted `default` theme key, existing CSS/resource paths, and
+     compatibility with stored `default` or legacy `light` preferences
+   - Keep the Light theme's colors and rendering behavior unchanged; this is a naming improvement,
+     not a new palette
+   - When protocol responses expose theme state, return the stable canonical key `default` and the
+     user-visible display name `Light` as separate fields
+   - Verify Follow System maps macOS Light to the renamed Light theme, manual Light/Dark selection
+     remains stable, and UI/PNG/PDF/HTML output keeps the existing theme behavior
 
 ### v0.9.2
 Start this milestone after v0.9.1 is successfully published.
