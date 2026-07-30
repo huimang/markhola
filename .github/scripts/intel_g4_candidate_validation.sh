@@ -563,8 +563,8 @@ write_step_summary() {
 
 run_static_self_test() {
   local test_script="$ROOT_DIR/.github/scripts/test_intel_g4_candidate_validation.sh"
-  if [[ -x "$test_script" ]]; then
-    "$test_script"
+  if [[ -f "$test_script" ]]; then
+    bash "$test_script"
   fi
 }
 
