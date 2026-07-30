@@ -83,8 +83,13 @@ fn runtime_bootstrap_starts_protocol_transport_with_exact_token_framing() {
     assert!(runtime_source.contains("pub(super) _protocol_transport: ProtocolTransport,"));
     assert!(runtime_source.contains("_protocol_transport: protocol_transport,"));
     assert!(transport_source.contains("if !frame_has_exact_token(&payload, expected_token) {"));
-    assert!(transport_source.contains("let expected_token = endpoint.instance_token().to_string();"));
-    assert!(transport_source.contains("if let Some(newline) = payload.iter().position(|byte| *byte == b'\\n') {"));
+    assert!(
+        transport_source.contains("let expected_token = endpoint.instance_token().to_string();")
+    );
+    assert!(
+        transport_source
+            .contains("if let Some(newline) = payload.iter().position(|byte| *byte == b'\\n') {")
+    );
     assert!(transport_source.contains("if payload.len() != newline + 1 {"));
     assert!(transport_source.contains("if newline == 0 {"));
     assert!(transport_source.contains("return Ok(payload);"));
@@ -104,16 +109,89 @@ fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity()
     let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
 
     assert!(bootstrap_source.contains("protocol_transport.attach_proxy(proxy.clone());"));
-    assert!(bootstrap_source.contains("let protocol_commands = ProtocolCommandRuntime::new(protocol_transport.identity());"));
+    assert!(bootstrap_source.contains(
+        "let protocol_commands = ProtocolCommandRuntime::new(protocol_transport.identity());"
+    ));
     assert!(runtime_source.contains("pub(super) protocol_commands: ProtocolCommandRuntime,"));
     assert!(runtime_source.contains("protocol_commands,"));
     assert!(user_events_source.contains("UserEvent::ProtocolRequest(request) => {"));
     assert!(user_events_source.contains(".protocol_commands"));
     assert!(user_events_source.contains(".handle_app_mut("));
     assert!(user_events_source.contains("let _ = request.response.send(response);"));
-    assert!(command_source.contains("request.instance_token != self.identity.exact_instance_token()"));
+    assert!(
+        command_source.contains("request.instance_token != self.identity.exact_instance_token()")
+    );
     assert!(command_source.contains("\"request_id_conflict\""));
     assert!(command_source.contains("\"command_not_ready\""));
+}
+
+#[test]
+fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
+    let save_actions_source = include_str!("../implementation/app/save_actions.rs");
+    let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+
+    assert!(save_actions_source.contains("save_service::save_document(document)"));
+    assert!(save_actions_source.contains("save_service::save_document_as(document, path, overwrite)"));
+    assert!(save_actions_source.contains("let Some(path) = choose_save_as_path(&snapshot) else {"));
+    assert!(save_actions_source.contains("FileDialog::new()"));
+    assert!(!save_actions_source.contains("file_io::save_markdown"));
+    assert!(!save_actions_source.contains("document.replace_file_path"));
+
+    assert!(command_source.contains("save_service::save_document(document)"));
+    assert!(command_source.contains("save_service::validate_save_as_target("));
+    assert!(command_source.contains("save_service::save_document_as(document, &target, output.overwrite)"));
+    assert!(user_events_source.contains("use super::save_actions::{save_active_document, save_active_document_as};"));
+    assert!(user_events_source.contains("UserEvent::SaveDocument => {"));
+    assert!(user_events_source.contains("save_active_document("));
+    assert!(user_events_source.contains("UserEvent::SaveDocumentAs => {"));
+    assert!(user_events_source.contains("save_active_document_as("));
+}
+
+#[test]
+fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+
+    assert!(user_events_source.contains("if protocol_request_changes_active_document("));
+    assert!(user_events_source.contains("let response_ok = serde_json::from_slice::<serde_json::Value>(response)"));
+    assert!(user_events_source.contains("if !response_ok {"));
+    assert!(user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")"));
+    assert!(user_events_source.contains("== workspace.active_document_id()"));
+    assert!(user_events_source.contains("super::surface_actions::sync_active_surface(runtime, \"\", true);"));
+}
+
+#[test]
+fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service() {
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+    let menu_source = include_str!("../implementation/app/menu_file_export.rs");
+    let menu_target_source = include_str!("../implementation/app/menu_target.rs");
+    let menu_state_source = include_str!("../implementation/app/menu_state.rs");
+    let dispatch_source = include_str!("../implementation/app/interface_dispatch.rs");
+    let interface_types_source = include_str!("../implementation/app/interface_types.rs");
+    let export_actions_source = include_str!("../implementation/app/export_actions.rs");
+    let en_strings = include_str!("../../i18n/en.yaml");
+    let zh_strings = include_str!("../../i18n/zh-CN.yaml");
+
+    assert!(interface_types_source.contains("ExportPng,"));
+    assert!(dispatch_source.contains("UserEvent::ExportPng => (None, \"ExportPng\","));
+    assert!(menu_target_source.contains("fn export_png_document(&self"));
+    assert!(menu_target_source.contains("UserEvent::ExportPng"));
+    assert!(menu_source.contains("let png = export_item(mtm, \"PNG\", Some(sel!(exportPngDocument:)), target);"));
+    assert!(menu_source.contains("remember_export_png(&png);"));
+    assert!(menu_state_source.contains("static EXPORT_PNG_ITEM"));
+    assert!(menu_state_source.contains("pub(super) fn remember_export_png(item: &Retained<NSMenuItem>)"));
+    assert!(menu_state_source.contains("EXPORT_PNG_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()))"));
+    assert!(user_events_source.contains("UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),"));
+    assert!(export_actions_source.contains("export_service::export_document_to_path("));
+    assert!(export_actions_source.contains("ExportFormat::Png"));
+    assert!(en_strings.contains("export_png: \"Export PNG\""));
+    assert!(en_strings.contains("dialog:\n  export_png: \"Export PNG\""));
+    assert!(en_strings.contains("exported_png: \"Exported PNG: {path}\""));
+    assert!(en_strings.contains("export_png_failed: \"PNG export failed: {error}\""));
+    assert!(zh_strings.contains("export_png: \"导出 PNG\""));
+    assert!(zh_strings.contains("dialog:\n  export_png: \"导出 PNG\""));
+    assert!(zh_strings.contains("exported_png: \"已导出 PNG：{path}\""));
+    assert!(zh_strings.contains("export_png_failed: \"PNG 导出失败：{error}\""));
 }
 
 #[test]
@@ -259,10 +337,7 @@ fn default_theme_separates_titlebar_tabs_and_document_surface() {
         DocumentSize::default(),
     );
 
-    assert!(
-        native_tabs
-            .contains("AppTheme::Default => ((234, 249, 245), (226, 232, 240), 0.34)")
-    );
+    assert!(native_tabs.contains("AppTheme::Default => ((234, 249, 245), (226, 232, 240), 0.34)"));
     assert!(!native_tabs.contains("AppTheme::Light"));
     assert!(native_tabs.contains("ns_window.setBackgroundColor(Some(&tab_color))"));
     assert!(native_tabs.contains("NSWindowButton::CloseButton"));
@@ -546,9 +621,13 @@ fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silen
     assert!(interface_source.contains("struct ExportSuccessPayload"));
     assert!(!interface_source.contains("struct StatusPayload"));
     assert!(!interface_source.contains("pub(crate) level:"));
-    assert!(export_source.contains("Ok(PdfExportOutcome::Exported(path)) => render_export_success("));
+    assert!(
+        export_source.contains("Ok(PdfExportOutcome::Exported(path)) => render_export_success(")
+    );
     assert!(export_source.contains("Ok(PdfExportOutcome::Cancelled) => {}"));
-    assert!(export_source.contains("Ok(HtmlExportOutcome::Exported(path)) => render_export_success("));
+    assert!(
+        export_source.contains("Ok(HtmlExportOutcome::Exported(path)) => render_export_success(")
+    );
     assert!(export_source.contains("Ok(HtmlExportOutcome::Cancelled) => {}"));
     assert!(export_source.contains("Err(message) => render_error_status(webview, &message)"));
 }
@@ -573,9 +652,10 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
         .unwrap();
 
     assert!(bootstrap_source.contains("native_tabs::configure_main_window("));
-    assert!(bootstrap_source.contains(
-        "native_tabs::configure_document_window(&window, selected_theme, proxy)"
-    ));
+    assert!(
+        bootstrap_source
+            .contains("native_tabs::configure_document_window(&window, selected_theme, proxy)")
+    );
     assert!(!bootstrap_source.contains("native_tabs::configure("));
     assert!(tabs_source.contains("standardWindowButton(NSWindowButton::CloseButton)"));
     assert!(application_close_button_configuration.contains("sel!(exitApplication:)"));
@@ -647,9 +727,7 @@ fn native_footer_right_aligns_metadata_but_keeps_the_path_on_the_left() {
     let source = include_str!("../implementation/app/native_footer.rs");
 
     for field in ["words_field", "lines_field"] {
-        assert!(source.contains(&format!(
-            "{field}.setAlignment(NSTextAlignment::Right)"
-        )));
+        assert!(source.contains(&format!("{field}.setAlignment(NSTextAlignment::Right)")));
     }
     assert!(!source.contains("path_field.setAlignment(NSTextAlignment::Right)"));
     assert!(!source.contains("mode_field"));
@@ -867,65 +945,3 @@ fn app_shell_routes_local_markdown_links_through_ipc() {
     assert!(script.contains("pathname.endsWith(\".markdown\")"));
     assert!(script.contains("kind: \"open-markdown-link\""));
 }
-
-#[test]
-fn ui_and_protocol_save_paths_delegate_to_shared_save_service() {
-    let save_actions_source = include_str!("../implementation/app/save_actions.rs");
-    let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
-    let user_events_source = include_str!("../implementation/app/user_events.rs");
-
-    assert!(save_actions_source.contains("save_service::save_document(document)"));
-    assert!(save_actions_source.contains("save_service::save_document_as(document, path, overwrite)"));
-    assert!(save_actions_source.contains("let Some(path) = choose_save_as_path(&snapshot) else {"));
-    assert!(save_actions_source.contains("FileDialog::new()"));
-    assert!(!save_actions_source.contains("file_io::save_markdown"));
-    assert!(!save_actions_source.contains("document.replace_file_path"));
-
-    assert!(command_source.contains("save_service::save_document(document)"));
-    assert!(command_source.contains("save_service::validate_save_as_target("));
-    assert!(command_source.contains("save_service::save_document_as(document, &target, output.overwrite)"));
-    assert!(user_events_source.contains("use super::save_actions::{save_active_document, save_active_document_as};"));
-    assert!(user_events_source.contains("UserEvent::SaveDocument => {"));
-    assert!(user_events_source.contains("save_active_document("));
-    assert!(user_events_source.contains("UserEvent::SaveDocumentAs => {"));
-    assert!(user_events_source.contains("save_active_document_as("));
-}
-
-#[test]
-fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
-    let user_events_source = include_str!("../implementation/app/user_events.rs");
-
-    assert!(user_events_source.contains("if protocol_request_changes_active_document("));
-    assert!(user_events_source.contains("let response_ok = serde_json::from_slice::<serde_json::Value>(response)"));
-    assert!(user_events_source.contains("if !response_ok {"));
-    assert!(user_events_source.contains("Some(\"replace_document_content\" | \"set_document_mode\")"));
-    assert!(user_events_source.contains("== workspace.active_document_id()"));
-    assert!(user_events_source.contains("super::surface_actions::sync_active_surface(runtime, \"\", true);"));
-
-#[test]
-fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service() {
-    let user_events_source = include_str!("../implementation/app/user_events.rs");
-    let menu_source = include_str!("../implementation/app/menu_file_export.rs");
-    let menu_target_source = include_str!("../implementation/app/menu_target.rs");
-    let menu_state_source = include_str!("../implementation/app/menu_state.rs");
-    let dispatch_source = include_str!("../implementation/app/interface_dispatch.rs");
-    let interface_types_source = include_str!("../implementation/app/interface_types.rs");
-    let export_actions_source = include_str!("../implementation/app/export_actions.rs");
-    let en_strings = include_str!("../../i18n/en.yaml");
-    let zh_strings = include_str!("../../i18n/zh-CN.yaml");
-
-    assert!(interface_types_source.contains("ExportPng,"));
-    assert!(dispatch_source.contains("UserEvent::ExportPng => (None, \"ExportPng\","));
-    assert!(menu_target_source.contains("fn export_png_document(&self"));
-    assert!(menu_target_source.contains("UserEvent::ExportPng"));
-    assert!(menu_source.contains("let png = export_item(mtm, \"PNG\", Some(sel!(exportPngDocument:)), target);"));
-    assert!(menu_source.contains("remember_export_png(&png);"));
-    assert!(menu_state_source.contains("static EXPORT_PNG_ITEM"));
-    assert!(menu_state_source.contains("pub(super) fn remember_export_png(item: &Retained<NSMenuItem>)"));
-    assert!(menu_state_source.contains("EXPORT_PNG_ITEM.with(|slot| *slot.borrow_mut() = Some(item.clone()))"));
-    assert!(user_events_source.contains("UserEvent::ExportPng => export_actions::export_png(&runtime.webview, &runtime.workspace),"));
-    assert!(export_actions_source.contains("export_service::export_document_to_path("));
-    assert!(export_actions_source.contains("ExportFormat::Png"));
-    assert!(en_strings.contains("dialog:\n  export_png: \"Export PNG\""));
-    assert!(en_strings.contains("exported_png: \"Exported PNG: {path}\""));
-    assert!(zh_strings.contains("dialog:\n  export_png: \"导出 PNG\""));
