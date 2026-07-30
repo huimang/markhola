@@ -68,6 +68,20 @@ fn rejects_malformed_unknown_and_wrong_instance_requests() {
         ))["error_code"],
         "instance_mismatch"
     );
+    assert_eq!(
+        response(&runtime.handle(
+            br#"{"request_id":"unknown-field","instance_token":"test-token","command":"get_instance_state","target":{"instance_id":"test-instance"},"extra":true}"#,
+            &workspace,
+        ))["error_code"],
+        "invalid_request"
+    );
+    assert_eq!(
+        response(&runtime.handle(
+            br#"{"request_id":"bad-target","instance_token":"test-token","command":"get_document_state","target":{"instance_id":"test-instance","document_id":7,"expected_version":1,"unexpected":1}}"#,
+            &workspace,
+        ))["error_code"],
+        "invalid_request"
+    );
 }
 
 #[test]
@@ -137,6 +151,59 @@ fn rejects_missing_and_stale_document_identity() {
 }
 
 #[test]
+fn exact_document_state_tracks_version_after_local_mutation() {
+    let mut workspace = workspace();
+    let mut runtime = runtime();
+    let stale_before = response(&runtime.handle(
+        &request(
+            "before-mutate",
+            "get_document_state",
+            json!({
+                "instance_id": INSTANCE_ID,
+                "document_id": 7,
+                "expected_version": 1,
+            }),
+        ),
+        &workspace,
+    ));
+    assert_eq!(stale_before["result"]["document"]["version"], 1);
+
+    workspace
+        .active_document_mut()
+        .unwrap()
+        .update_markdown("# Protocol\nchanged".to_string());
+
+    let stale = response(&runtime.handle(
+        &request(
+            "after-mutate-stale",
+            "get_document_state",
+            json!({
+                "instance_id": INSTANCE_ID,
+                "document_id": 7,
+                "expected_version": 1,
+            }),
+        ),
+        &workspace,
+    ));
+    assert_eq!(stale["error_code"], "stale_document_version");
+
+    let fresh = response(&runtime.handle(
+        &request(
+            "after-mutate-fresh",
+            "get_document_state",
+            json!({
+                "instance_id": INSTANCE_ID,
+                "document_id": 7,
+                "expected_version": 2,
+            }),
+        ),
+        &workspace,
+    ));
+    assert_eq!(fresh["result"]["document"]["version"], 2);
+    assert_eq!(fresh["result"]["document"]["dirty"], true);
+}
+
+#[test]
 fn replays_identical_requests_and_rejects_request_id_reuse() {
     let workspace = workspace();
     let mut runtime = runtime();
@@ -178,6 +245,40 @@ fn reports_completed_status_and_cancel_too_late() {
 }
 
 #[test]
+fn reports_failed_status_for_cached_error_responses() {
+    let workspace = workspace();
+    let mut runtime = runtime();
+    runtime.handle(
+        &request(
+            "missing-doc",
+            "get_document_state",
+            json!({ "instance_id": INSTANCE_ID, "document_id": 7 }),
+        ),
+        &workspace,
+    );
+
+    let status_payload = json!({
+        "request_id": "status-failed",
+        "instance_token": TOKEN,
+        "command": "get_request_status",
+        "target": target(),
+        "request": { "request_id": "missing-doc" },
+    });
+    let status = response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
+    assert_eq!(status["result"]["status"], "failed");
+
+    let cancel_payload = json!({
+        "request_id": "cancel-failed",
+        "instance_token": TOKEN,
+        "command": "cancel_request",
+        "target": target(),
+        "request": { "request_id": "missing-doc" },
+    });
+    let cancel = response(&runtime.handle(&serde_json::to_vec(&cancel_payload).unwrap(), &workspace));
+    assert_eq!(cancel["result"]["status"], "too_late");
+}
+
+#[test]
 fn bounds_process_lifetime_request_cache() {
     let workspace = workspace();
     let mut runtime = runtime();
@@ -203,6 +304,7 @@ fn bounds_process_lifetime_request_cache() {
 fn allowlisted_side_effects_fail_closed_until_services_connect() {
     let workspace = workspace();
     let mut runtime = runtime();
+    let before_snapshot = workspace.active_document_snapshot().unwrap();
     for command in [
         "open_document",
         "replace_document_content",
@@ -219,5 +321,19 @@ fn allowlisted_side_effects_fail_closed_until_services_connect() {
             &workspace,
         ));
         assert_eq!(result["error_code"], "command_not_ready");
+
+        let status_payload = json!({
+            "request_id": format!("status-{command}"),
+            "instance_token": TOKEN,
+            "command": "get_request_status",
+            "target": target(),
+            "request": { "request_id": format!("not-ready-{command}") },
+        });
+        let status = response(&runtime.handle(&serde_json::to_vec(&status_payload).unwrap(), &workspace));
+        assert_eq!(status["result"]["status"], "failed");
     }
+    let after_snapshot = workspace.active_document_snapshot().unwrap();
+    assert_eq!(after_snapshot.document_id, before_snapshot.document_id);
+    assert_eq!(after_snapshot.version, before_snapshot.version);
+    assert_eq!(after_snapshot.content_sha256, before_snapshot.content_sha256);
 }

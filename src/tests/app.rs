@@ -97,6 +97,26 @@ fn runtime_bootstrap_starts_protocol_transport_with_exact_token_framing() {
 }
 
 #[test]
+fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity() {
+    let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
+    let runtime_source = include_str!("../implementation/app/runtime.rs");
+    let user_events_source = include_str!("../implementation/app/user_events.rs");
+    let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
+
+    assert!(bootstrap_source.contains("protocol_transport.attach_proxy(proxy.clone());"));
+    assert!(bootstrap_source.contains("let protocol_commands = ProtocolCommandRuntime::new(protocol_transport.identity());"));
+    assert!(runtime_source.contains("pub(super) protocol_commands: ProtocolCommandRuntime,"));
+    assert!(runtime_source.contains("protocol_commands,"));
+    assert!(user_events_source.contains("UserEvent::ProtocolRequest(request) => {"));
+    assert!(user_events_source.contains(".protocol_commands"));
+    assert!(user_events_source.contains(".handle(&request.payload, &runtime.workspace)"));
+    assert!(user_events_source.contains("let _ = request.response.send(response);"));
+    assert!(command_source.contains("request.instance_token != self.identity.exact_instance_token()"));
+    assert!(command_source.contains("\"request_id_conflict\""));
+    assert!(command_source.contains("\"command_not_ready\""));
+}
+
+#[test]
 fn app_shell_includes_find_panel_markup_and_handlers() {
     let html = app_shell_html(
         AppTheme::Default,
