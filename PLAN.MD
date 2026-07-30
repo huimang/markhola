@@ -251,8 +251,37 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - If physical Intel hardware is not used, disclose the remaining Intel CPU/GPU and native window
      system risk in the release notes
 
+### v0.9.1
+1. Export the current document as a PNG image
+   - Add a user-visible export action for saving the currently active Markdown document as PNG
+   - Export the complete rendered document rather than only the visible viewport
+   - Preserve the same rendered Markdown, theme, Mermaid, math, and local-image behavior used by
+     the current document preview
+   - Let the caller choose the output path and report the final path or a clear failure reason
+   - Keep PNG export separate from normal Markdown save behavior and existing PDF/HTML export
+2. Add a local process-command protocol for export and save automation
+   - Allow a local automation client to send structured commands to a running MarkHola process
+     without taking keyboard focus or driving the visible UI
+   - Cover at least exporting the active document as PNG and saving the active writable document
+   - Require each request to carry a request ID, command name, target document identity when needed,
+     output path or save options, and an explicit overwrite policy
+   - Return a structured response with the request ID, success or failure status, affected document,
+     final output path when applicable, and a stable error code and message
+   - Keep command execution bound to the intended running MarkHola instance and fail closed when the
+     target document is missing, ambiguous, readonly, or no longer current
+   - Keep the protocol local-only and avoid exposing a network-listening service
+   - Reuse the same application save and export paths as user-triggered actions so automated
+     validation proves production behavior instead of a separate test-only implementation
+3. Add validation coverage for UI and non-UI PNG export
+   - Verify PNG export from the visible application action and through the local process-command
+     protocol against the exact packaged candidate
+   - Verify deterministic request/response correlation, output-file identity, overwrite handling,
+     failure responses, and no-focus-stealing behavior
+   - Use the protocol to accelerate release validation without treating protocol success alone as a
+     substitute for visual inspection of representative PNG output
+
 ### v1.0.0
-Start this milestone immediately after v0.9.0 is successfully published; do not schedule v0.9.1 or v0.9.2 work in between.
+Start this milestone immediately after v0.9.1 is successfully published.
 
 1. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
@@ -302,7 +331,7 @@ Start this milestone immediately after v0.9.0 is successfully published; do not 
    - Treat document-view zoom as a viewport-scale behavior that can enlarge rendered content such as images, tables, formulas, and diagrams together
    - Keep document-view zoom separate from the saved document font-size setting
 
-### Post-v1.0.0 (version TBD)
+### Post-v1.5.0 (version TBD)
 1. Add Windows 11 support
    - Run MarkHola on Windows 11 with the same core Markdown reading flow as macOS
    - Keep readonly and writable document behavior aligned with the existing product scope
