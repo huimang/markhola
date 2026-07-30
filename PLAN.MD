@@ -296,9 +296,8 @@ This is another markdown reader and exporter software.Written by AI, free are th
    - Use the protocol to accelerate release validation without treating protocol success alone as a
      substitute for visual inspection of representative PNG, PDF, and HTML output
 
-### v0.9.3
-Start this milestone after v0.9.1 is successfully published. Keep v0.9.2 unassigned until Product
-defines its scope.
+### v0.9.2
+Start this milestone after v0.9.1 is successfully published.
 
 1. Add one-shot command-line document export through the MarkHola application binary
    - Support `export-png`, `export-pdf`, and `export-html` commands without opening a visible
@@ -325,9 +324,9 @@ defines its scope.
 3. Keep the first CLI release intentionally bounded
    - Do not add document editing, save, Save As, running-instance control, arbitrary filesystem
      access, shell execution, WebView JavaScript, stdin streaming, batch, watch mode, or global
-     command installation in v0.9.3
+     command installation in v0.9.2
    - Keep running-instance automation in the v0.9.1 Unix-domain-socket protocol and offline
-     source-to-artifact conversion in the v0.9.3 CLI
+     source-to-artifact conversion in the v0.9.2 CLI
    - Add paired technical design and test documents before implementation and provide a tracked
      example Markdown file that validates CLI PNG, PDF, and HTML output
    - Verify no visible window or focus change, exact source and output identity, source
@@ -335,7 +334,7 @@ defines its scope.
      visual output, and parity with the shared production export services
 
 ### v1.0.0
-Start this milestone immediately after v0.9.3 is successfully published.
+Start this milestone immediately after v0.9.2 is successfully published.
 
 1. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
