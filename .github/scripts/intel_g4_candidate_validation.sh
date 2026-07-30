@@ -18,6 +18,7 @@ BLOCKERS_FILE="$UI_DIR/blockers.txt"
 STARTUP_LOG="$UI_DIR/startup.log"
 APP_LOG_PATH_FILE="$UI_DIR/app-log-path.txt"
 RUNTIME_ARCH_FILE="$UI_DIR/runtime-architecture.txt"
+MATRIX_GATE="$ROOT_DIR/.github/scripts/validate_intel_g4_matrix.sh"
 
 DMG_PATH="$CANDIDATE_DIR/$RELEASE_ASSET_NAME"
 MOUNT_ROOT="$RUNNER_TEMP/intel-g4-mount"
@@ -162,6 +163,7 @@ download_draft_asset() {
   } >"$CANDIDATE_DIR/sha256.txt"
 
   [[ "$actual_sha" == "$EXPECTED_SHA256" ]] || fail_closed "Draft asset SHA-256 mismatch"
+  append_ui_result "candidate_sha256" "PASS" "Downloaded draft asset matches expected SHA-256"
 }
 
 verify_runner_identity() {
@@ -186,6 +188,7 @@ verify_runner_identity() {
   [[ "$hw_machine" == "x86_64" ]] || fail_closed "Hardware view must report x86_64"
   [[ "$translated" == "0" ]] || fail_closed "sysctl.proc_translated must be 0"
   [[ "$arm64_flag" == "0" ]] || fail_closed "Runner must not expose Apple Silicon hardware mode"
+  append_ui_result "runner_identity" "PASS" "Runner is native x86_64 with sysctl.proc_translated=0"
 }
 
 verify_dmg_and_copy_app() {
@@ -209,6 +212,7 @@ verify_dmg_and_copy_app() {
 
   ditto "$mounted_app" "$APP_COPY"
   [[ -d "$APP_COPY/Contents/MacOS" ]] || fail_closed "Copied app bundle is incomplete"
+  append_ui_result "dmg_identity" "PASS" "Exact UDZO DMG verified, mounted read-only, and copied"
 }
 
 verify_bundle_manifest() {
@@ -274,6 +278,7 @@ verify_version_signature_and_resources() {
   compare_directory_parity "$ROOT_DIR/themes" "$APP_COPY/Contents/Resources/themes" "themes"
   cmp -s "$ROOT_DIR/assets/logo.png" "$APP_COPY/Contents/Resources/logo.png" || fail_closed "logo.png resource parity mismatch"
   [[ -f "$APP_COPY/Contents/Resources/MarkHola.icns" ]] || fail_closed "Missing generated MarkHola.icns"
+  append_ui_result "bundle_identity" "PASS" "Bundle version, signature, architecture, minos, and resources passed"
 }
 
 compile_window_probe() {
@@ -341,7 +346,7 @@ check_gui_capabilities() {
     can_run_gui=0
   fi
 
-  return "$can_run_gui"
+  [[ "$can_run_gui" -eq 1 ]]
 }
 
 capture_blocked_ui_placeholders() {
@@ -414,6 +419,18 @@ run_gui_matrix() {
   ps -p "$app_pid" -o pid=,ppid=,state=,etime=,command= >"$UI_DIR/process.txt"
   lsof -p "$app_pid" >"$UI_DIR/lsof.txt" 2>&1 || true
   sample "$app_pid" 2 1 -file "$UI_DIR/sample.txt" >/dev/null 2>&1 || printf 'BLOCKED: sample command failed for pid=%s\n' "$app_pid" >"$UI_DIR/sample.txt"
+
+  if grep -Fq "$APP_COPY/Contents/MacOS/MarkHola" "$UI_DIR/process.txt"; then
+    append_ui_result "executable_path_binding" "PASS" "Process command is bound to the copied candidate executable"
+  else
+    append_ui_result "executable_path_binding" "BLOCKED" "Process command does not prove the copied candidate executable path"
+  fi
+
+  if grep -Fq "$APP_COPY/Contents/MacOS/MarkHola" "$UI_DIR/lsof.txt"; then
+    append_ui_result "lsof_binding" "PASS" "lsof binds the candidate executable to pid=$app_pid"
+  else
+    append_ui_result "lsof_binding" "BLOCKED" "lsof does not bind the candidate executable to pid=$app_pid"
+  fi
 
   if grep -q 'Code Type:.*X86-64' "$UI_DIR/sample.txt" \
     && ! grep -Eqi 'translated|arm64|aarch64' "$UI_DIR/sample.txt"; then
@@ -538,13 +555,7 @@ APPLESCRIPT
 }
 
 finalize_result() {
-  if grep -q $'\tBLOCKED\t' "$UI_MATRIX_FILE"; then
-    note "overall=BLOCKED"
-    return 1
-  fi
-
-  note "overall=PASS"
-  return 0
+  bash "$MATRIX_GATE" "$UI_MATRIX_FILE" "$BLOCKERS_FILE" "$SUMMARY_FILE"
 }
 
 write_step_summary() {
@@ -584,6 +595,8 @@ require_command swiftc
 require_command osascript
 require_command sample
 require_command lsof
+require_command grep
+require_command awk
 
 run_static_self_test
 validate_sha_input
@@ -602,5 +615,7 @@ else
   capture_blocked_ui_placeholders
 fi
 
+final_status=0
+finalize_result || final_status=$?
 write_step_summary
-finalize_result
+exit "$final_status"
