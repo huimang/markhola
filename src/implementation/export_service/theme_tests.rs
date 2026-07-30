@@ -74,10 +74,15 @@ fn png_and_pdf_share_theme_specific_render_input() {
         NEXT_THEME_TEST.fetch_add(1, Ordering::Relaxed),
     ));
     fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("local.svg"),
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#17B890"/></svg>"##,
+    )
+    .unwrap();
     let document = ActiveDocument::open_with_id(
         2,
         root.join("source.md"),
-        "```mermaid\ngraph TD\nA-->B\n```".to_string(),
+        "```mermaid\ngraph TD\nA-->B\n```\n\n$E=mc^2$\n\n![local](./local.svg)".to_string(),
         format!("file://{}/", root.display()),
     );
     let rendered = crate::pdf_export::render_export_document_html(&document);
@@ -87,7 +92,19 @@ fn png_and_pdf_share_theme_specific_render_input() {
     assert_ne!(light, dark);
     assert!(light.contains("theme: \"default\""));
     assert!(dark.contains("theme: \"dark\""));
+    assert!(light.contains("background: var(--bg)"));
+    assert!(dark.contains("background: var(--bg)"));
+    assert!(light.contains("color: var(--text)"));
+    assert!(dark.contains("color: var(--text)"));
+    assert!(!light.contains("background: #ffffff"));
+    assert!(!dark.contains("background: #ffffff"));
+    assert!(!light.contains("color: #111111"));
+    assert!(!dark.contains("color: #111111"));
     assert!(light.contains("graph TD"));
     assert!(dark.contains("graph TD"));
+    assert!(light.contains("math math-inline"));
+    assert!(dark.contains("math math-inline"));
+    assert!(light.contains("data:image/svg+xml;base64,"));
+    assert!(dark.contains("data:image/svg+xml;base64,"));
     fs::remove_dir_all(root).unwrap();
 }

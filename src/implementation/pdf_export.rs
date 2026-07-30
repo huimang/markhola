@@ -43,11 +43,11 @@ const EXPORT_PRINT_CSS: &str = r#"
 html, body {
   margin: 0;
   padding: 0;
-  background: #ffffff;
+  background: var(--bg);
 }
 
 body {
-  color: #111111;
+  color: var(--text);
 }
 
 .export-page {
@@ -56,7 +56,7 @@ body {
   max-width: 816px;
   margin: 0 auto;
   padding: 48px 56px 40px;
-  background: #ffffff;
+  background: var(--bg);
 }
 
 .export-footer {
@@ -68,7 +68,7 @@ body {
   text-align: right;
   font-size: 10px;
   line-height: 1.4;
-  color: #f8f7f4;
+  color: var(--muted);
   user-select: none;
 }
 
