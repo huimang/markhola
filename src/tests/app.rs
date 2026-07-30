@@ -73,6 +73,30 @@ fn suppresses_the_expected_blank_finish_once_before_recovering_again() {
 }
 
 #[test]
+fn runtime_bootstrap_starts_protocol_transport_with_exact_token_framing() {
+    let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
+    let runtime_source = include_str!("../implementation/app/runtime.rs");
+    let transport_source = include_str!("../implementation/app/protocol_transport/mod.rs");
+    let discovery_source = include_str!("../implementation/app/protocol_transport/discovery.rs");
+
+    assert!(bootstrap_source.contains("let protocol_transport = ProtocolTransport::start()?;"));
+    assert!(runtime_source.contains("pub(super) _protocol_transport: ProtocolTransport,"));
+    assert!(runtime_source.contains("_protocol_transport: protocol_transport,"));
+    assert!(transport_source.contains("if !frame_has_exact_token(&payload, expected_token) {"));
+    assert!(transport_source.contains("let expected_token = endpoint.instance_token().to_string();"));
+    assert!(transport_source.contains("if let Some(newline) = payload.iter().position(|byte| *byte == b'\\n') {"));
+    assert!(transport_source.contains("if payload.len() != newline + 1 {"));
+    assert!(transport_source.contains("if newline == 0 {"));
+    assert!(transport_source.contains("return Ok(payload);"));
+    assert!(transport_source.contains("if count == 0 {"));
+    assert!(transport_source.contains("return Err(());"));
+    assert!(transport_source.contains("constant_time_eq("));
+    assert!(transport_source.contains("instance_token: &'a str,"));
+    assert!(discovery_source.contains("instance_token: token.clone(),"));
+    assert!(discovery_source.contains("pub(super) fn instance_token(&self) -> &str {"));
+}
+
+#[test]
 fn app_shell_includes_find_panel_markup_and_handlers() {
     let html = app_shell_html(
         AppTheme::Default,
