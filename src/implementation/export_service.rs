@@ -17,9 +17,12 @@ mod output;
 pub use cancellation::ExportCancellation;
 use cancellation::run_with_cancellation;
 pub(crate) use cancellation::{
-    begin_export_cancellation, cooperative_cancellation_requested, finish_export_cancellation,
-    request_export_cancellation,
+    CancelOutcome, ExportStatus, begin_export_cancellation, cancel_export_and_wait,
+    cooperative_cancellation_requested, export_status, finish_export, finish_unresolved_export,
+    register_queued_export,
 };
+#[cfg(test)]
+pub(crate) use cancellation::{finish_export_cancellation, request_export_cancellation};
 use output::{atomic_commit, validate_format, validate_target};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

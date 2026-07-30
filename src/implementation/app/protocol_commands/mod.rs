@@ -102,9 +102,6 @@ impl ProtocolCommandRuntime {
         } else {
             self.execute(&request, workspace)
         };
-        if request.command.is_export() {
-            export_service::finish_export_cancellation(&request.request_id);
-        }
         let status = if response["ok"] == true {
             RequestStatus::Completed
         } else if response["error_code"] == "cancelled" {
@@ -112,6 +109,14 @@ impl ProtocolCommandRuntime {
         } else {
             RequestStatus::Failed
         };
+        if request.command.is_export() {
+            let export_status = match status {
+                RequestStatus::Completed => export_service::ExportStatus::Completed,
+                RequestStatus::Cancelled => export_service::ExportStatus::Cancelled,
+                _ => export_service::ExportStatus::Failed,
+            };
+            export_service::finish_export(&request.request_id, export_status);
+        }
         let encoded = encode(response);
         self.remember(request.request_id, fingerprint, encoded.clone(), status);
         encoded
