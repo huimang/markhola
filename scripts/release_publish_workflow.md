@@ -36,33 +36,40 @@ Run the automated regression flow first:
 ./scripts/release_regression.sh --with-package
 ```
 
-This should leave you with a packaged release candidate at:
+This should leave you with an architecture-specific pair:
 
 ```bash
-dist/MarkHola-<version>.dmg
+dist/MarkHola-<version>-apple-silicon.dmg
+dist/MarkHola-<version>-intel.dmg
 ```
 
-For `v0.9.0` and later macOS releases, the packaged app must be a single Universal 2 bundle:
+For `v0.9.0`, verify both thin Apps independently:
 
 ```bash
 ./scripts/verify_macos_architectures.sh \
-  --app dist/MarkHola.app \
-  --universal
+  --app dist/MarkHola-apple-silicon.app \
+  --architecture arm64
+./scripts/verify_macos_architectures.sh \
+  --app dist/MarkHola-intel.app \
+  --architecture x86_64
 ```
 
-The check must prove that the main executable contains only `arm64` and `x86_64`, both slices use
-the macOS 14.0 deployment target, `LSMinimumSystemVersion` is 14.0, no incompatible helper Mach-O is
-bundled, and the final assembled App signature remains valid.
+Each check must prove that the main executable and every bundled Mach-O contain only the named
+architecture, every Mach-O uses the macOS 14.0 deployment target, `LSMinimumSystemVersion` is 14.0,
+and the final assembled App signature remains valid. Both Apps must come from one commit and have
+identical user-visible resources.
 
 ## 2. Run pre-publish sandbox validation
 
-Before creating or publishing the GitHub release, validate the packaged app in a macOS sandbox environment.
+Before Product creates or publishes the GitHub release, validate both packaged Apps in their
+accepted macOS environments.
 
-The validation target should be the exact DMG file that will be uploaded to GitHub, not a separately rebuilt artifact.
+Each validation target must be the exact architecture-specific DMG file that Product will upload,
+not a separately rebuilt artifact.
 
 Recommended sandbox validation flow:
 
-1. Mount `dist/MarkHola-<version>.dmg`
+1. Mount the architecture-specific `dist/MarkHola-<version>-<architecture>.dmg`
 2. Copy `MarkHola.app` from the mounted volume into a sandbox-local path
 3. Before launching, check whether other local `MarkHola.app` copies already exist, especially `/Applications/MarkHola.app`
 4. Stop or isolate other running `MarkHola` processes so LaunchServices does not route validation to an older installed copy
@@ -76,14 +83,13 @@ Recommended sandbox validation flow:
 12. Switch back to readonly mode and verify rendered output
 13. If the release includes `[toc]`, verify the generated table of contents updates after save
 
-For a Universal 2 release, also capture the actual running architecture:
+Capture the actual running architecture for each thin candidate:
 
 - Apple Silicon native launch must report `aarch64`
-- Intel native launch must report `x86_64`
-- when Product authorizes the Rosetta fallback, force the exact candidate's x86_64 slice and record
-  `sysctl.proc_translated=1`, the candidate process path, and startup logs reporting `x86_64`
-- Rosetta evidence must retain the documented Intel hardware, GPU, WebKit, PDFKit, and window-system
-  residual risks
+- Intel validation must run on a physical Intel Mac or true x86_64 macOS 14+ virtual/fully emulated
+  guest and report `x86_64`
+- virtual/fully emulated Intel validation must prove `sysctl.proc_translated=0`
+- Rosetta, arm64 Tart, and static architecture evidence are supplemental and cannot pass Intel G4
 
 Hard rule:
 
@@ -109,13 +115,13 @@ If sandbox validation fails, do not upload or publish the DMG.
 
 If the UI behavior and the logs disagree, assume the wrong app copy may have been activated first, then re-run validation against a confirmed candidate process path.
 
-## 3. Create the GitHub release draft
+## 3. Product creates the GitHub release draft
 
-Only after the sandbox checks pass:
+Only Product performs these actions, and only after both architecture checks pass:
 
 1. create the Git tag `v<version>` on the final release commit
 2. draft the GitHub release
-3. upload the already-validated DMG file
+3. upload both already-validated architecture-specific DMG files
 4. fill the release title and notes
 
 The release notes should summarize the items listed under the matching version in `PLAN.MD`.
@@ -124,27 +130,28 @@ The release notes should summarize the items listed under the matching version i
 
 Publish the release only after confirming all of the following:
 
-- the uploaded DMG is the same validated artifact
+- both uploaded DMGs are the same validated artifacts
 - the release title matches `MarkHola-<version>`
 - the release notes match the target version scope
 - every packaged `Help > Documentation` language matches the target version and user-visible release
   scope
 - the Git tag points at the intended final release commit
-- the GitHub Release contains only one `MarkHola-<version>.dmg` installation asset
-- the downloaded release asset has the same SHA-256 as the frozen validated candidate
+- the GitHub Release contains exactly `MarkHola-<version>-apple-silicon.dmg` and
+  `MarkHola-<version>-intel.dmg`
+- each downloaded release asset has the same SHA-256 as its frozen validated candidate
 
 ## 5. Keep evidence
 
 For each release, keep a short verification record with:
 
-- the DMG path
-- the copied validation app path
+- both DMG paths
+- both copied validation App paths
 - the running process path used during validation
 - the tested version
 - the sandbox validation result
 - the key behaviors verified
-- the App slice list and per-slice deployment target
-- the actual native and Intel/Rosetta process architectures
+- the complete Mach-O list, thin architecture, and deployment target for each App
+- the actual Apple Silicon and qualified Intel/x86_64 process architectures
 - whether Developer ID signing, DMG signing, notarization, staple, and validate ran or were skipped
 - the GitHub release URL after publish
 

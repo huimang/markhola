@@ -67,7 +67,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Open Markdown files from Finder on macOS
 - Open external links in the default browser
 - macOS app bundle and DMG packaging
-- One Universal 2 macOS app and DMG for Apple Silicon and Intel
+- Separate architecture-specific macOS DMGs for Apple Silicon and Intel
 
 ## Platform
 
@@ -149,13 +149,23 @@ Create a fast host-architecture app for local development:
 ./scripts/build_app.sh
 ```
 
-Create and verify the Universal 2 app without packaging:
+Create and verify an Apple Silicon app without packaging:
 
 ```bash
-./scripts/build_app.sh --universal
+./scripts/build_app.sh \
+  --target aarch64-apple-darwin \
+  --app dist/MarkHola-apple-silicon.app
 ```
 
-Run the standalone Universal 2 architecture-gate tests:
+Create and verify an Intel app without packaging:
+
+```bash
+./scripts/build_app.sh \
+  --target x86_64-apple-darwin \
+  --app dist/MarkHola-intel.app
+```
+
+Run the standalone thin-architecture gate tests:
 
 ```bash
 ./scripts/test_verify_macos_architectures.sh
@@ -163,10 +173,10 @@ Run the standalone Universal 2 architecture-gate tests:
 
 Release order for GitHub publishing:
 
-1. `./scripts/release_regression.sh --with-package`
-2. sandbox-validate the exact DMG candidate
-3. create the GitHub release draft and upload that validated DMG
-4. publish the release only after the sandbox checks pass
+1. Engineering runs `./scripts/release_regression.sh --with-package` from one clean commit.
+2. Testing validates each exact architecture-specific DMG in its matching accepted environment.
+3. Product uploads the already-validated pair to the GitHub release draft.
+4. Product publishes only after both architecture gates pass.
 
 ## Project Structure
 

@@ -20,11 +20,12 @@ scripts/release_publish_workflow.md
 
 ## Manual checks
 
-1. Universal 2 candidate identity
-   Expected: `scripts/verify_macos_architectures.sh --app dist/MarkHola.app --universal` passes.
-   Expected: the main executable contains only `arm64` and `x86_64`.
-   Expected: both slices and `LSMinimumSystemVersion` report macOS 14.0.
-   Expected: the final assembled App signature is valid.
+1. Paired thin candidate identity
+   Expected: `scripts/verify_macos_architectures.sh --app dist/MarkHola-apple-silicon.app --architecture arm64` passes.
+   Expected: `scripts/verify_macos_architectures.sh --app dist/MarkHola-intel.app --architecture x86_64` passes.
+   Expected: every Mach-O contains only the asset's named architecture.
+   Expected: every Mach-O and `LSMinimumSystemVersion` report macOS 14.0.
+   Expected: both final assembled App signatures are valid and their user-visible resources match.
 
 2. Empty launch close behavior
    Expected: launch the app with no document opened, press `Command+W`, and the app exits.
@@ -113,7 +114,7 @@ scripts/release_publish_workflow.md
 
 ## Pre-publish sandbox verification
 
-Use the exact DMG candidate that will be uploaded to GitHub.
+Use each exact architecture-specific DMG candidate that Product will upload to GitHub.
 
 1. Mount the release DMG and launch the copied `MarkHola.app`
    Expected: the packaged app starts normally inside the sandboxed macOS environment.
@@ -134,14 +135,16 @@ Use the exact DMG candidate that will be uploaded to GitHub.
    Expected: each bundled document shows the target version and accurately describes the packaged feature and menu behavior.
 
 7. Validate Apple Silicon runtime identity
+   Expected: physical Apple Silicon macOS 14+ runs `MarkHola-<version>-apple-silicon.dmg`.
    Expected: the exact copied candidate process path is recorded and startup/About report `aarch64`.
 
 8. Validate Intel runtime identity
-   Expected: a macOS 14+ Intel Mac runs the same DMG and startup/About report `x86_64`.
-   Expected: if Product authorizes Rosetta instead, the exact candidate is forced to x86_64,
-   `sysctl.proc_translated=1` is recorded, and the full accepted fallback behavior suite is run.
+   Expected: a physical Intel Mac or true x86_64 macOS 14+ virtual/fully emulated guest runs
+   `MarkHola-<version>-intel.dmg` and startup/About report `x86_64`.
+   Expected: a virtual/fully emulated guest proves `sysctl.proc_translated=0`; Rosetta and arm64
+   guests do not satisfy the Intel acceptance gate.
 
 9. Freeze and re-read the release asset
-   Expected: the final DMG SHA-256 is recorded before upload.
-   Expected: the uploaded asset is downloaded again and has the same file name, size, and SHA-256.
-   Expected: the release has one Universal 2 DMG rather than separate architecture assets.
+   Expected: both final DMG SHA-256 values are recorded before upload.
+   Expected: Product downloads both uploaded assets and confirms each file name, size, and SHA-256.
+   Expected: the release contains exactly the Apple Silicon and Intel architecture-specific DMGs.
