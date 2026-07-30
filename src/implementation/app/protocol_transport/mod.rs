@@ -113,31 +113,26 @@ fn handle_connection(mut stream: UnixStream, expected_uid: u32, expected_token: 
 fn read_frame(stream: &mut UnixStream) -> Result<Vec<u8>, ()> {
     let mut payload = Vec::new();
     let mut chunk = [0u8; 4096];
-    let mut delimiter = None;
     loop {
         let count = stream.read(&mut chunk).map_err(|_| ())?;
         if count == 0 {
-            break;
+            return Err(());
         }
         payload.extend_from_slice(&chunk[..count]);
         if payload.len() > MAX_REQUEST_BYTES {
             return Err(());
         }
-        if delimiter.is_none() {
-            delimiter = payload.iter().position(|byte| *byte == b'\n');
-        }
-        if let Some(newline) = delimiter {
+        if let Some(newline) = payload.iter().position(|byte| *byte == b'\n') {
             if payload.len() != newline + 1 {
                 return Err(());
             }
+            if newline == 0 {
+                return Err(());
+            }
+            payload.truncate(newline);
+            return Ok(payload);
         }
     }
-    let newline = delimiter.ok_or(())?;
-    if newline == 0 || newline + 1 != payload.len() {
-        return Err(());
-    }
-    payload.truncate(newline);
-    Ok(payload)
 }
 
 #[derive(Deserialize)]

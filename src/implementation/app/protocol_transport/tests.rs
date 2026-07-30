@@ -58,6 +58,27 @@ fn accepts_same_uid_unix_peer_without_exposing_commands() {
 }
 
 #[test]
+fn responds_after_one_frame_without_client_half_close() {
+    let (root, paths) = temporary_paths("open-write-side");
+    let transport = ProtocolTransport::start_with_paths(paths).unwrap();
+    let mut stream = UnixStream::connect(transport.socket_path()).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(1)))
+        .unwrap();
+    stream
+        .write_all(&request_frame(&record_token(&transport)))
+        .unwrap();
+
+    let mut response = vec![0; NOT_READY_RESPONSE.len() + 1];
+    stream.read_exact(&mut response).unwrap();
+    assert_eq!(response, [NOT_READY_RESPONSE, b"\n"].concat());
+
+    drop(stream);
+    drop(transport);
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
 fn rejects_missing_wrong_and_stale_tokens_but_accepts_current_token() {
     let (root, paths) = temporary_paths("token");
     let first = ProtocolTransport::start_with_paths(paths.clone()).unwrap();
