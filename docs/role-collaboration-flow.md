@@ -325,6 +325,38 @@ evidence and remaining-risk summary and retains the final product and release go
 The GUI portion runs only in an approved isolated macOS environment or a user-provided host-idle
 window; headless checks should be completed separately without occupying the active desktop.
 
+#### Scripted true-device validation
+
+Testing should use `scripts/device_validation/run.sh` as the default orchestration entry point for
+new release-candidate validation. The runner first binds both exact DMG paths and SHA-256 values,
+mounts and copies the candidates through the exact-artifact identity runner, and creates a new
+run-specific evidence directory. It then discovers one shell case per file under
+`scripts/device_validation/cases/`, runs selected cases with isolated evidence, and writes
+structured `summary.json`, `summary.md`, and log output. Release mutation is always `NONE`.
+
+Each case declares a stable `CASE_ID`, title, tags, timeout, and `case_run` function. A case must
+emit one structured `CASE_RESULT status=PASS|FAIL|BLOCKED|UNSET` and explicit `EXPECT` records;
+ordinary prose or a successful process exit cannot produce a pass. The aggregate status uses the
+following precedence: `FAIL`, then `BLOCKED`, then `UNSET`, then `PASS`. A timeout, missing
+structured result, missing evidence, duplicate case ID, or candidate identity mismatch fails
+closed. Re-running a case always uses a new evidence directory and never overwrites prior evidence.
+
+When a feature is accepted for implementation, Architect defines the objective acceptance boundary
+and Testing adds or updates a feature-scoped case in the same package. The case must document its
+goal, prerequisites, expected structured events, evidence outputs, timeout, and whether it is
+objective or manual-only. Testing updates the framework test for discovery, status aggregation,
+identity binding, evidence isolation, and failure behavior when the change affects those contracts.
+Do not put product code, Release mutations, or ignored candidate artifacts in a case commit.
+
+Objective visual probes may produce a per-format metrics file for
+`scripts/device_validation/evaluate_visual_metrics.sh`. This may evaluate contrast, geometry,
+clipping, resource completeness, and output validity for each Light/Dark and PNG/PDF/HTML/Print
+run. It is an objective regression layer, not a claim that a page feels comfortable or natural.
+GUI appearance, interaction quality, trackpad behavior, and true Intel hardware remain Product
+manual checklist items. Manual-only cases stay `UNSET` until Product records `PASS`, `FAIL`, or
+an explicitly accepted residual; an unavailable environment is `BLOCKED` and is never promoted
+automatically.
+
 ### Step 10 — Architect prepares final technical acceptance
 
 After Testing and review findings have converged, the Architect confirms the code is ready for
