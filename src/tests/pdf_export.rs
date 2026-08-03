@@ -116,6 +116,45 @@ fn static_exports_fit_only_tables_to_the_frozen_content_width() {
 }
 
 #[test]
+fn png_pdf_and_print_share_complete_accessible_footnote_html() {
+    let document = document(
+        "/tmp/footnotes.md",
+        "Body[^long] and repeated[^long].\n\n[^long]: A long shared-output footnote with **formatting**, $x^2$, and enough content to remain part of the measured full document height.",
+    );
+    let rendered = markdown::render_html(document.markdown());
+    let light = build_export_html_with_theme_and_context(
+        &document,
+        &rendered,
+        "default",
+        RenderContext::default(),
+    );
+    let dark = build_export_html_with_theme_and_context(
+        &document,
+        &rendered,
+        "dark",
+        RenderContext::default(),
+    );
+
+    for html in [&rendered, &light, &dark] {
+        assert!(html.contains("class=\"footnotes\" aria-label=\"Footnotes\""));
+        assert!(html.contains("id=\"markhola-footnote-ref-1-2\""));
+        assert!(html.contains("href=\"#markhola-footnote-ref-1-2\""));
+        assert!(html.contains("A long shared-output footnote"));
+        assert!(html.contains("<strong>formatting</strong>"));
+        assert!(html.contains("class=\"math math-inline\""));
+    }
+    assert!(light.find("class=\"footnotes\"").unwrap() < light.find("class=\"export-footer\"").unwrap());
+    assert!(dark.find("class=\"footnotes\"").unwrap() < dark.find("class=\"export-footer\"").unwrap());
+
+    let source = include_str!("../implementation/pdf_export.rs");
+    assert!(source.contains("render_document_png_data_with_theme"));
+    assert!(source.contains("render_document_pdf_data_with_theme"));
+    assert!(source.contains("prepare_printable_webview_with_context"));
+    assert!(source.contains("markdown::render_html_with_image_resolver"));
+    assert!(source.contains("height: measurement.height"));
+}
+
+#[test]
 fn print_preparation_does_not_enable_static_table_fitting() {
     let source = include_str!("../implementation/pdf_export.rs");
     assert!(source.contains(
