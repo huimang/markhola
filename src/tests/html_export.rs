@@ -58,6 +58,23 @@ fn standalone_html_preserves_the_accessible_scrollable_table_region() {
 }
 
 #[test]
+fn standalone_html_uses_the_shared_accessible_footnote_model() {
+    let document = ActiveDocument::open_with_id(
+        1,
+        PathBuf::from("/tmp/footnotes.md"),
+        "Shared[^note] and again[^note].\n\n[^note]: Export footnote.".to_string(),
+        "file:///tmp/".to_string(),
+    );
+
+    let html = build_export_html(&document);
+
+    assert!(html.contains("class=\"footnotes\" aria-label=\"Footnotes\""));
+    assert!(html.contains("id=\"markhola-footnote-ref-1-2\""));
+    assert!(html.contains("href=\"#markhola-footnote-ref-1-2\""));
+    assert!(html.contains("Export footnote."));
+}
+
+#[test]
 fn export_markdown_file_to_path_preserves_source_and_writes_html_document() {
     let input = temp_path("source", "md");
     let output = temp_path("export", "html");

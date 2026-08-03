@@ -1,3 +1,5 @@
+#[path = "markdown/footnotes.rs"]
+mod footnotes;
 #[path = "markdown/syntax_theme.rs"]
 mod syntax_theme;
 
@@ -29,6 +31,7 @@ pub(crate) fn render_html_with_image_resolver(
     options.insert(Options::ENABLE_STRIKETHROUGH);
     options.insert(Options::ENABLE_TASKLISTS);
     options.insert(Options::ENABLE_MATH);
+    options.insert(Options::ENABLE_FOOTNOTES);
 
     let parser = Parser::new_ext(&markdown, options).map(|event| match event {
         Event::Start(Tag::Image {
@@ -49,6 +52,7 @@ pub(crate) fn render_html_with_image_resolver(
         }
         other => other,
     });
+    let (parser, footnotes) = footnotes::rewrite(parser);
     let mut html_output = String::new();
     let mut regular_events = Vec::new();
     let mut events = parser.into_iter();
@@ -116,6 +120,7 @@ pub(crate) fn render_html_with_image_resolver(
     }
 
     push_regular_html(&mut html_output, &mut regular_events);
+    html_output.push_str(&footnotes);
 
     if has_toc_placeholder {
         let toc_html = render_toc(&headings);
@@ -467,10 +472,15 @@ fn slugify_heading(value: &str) -> String {
 }
 
 fn unique_heading_id(used: &mut std::collections::HashMap<String, usize>, base: &str) -> String {
-    let count = used.entry(base.to_string()).or_insert(0);
+    let base = if base.starts_with("markhola-footnote-") {
+        format!("heading-{base}")
+    } else {
+        base.to_string()
+    };
+    let count = used.entry(base.clone()).or_insert(0);
     *count += 1;
     if *count == 1 {
-        base.to_string()
+        base
     } else {
         format!("{base}-{}", *count)
     }

@@ -269,3 +269,66 @@ fn export_verification_example_keeps_disposable_copy_and_source_preservation_ins
     assert!(html.contains("<table>"));
     assert!(html.contains("assets/diagram.svg"));
 }
+
+#[test]
+fn renders_referenced_footnotes_in_first_reference_order_with_distinct_backlinks() {
+    let html =
+        render_html("Second[^b], first[^a], and second again[^b].\n\n[^a]: Alpha.\n[^b]: Beta.");
+
+    assert!(html.contains("id=\"markhola-footnote-ref-1-1\""));
+    assert!(html.contains("id=\"markhola-footnote-ref-1-2\""));
+    assert!(html.contains("id=\"markhola-footnote-ref-2-1\""));
+    assert!(html.contains("href=\"#markhola-footnote-definition-1\" aria-label=\"Footnote 1\""));
+    assert!(html.contains("href=\"#markhola-footnote-ref-1-1\""));
+    assert!(html.contains("href=\"#markhola-footnote-ref-1-2\""));
+    assert!(html.find("Beta.").unwrap() < html.find("Alpha.").unwrap());
+}
+
+#[test]
+fn renders_only_referenced_definitions_and_preserves_safe_markdown_content() {
+    let html = render_html(
+        "Text[^used].\n\n[^unused]: Hidden.\n[^used]: **Strong** with $x^2$, a list:\n\n    - item\n\n    ![local](asset.svg)",
+    );
+
+    assert!(html.contains("<strong>Strong</strong>"));
+    assert!(html.contains("class=\"math math-inline\""));
+    assert!(html.contains("<li>item</li>"));
+    assert!(html.contains("src=\"asset.svg\""));
+    assert!(!html.contains("Hidden."));
+}
+
+#[test]
+fn footnotes_fail_safe_for_missing_nested_and_duplicate_definitions() {
+    let html = render_html(
+        "Missing[^missing] and used[^one].\n\n[^one]: First with nested[^two].\n[^one]: Duplicate.\n[^two]: Nested target.",
+    );
+
+    assert!(html.contains("[^missing]"));
+    assert!(html.contains("First with nested[^two]."));
+    assert!(!html.contains("Duplicate."));
+    assert!(!html.contains("Nested target."));
+}
+
+#[test]
+fn footnote_anchor_namespace_is_separate_from_heading_ids() {
+    let html = render_html(
+        "# Markhola Footnote Definition 1\n\nText[^note].\n\n[^note]: Note.",
+    );
+
+    assert!(html.contains("id=\"heading-markhola-footnote-definition-1\""));
+    assert!(html.contains("id=\"markhola-footnote-definition-1\""));
+    assert!(html.contains("aria-label=\"Footnotes\""));
+    assert!(html.contains("aria-label=\"Back to footnote 1 reference 1\""));
+}
+
+#[test]
+fn footnotes_escape_raw_html_and_do_not_activate_custom_nested_content() {
+    let html = render_html(
+        "Safe[^note].\n\n[^note]: <script>alert('no')</script> and <span>plain</span>.",
+    );
+
+    assert!(!html.contains("<script>"));
+    assert!(!html.contains("<span>plain</span>"));
+    assert!(html.contains("&lt;script&gt;"));
+    assert!(html.contains("&lt;span&gt;plain&lt;/span&gt;"));
+}

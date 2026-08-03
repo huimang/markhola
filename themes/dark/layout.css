@@ -481,6 +481,56 @@ body.workspace-empty #modeState {
   margin: 1em 0;
 }
 
+.markdown-body .footnotes {
+  margin-top: 40px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.markdown-body .footnotes > hr {
+  margin: 0 0 20px;
+}
+
+.markdown-body .footnotes__list {
+  margin: 0;
+  padding-left: 28px;
+}
+
+.markdown-body .footnotes__item {
+  margin-bottom: 12px;
+  padding-left: 4px;
+  break-inside: auto;
+}
+
+.markdown-body .footnotes__item > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body .footnotes__item > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body .footnote-reference {
+  margin-inline: 2px;
+  font-size: 0.78em;
+  line-height: 1;
+}
+
+.markdown-body .footnote-reference--missing {
+  color: var(--muted);
+}
+
+.markdown-body .footnotes__backlinks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.markdown-body .footnotes__backlink {
+  font-size: 0.82em;
+}
+
 .markdown-body a,
 .markdown-body a:visited {
   color: var(--markhola-violet-mid);

@@ -1045,3 +1045,16 @@ fn app_shell_routes_local_markdown_links_through_ipc() {
     assert!(script.contains("pathname.endsWith(\".markdown\")"));
     assert!(script.contains("kind: \"open-markdown-link\""));
 }
+
+#[test]
+fn theme_styles_include_accessible_footnote_layout() {
+    for css in [
+        include_str!("../../themes/default/layout.css"),
+        include_str!("../../themes/dark/layout.css"),
+    ] {
+        assert!(css.contains(".markdown-body .footnotes {"));
+        assert!(css.contains(".markdown-body .footnotes__backlinks {"));
+        assert!(css.contains("display: inline-flex;"));
+        assert!(css.contains("flex-wrap: wrap;"));
+    }
+}
