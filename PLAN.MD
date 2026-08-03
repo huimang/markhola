@@ -344,10 +344,106 @@ Start this milestone after v0.9.1 is successfully published.
      preservation, overwrite and path safety, stable exit codes and JSON responses, representative
      visual output, and parity with the shared production export services
 
-### v1.0.0
-Start this milestone immediately after v0.9.2 is successfully published.
+### v0.9.3
+Start this milestone after v0.9.2 is successfully published.
 
-1. Detect external Markdown file changes while a document is open
+1. Complete keyboard document-font-size control
+   - Support `Command +` and `Command -` to increase or decrease document font size
+   - Keep the existing persisted document-font-size range and treat the shortcuts as typography changes rather than document-view zoom
+2. Add horizontal interaction for tables wider than the document
+   - Keep the document reading surface at 960 px and make only an overflowing table region horizontally scrollable
+   - Support trackpad and keyboard horizontal navigation without introducing page-level horizontal scrolling
+   - Keep the table region focusable and identifiable to accessibility clients
+   - Preserve complete table content in PNG and PDF output without using the current UI scroll offset, showing scrollbars, or clipping columns
+   - Keep standalone HTML tables horizontally scrollable when their natural width exceeds the document content area
+   - Define deterministic static-export fitting and minimum-readable-scale behavior in the paired design and test documents before implementation
+3. Make printing follow the visible document font size
+   - Snapshot the current persisted document-font-size setting when `File > Print` starts
+   - Apply that font-size setting consistently to printable text, headings, code, tables, Mermaid, math, and local-image layout
+   - Let font-size changes affect pagination while preserving the existing PDF canvas and centered reading-surface geometry
+   - Keep temporary document-view pinch zoom separate so it does not alter printing or persisted font-size settings
+   - Make UI PDF, PNG, and standalone HTML exports use the same current document-font-size snapshot
+   - Keep CLI and socket exports deterministic at 100% unless they receive an explicit future font-size option
+4. Add Markdown footnote support
+   - Support footnote references such as `[^id]` and matching definitions such as `[^id]: content`
+   - Number footnotes by first reference order, reuse the same number for repeated references, and provide a distinct return link for each reference
+   - Render referenced definitions in a dedicated document-end footnote region with stable anchors, keyboard navigation, and accessible labels
+   - Support existing safe inline Markdown, paragraphs, lists, math, and local images inside footnotes without adding footnote-specific resource syntax
+   - Keep heading identifiers and footnote identifiers in separate deterministic namespaces
+   - Preserve the original Markdown through editing, saving, and Save As
+   - Use the same footnote model and structure in the app, PNG, PDF, standalone HTML, and native Print, including complete long-document output without clipping
+   - Do not render unreferenced definitions, and exclude nested footnotes and non-standard custom footnote syntax from v0.9.3
+   - Verify repeated and missing definitions, duplicate identifiers, code-block lookalikes, safe links, Light/Dark themes, document font sizes, pagination, and source preservation
+
+### v0.9.4
+Start this milestone after v0.9.3 is successfully published.
+
+1. Add GitHub-compatible Markdown Alerts
+   - Support blockquote Alerts for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!CAUTION]`, and `[!WARNING]`
+   - Recognize an Alert only when its marker is the first non-empty content in a blockquote, accepting ASCII case-insensitive markers and surrounding whitespace
+   - Preserve ordinary blockquote rendering when the marker is missing, unknown, misplaced, or appears inside a code block
+   - Preserve safe paragraphs, line breaks, lists, emphasis, links, code, math, and local images inside Alert content
+   - Render a stable accessible region, localized visible type label, and decorative icon for each Alert type
+   - Use dedicated Light and Dark theme tokens with accessible text, border, icon, and background contrast
+   - Preserve the original Markdown through editing, saving, and Save As
+   - Use the same Alert structure in the app, PNG, PDF, standalone HTML, and native Print, including long content and page breaks without clipping
+   - Exclude nested Alerts, custom Alert types, interactive collapsing, Alert-specific Mermaid behavior, remote resources, and source rewriting from v0.9.4
+   - Verify all five types, case and whitespace handling, multiline content, ordinary blockquote fallback, unsafe input, accessibility, themes, exports, printing, and source preservation
+2. Consolidate implementation structure by responsibility
+   - Group WebView page structure, presentation CSS, shell assembly, and page interaction under a coherent `app/web_surface` boundary
+   - Group native macOS menu definitions, state, installation, and target/action code under a coherent `app/native_menu` boundary
+   - Evaluate a separate `app/window_runtime` boundary for native windows, tabs, WebView lifecycle, and workspace orchestration
+   - Keep shared Markdown semantics, export services, protocol transport, and resource resolution outside UI-only directories
+   - Base moves on responsibility, cohesion, dependency direction, platform conditions, test ownership, and resource-path impact rather than filename prefixes alone
+   - Require a small refactor blueprint, disjoint owner/write set, validation plan, and separate integration boundary before each structural move
+   - Preserve behavior, public boundaries, conditional compilation, test discoverability, and resource loading; defer or reject moves that introduce cycles, broader visibility, duplicate abstractions, or unrelated churn
+   - Verify module structure, affected tests, resource paths, build/package behavior, and maintainability after each incremental move
+
+### v0.9.5
+Start this milestone after v0.9.4 is successfully published.
+
+1. Add offline GeoJSON map rendering
+   - Recognize fenced code blocks labeled `geojson` as the only v0.9.5 map input surface
+   - Render valid point, line, polygon, multi-geometry, GeometryCollection, Feature, and FeatureCollection data as deterministic bundled SVG without network access or map tiles
+   - Interpret coordinates as longitude and latitude and fit valid geometry to deterministic bounds without adding custom CRS or projection selection
+   - Provide keyboard-accessible pan, zoom, Fit, and Reset controls in the app without modifying the Markdown source or geometry data
+   - Use accessible SVG image semantics, geometry summaries, and Light/Dark theme tokens that do not rely on color alone
+   - Make PNG, PDF, standalone HTML, and native Print use the same geometry and style model while always fitting the complete map independently of the current UI pan or zoom state
+   - Preserve a safe readable fallback for invalid or unsupported data instead of rendering a blank region
+   - Limit each map block to 2 MiB, 100,000 geometries, 1,000,000 coordinate points, nesting depth 64, and the existing static-output dimension and pixel limits
+   - Reject invalid JSON, unsupported geometry, invalid coordinates, scripts, HTML injection, remote URLs, external resources, and limit violations with stable errors
+   - Exclude map tiles, basemaps, geocoding, measurements, route planning, editing, live data, animation, custom CRS, 3D data, MVT, local JSON file loading, and third-party runtime map frameworks from v0.9.5
+   - Verify supported geometry types, malformed and adversarial input, accessibility, interaction, themes, deterministic exports, complete bounds, source preservation, and existing render-feature regressions
+
+### v0.9.6
+Start this milestone after v0.9.5 is successfully published.
+
+1. Add offline STL 3D model viewing
+   - Support ASCII STL in fenced code blocks labeled `stl`
+   - Support ASCII and binary STL through restricted relative `.stl` document assets resolved by the existing canonical asset-access boundary
+   - Reject absolute paths, path traversal, symlink escapes, network URLs, arbitrary local files, and non-STL assets
+   - Parse ASCII and binary STL in Rust into one validated mesh, bounds, normal, camera, and lighting model without changing source coordinates
+   - Treat STL coordinates as unitless, use valid supplied normals, recompute missing or invalid normals, and fail closed on non-finite coordinates, malformed records, and degenerate geometry
+   - Provide offline bundled WebGL orbit, pan, zoom, Fit, and Reset interaction in the app with keyboard-accessible controls and model summaries
+   - Use deterministic initial camera, centering, lighting, background, and Light/Dark theme tokens across all render paths
+   - Make PNG, PDF, and native Print capture the complete model from the canonical initial camera without inheriting current UI interaction, controls, scroll position, or window size
+   - Keep standalone HTML fully offline and interactive while starting from the same deterministic camera and model state
+   - Show a stable accessible error and model summary when WebGL is unavailable, and fail static export rather than producing a blank or misleading result
+   - Limit each STL to 32 MiB, 2,000,000 triangles, approximately 6,000,000 vertex references, 512 MiB working memory, 60 seconds, and the existing static-output dimension and pixel limits
+   - Exclude materials, textures, STL color extensions, assemblies, multiple-model scenes, animation, editing, slicing, measurements, annotations, collision analysis, network resources, and non-STL 3D formats from v0.9.6
+   - Verify valid and malformed ASCII/binary STL, truncation, counts, limits, unsafe paths, deterministic camera parity, interaction, accessibility, themes, exports, printing, source preservation, and coexistence with existing rendered content
+
+### v1.0.0
+Start this milestone immediately after v0.9.6 is successfully published.
+
+1. Make trackpad document-view zoom the primary v1.0 experience
+   - Add macOS two-finger pinch zoom for document viewing
+   - Use system trackpad pinch gestures to zoom the document view itself instead of changing the saved document-font-size preference
+   - Treat document-view zoom as a viewport-scale behavior that enlarges rendered text, images, tables, formulas, and diagrams together
+   - Keep document-view zoom separate from the saved document-font-size setting and block-focused large-view overlays
+   - Preserve document content, editing state, scroll stability, and native macOS gesture expectations while zooming
+   - Validate smooth zooming, useful minimum and maximum scales, readable rendering, and consistent behavior across Light and Dark themes
+2. Detect external Markdown file changes while a document is open
    - If the current document has no unsaved changes, automatically reload the latest on-disk content
    - If the current document has unsaved changes, prompt the user to choose one of:
      - Reload the latest on-disk content directly
@@ -362,7 +458,7 @@ Start this milestone immediately after v0.9.2 is successfully published.
      - Overwrite the current on-disk file with the editor content
      - Save the current editor content to a temporary file, then load the latest on-disk content
      - Keep the current document unchanged
-2. Add large-view support for images and Mermaid diagrams
+3. Add large-view support for images and Mermaid diagrams
    - Allow image and Mermaid blocks to be opened in an overlay when the normal document layout is
      too small
    - Support zooming and panning inside the overlay
@@ -370,10 +466,9 @@ Start this milestone immediately after v0.9.2 is successfully published.
    - Keep the original document content unchanged while entering and leaving the larger viewing mode
    - Keep this capability separate from document font-size changes and document-view zoom
    - Treat this as a block-focused viewing mode for oversized rendered content rather than a global document scaling action
-3. Add a dedicated Settings page for MarkHola configuration
+4. Add a dedicated Settings page for MarkHola configuration
    - Provide one configuration entry for the user to manage app settings instead of scattering them only across menus
    - Cover theme, document font size, and interface language in the first version
-   - Support `Command +` and `Command -` to increase or decrease document font size
    - Treat document font size as a typography setting for the current reading and editing experience
    - Let font-size changes affect text-centric layout such as paragraphs, headings, lists,
      blockquotes, code blocks, and spacing
@@ -382,18 +477,11 @@ Start this milestone immediately after v0.9.2 is successfully published.
    - Keep the page style consistent with MarkHola's existing visual language
    - Allow the Settings page to become the shared entry point for future configuration items
 
-4. Align the 1.0 release documentation and validation surface
+5. Align the 1.0 release documentation and validation surface
    - Update `README.md`, bundled Help, examples, validation records, and release workflow before
      publishing v1.0.0
    - Keep the existing Apple Intel and Apple Silicon support as a compatibility baseline rather than
      treating it as new v1.0.0 feature scope
-
-### v1.0.2
-1. Add document-view zoom for reading
-   - Add macOS two-finger pinch zoom for document viewing
-   - Use system trackpad pinch gestures to zoom the document view itself instead of changing the saved document font-size preference
-   - Treat document-view zoom as a viewport-scale behavior that can enlarge rendered content such as images, tables, formulas, and diagrams together
-   - Keep document-view zoom separate from the saved document font-size setting
 
 ### Post-v1.5.0 (version TBD)
 1. Add Windows 11 support
