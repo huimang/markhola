@@ -102,7 +102,10 @@ fn replace_file_path_turns_draft_into_saved_document_at_new_path() {
     assert!(!document.is_draft());
     assert!(!document.is_dirty());
     assert_eq!(document.file_path(), target);
-    assert_eq!(snapshot.file_name, target.file_name().unwrap().to_string_lossy());
+    assert_eq!(
+        snapshot.file_name,
+        target.file_name().unwrap().to_string_lossy()
+    );
     assert_eq!(snapshot.file_path, target.display().to_string());
     assert_eq!(snapshot.title, "Saved elsewhere");
     assert_eq!(snapshot.save_status, "Saved");

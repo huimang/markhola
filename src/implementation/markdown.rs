@@ -69,10 +69,8 @@ pub(crate) fn render_html_with_image_resolver(
                 }
 
                 let heading_text = heading_plain_text(&heading_events);
-                let heading_id = unique_heading_id(
-                    &mut used_heading_ids,
-                    &slugify_heading(&heading_text),
-                );
+                let heading_id =
+                    unique_heading_id(&mut used_heading_ids, &slugify_heading(&heading_text));
                 headings.push(TocHeading {
                     level,
                     id: heading_id.clone(),
@@ -266,7 +264,10 @@ fn fence_marker(line: &str) -> Option<(char, usize)> {
     if first != '`' && first != '~' {
         return None;
     }
-    let len = trimmed.chars().take_while(|character| *character == first).count();
+    let len = trimmed
+        .chars()
+        .take_while(|character| *character == first)
+        .count();
     (len >= 3).then_some((first, len))
 }
 
@@ -282,7 +283,10 @@ fn replace_angle_bracket_links_in_line(line: &str) -> String {
         let remainder = &line[index..];
 
         if remainder.starts_with('`') {
-            let tick_count = remainder.chars().take_while(|character| *character == '`').count();
+            let tick_count = remainder
+                .chars()
+                .take_while(|character| *character == '`')
+                .count();
             let closing = format!("{}`", "`".repeat(tick_count.saturating_sub(1)));
             if let Some(offset) = remainder[tick_count..].find(&closing) {
                 let end = index + tick_count + offset + tick_count;
@@ -345,8 +349,7 @@ fn is_angle_bracket_link_target(value: &str) -> bool {
 fn is_html_tag_name(value: &str) -> bool {
     matches!(
         value,
-        "a"
-            | "abbr"
+        "a" | "abbr"
             | "article"
             | "aside"
             | "b"
@@ -453,10 +456,7 @@ fn slugify_heading(value: &str) -> String {
     }
 }
 
-fn unique_heading_id(
-    used: &mut std::collections::HashMap<String, usize>,
-    base: &str,
-) -> String {
+fn unique_heading_id(used: &mut std::collections::HashMap<String, usize>, base: &str) -> String {
     let count = used.entry(base.to_string()).or_insert(0);
     *count += 1;
     if *count == 1 {

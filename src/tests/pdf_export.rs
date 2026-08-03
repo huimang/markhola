@@ -52,7 +52,10 @@ fn suggested_pdf_path_keeps_source_document_path_unchanged() {
 
     let export_path = document.suggested_pdf_export_path();
 
-    assert_eq!(document.file_path(), PathBuf::from("/tmp/source-preserved.md"));
+    assert_eq!(
+        document.file_path(),
+        PathBuf::from("/tmp/source-preserved.md")
+    );
     assert_eq!(export_path, PathBuf::from("/tmp/source-preserved.pdf"));
 }
 
@@ -225,7 +228,10 @@ fn pdf_canvas_has_symmetric_thirty_two_pixel_gutters() {
 #[test]
 fn printable_page_count_rounds_up_for_partial_last_page() {
     assert_eq!(printable_page_count_for_height(EXPORT_WEBVIEW_HEIGHT), 1);
-    assert_eq!(printable_page_count_for_height(EXPORT_WEBVIEW_HEIGHT + 1.0), 2);
+    assert_eq!(
+        printable_page_count_for_height(EXPORT_WEBVIEW_HEIGHT + 1.0),
+        2
+    );
     assert_eq!(printable_page_count_for_height(6647.0), 6);
 }
 

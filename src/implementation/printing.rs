@@ -4,7 +4,10 @@ use objc2_app_kit::{NSApp, NSPrintInfo};
 use crate::app::log_event;
 use crate::document::ActiveDocument;
 use crate::file_io;
-use crate::pdf_export::{prepare_printable_webview, prepare_printable_webview_with_measurement, printable_page_count_for_height};
+use crate::pdf_export::{
+    prepare_printable_webview, prepare_printable_webview_with_measurement,
+    printable_page_count_for_height,
+};
 
 pub fn print_document(document: &ActiveDocument) -> Result<PrintOutcome, String> {
     log_event(
@@ -78,7 +81,9 @@ pub fn smoke_prepare_markdown_file_for_print(input_path: &std::path::Path) -> Re
     Ok(())
 }
 
-pub fn smoke_count_markdown_file_print_pages(input_path: &std::path::Path) -> Result<usize, String> {
+pub fn smoke_count_markdown_file_print_pages(
+    input_path: &std::path::Path,
+) -> Result<usize, String> {
     let input_path = std::fs::canonicalize(input_path)
         .map_err(|error| format!("Failed to canonicalize input path: {error}"))?;
     let markdown = file_io::load_markdown(&input_path)?;

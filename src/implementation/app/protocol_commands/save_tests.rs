@@ -168,7 +168,12 @@ fn save_commands_preserve_request_idempotency_and_failed_status_semantics() {
     assert_eq!(replay, first);
 
     let conflict = response(runtime.handle_mut(
-        &request("save-as-idempotent", "save_document", workspace.document_by_id(7).unwrap().version(), None),
+        &request(
+            "save-as-idempotent",
+            "save_document",
+            workspace.document_by_id(7).unwrap().version(),
+            None,
+        ),
         &mut workspace,
     ));
     assert_eq!(conflict["error_code"], "request_id_conflict");
@@ -224,13 +229,23 @@ fn save_commands_reject_mismatched_and_open_targets() {
     let mut runtime = runtime();
 
     let mismatch = response(runtime.handle_mut(
-        &request("save-mismatch", "save_document", version, Some((&other, false))),
+        &request(
+            "save-mismatch",
+            "save_document",
+            version,
+            Some((&other, false)),
+        ),
         &mut workspace,
     ));
     assert_eq!(mismatch["error_code"], "save_target_mismatch");
 
     let open_target = response(runtime.handle_mut(
-        &request("save-target-open", "save_document_as", version, Some((&other, true))),
+        &request(
+            "save-target-open",
+            "save_document_as",
+            version,
+            Some((&other, true)),
+        ),
         &mut workspace,
     ));
     assert_eq!(open_target["error_code"], "save_target_open");

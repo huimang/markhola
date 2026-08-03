@@ -8,7 +8,11 @@ pub(super) fn new_registry() -> AssetAccessRegistry {
     Arc::new(RwLock::new(HashMap::new()))
 }
 
-pub(super) fn register_document(registry: &AssetAccessRegistry, document_id: u64, path: &Path) -> Result<(), String> {
+pub(super) fn register_document(
+    registry: &AssetAccessRegistry,
+    document_id: u64,
+    path: &Path,
+) -> Result<(), String> {
     let parent = path
         .parent()
         .ok_or_else(|| "Document path does not have a parent directory.".to_string())?;
@@ -42,7 +46,10 @@ pub(super) fn resolve_asset(
     if path.as_os_str().is_empty()
         || path.is_absolute()
         || path.components().any(|component| {
-            matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_))
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
         })
     {
         return Err(AssetAccessError::Forbidden);
@@ -78,7 +85,10 @@ mod tests {
     use super::*;
 
     fn temp_dir(name: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!("markhola-asset-access-{name}-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!(
+            "markhola-asset-access-{name}-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
         path
@@ -94,12 +104,24 @@ mod tests {
         let registry = new_registry();
         register_document(&registry, 7, &document).unwrap();
 
-        assert_eq!(resolve_asset(&registry, 7, "image.png").unwrap(), std::fs::canonicalize(&image).unwrap());
-        assert!(matches!(resolve_asset(&registry, 7, "../outside.png"), Err(AssetAccessError::Forbidden)));
-        assert!(matches!(resolve_asset(&registry, 7, "/etc/passwd"), Err(AssetAccessError::Forbidden)));
+        assert_eq!(
+            resolve_asset(&registry, 7, "image.png").unwrap(),
+            std::fs::canonicalize(&image).unwrap()
+        );
+        assert!(matches!(
+            resolve_asset(&registry, 7, "../outside.png"),
+            Err(AssetAccessError::Forbidden)
+        ));
+        assert!(matches!(
+            resolve_asset(&registry, 7, "/etc/passwd"),
+            Err(AssetAccessError::Forbidden)
+        ));
 
         unregister_document(&registry, 7);
-        assert!(matches!(resolve_asset(&registry, 7, "image.png"), Err(AssetAccessError::UnknownDocument)));
+        assert!(matches!(
+            resolve_asset(&registry, 7, "image.png"),
+            Err(AssetAccessError::UnknownDocument)
+        ));
         let _ = std::fs::remove_dir_all(root);
     }
 
@@ -118,7 +140,10 @@ mod tests {
         let registry = new_registry();
         register_document(&registry, 8, &document).unwrap();
 
-        assert!(matches!(resolve_asset(&registry, 8, "escape.png"), Err(AssetAccessError::Forbidden)));
+        assert!(matches!(
+            resolve_asset(&registry, 8, "escape.png"),
+            Err(AssetAccessError::Forbidden)
+        ));
 
         let _ = std::fs::remove_dir_all(root);
         let _ = std::fs::remove_dir_all(outside);
