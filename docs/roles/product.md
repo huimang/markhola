@@ -59,8 +59,12 @@ Within this repository, the Product role must also:
 - treat failed release validation as a release blocker, not a follow-up convenience issue
 - ensure Testing's true-device evidence covers the intended product experience, important
   scenarios, and release candidate before making the final go/no-go decision
-- promptly commit each confirmed, small, complete, and independently understandable `PLAN.MD` or
-  product-planning package within Product's write scope
+- leave reviewed `PLAN.MD` changes unstaged and uncommitted by default; commit a confirmed, small,
+  complete, and independently understandable `PLAN.MD` or product-planning package only after the
+  user explicitly asks Product to commit it
+- while `PLAN.MD` scope remains under discussion or awaits user confirmation, keep every role in a
+  no-stage, no-commit, and no-push state for that scope; declare the planning boundary frozen only
+  after the user confirms it, then release role-owned commit work according to the collaboration flow
 - use `[update|remove|add|bugfix] <product-session-name>: <English summary>` and the actual Product
   session name for those commits
 - do not create a commit for pure coordination when no tracked product-planning file changed
@@ -87,7 +91,7 @@ The Product role should produce or approve:
 - role-routing and handoff decisions
 - current-stage, critical-path, owner, next-action, dependency, blocker, and acceptance-exit state
 - important-scenario HTML design mockups when required by the work
-- incrementally committed product-planning changes when tracked files changed
+- reviewed product-planning changes, with commit readiness deferred until explicit user instruction
 - release go/no-go decisions
 - final version publication approval
 

@@ -112,6 +112,7 @@ Within this repository, the Architect role must also:
 - safe parallel-work planning and conflict-aware delegation
 - code review
 - code-style and repository-convention review
+- structural maintainability review, including responsibility clustering and directory cohesion
 - terminology discipline
 - interface constraint design
 - performance and maintainability analysis
@@ -203,6 +204,22 @@ The Architect role reviews at least these dimensions:
 - clarity of abstractions
 - quality and necessity of comments
 - business fitness of API and interface design
+- discoverability of related files and directories
+- responsibility cohesion for filename clusters, including prefixed groups such as `menu*`
+- dependency direction, visibility, conditional compilation, test ownership, and refactor cost
+- whether a capability directory or module consolidation improves maintainability without becoming
+  a mechanical rename or introducing unrelated churn
+
+For structural findings, the Architect should first produce a compact inventory of affected files
+and responsibilities. Any proposed consolidation must state the target directory/module, single
+owner, disjoint write set, dependency and resource-path impact, test impact, and rollback boundary.
+The Architect should recommend a move only when the responsibility boundary is coherent; otherwise
+the review should explicitly record why the current layout is safer.
+
+Run this structural review after every small, complete implementation package. Scope it to the
+package's affected files and nearby responsibility clusters; do not defer all maintainability
+review to a version-end refactor. If a move is justified, hand it off as a separate bounded package
+with its own validation and integration point.
 - interface constraints and guardrails
 - over-design risk
 - extensibility and reuse

@@ -41,6 +41,21 @@ the next integration point. Architect retains responsibility for architecture bo
 review, acceptance clarity, and follow-up review. This rule does not change the planning-only
 boundary: implementation starts only after explicit authorization.
 
+For parallel implementation and test work, use one temporary role-scoped session or subagent per
+feature package. Give it only the package contract, write scope, dependencies, and acceptance it
+needs; do not copy unrelated project history or open-ended context into the task. After the package
+has delivered its commit or evidence and the downstream owner has consumed the handoff, close and
+release that temporary session or subagent. Long-lived role sessions retain only coordination,
+review, and integration context.
+
+Before closing any role session, perform a short knowledge closeout. Record only correct, verified,
+and materially reusable lessons that improve future work for the same role, such as a durable
+architecture constraint, a recurring validation trap, or a repository workflow rule. Do not preserve
+temporary debugging narration, duplicated status, speculative conclusions, or package-specific noise.
+Place accepted lessons in the smallest appropriate durable role or workflow document, or keep them in
+the concise handoff. Unresolved or low-confidence observations must not be promoted to shared
+knowledge.
+
 ## 1. Task types
 
 Every task must be treated as one of these modes before work begins:
@@ -109,10 +124,28 @@ Before coding:
 
 ### Incremental commit rule
 
-Product, Engineering, Testing, and Architect should commit an owned work package as soon as it is a
-small, complete, validated, and independently understandable unit. Do not wait until the end of a
-long task to batch unrelated packages. Product applies this rule to confirmed `PLAN.MD` and product
-planning changes; pure coordination without tracked changes needs no commit.
+While `PLAN.MD` scope is still being discussed, revised, or awaiting user confirmation, no role may
+stage, commit, or push changes for that scope. Product, Architect, Engineering, and Testing must keep
+their planning and review changes unstaged and uncommitted until the user confirms the scope and
+Product explicitly declares it frozen. After that freeze, each role resumes the owned incremental
+commit rules below.
+
+Engineering, Testing, and Architect should commit an owned work package as soon as it is a small,
+complete, validated, and independently understandable unit. Do not wait until the end of a long task
+to batch unrelated packages. Product may update `PLAN.MD` for review, but must leave that planning
+diff unstaged and uncommitted until the user explicitly asks for the change to be committed. Once
+the user gives that explicit instruction, Product applies the same incremental rule to the confirmed
+`PLAN.MD` or product-planning package. Pure coordination without tracked changes needs no commit.
+
+After the team explicitly decides to start development for a version, and the paired design, test
+plan, and example direction are confirmed, it may create one independent scope-freeze commit before
+implementation begins. This commit may contain only confirmed tracked planning or version metadata
+within the committing role's write scope; ignored
+drafts, implementation code, tests, fixtures, build outputs, and unreconciled scope changes stay out.
+The freeze commit records that implementation may start and remains separate from later feature,
+test, documentation, packaging, and release commits. If Product governance still requires the
+`PLAN.MD` diff to remain uncommitted, record the freeze in the handoff and wait for the user's explicit
+commit instruction rather than bypassing that rule.
 
 Use:
 
@@ -126,6 +159,34 @@ Architect reviews the resulting history, integration order, and read-only releas
 without replacing another role's independent commit. Architect does not create or modify release
 tags, GitHub drafts/releases, release assets, public release state, or downloaded release readback;
 Product is the single owner of those release operations.
+
+### Structural maintainability review
+
+Before an implementation package is accepted, the Architect must review repository structure in
+addition to runtime behavior. File names and sibling clusters are signals of responsibility, not
+proof of a correct boundary. The review should:
+
+- inventory related files by responsibility, directory, naming prefix, platform boundary, and test
+  ownership
+- identify clusters whose files implement the same capability but are scattered or difficult to
+  discover, such as several `menu*` files under an application directory
+- compare cohesion, dependency direction, public interfaces, conditional compilation, test location,
+  ownership, and expected future growth before recommending consolidation
+- prefer a focused capability directory when it materially improves discoverability and preserves
+  clear boundaries; do not move files solely to make names look uniform
+- require a small refactor blueprint, impact list, and validation plan before an approved move, and
+  keep the move separate from unrelated feature behavior whenever practical
+- treat circular dependencies, broader visibility, duplicate abstractions, broken resource paths,
+  or harder test ownership as reasons to reject or defer the consolidation
+
+The final review records either the accepted structure, the specific consolidation package, or the
+reason the current layout should remain. A directory move is not required when existing module
+boundaries are cohesive and discoverable.
+
+This review is required after each small, complete implementation package, not only during a
+version-end cleanup. Limit each pass to the files and responsibility clusters affected by that
+package. Record safe consolidation work as a separate follow-up package with its own owner, tests,
+and integration boundary; do not accumulate unrelated structural debt for a later bulk refactor.
 
 ### Repository storage guard
 

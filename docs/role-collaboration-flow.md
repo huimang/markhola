@@ -59,6 +59,15 @@ When multiple Testing sessions run concurrently, use a dedicated `testing-bug-tr
 the sole ledger writer. Other Testing sessions deliver findings and re-test evidence to that
 session and keep their own write scopes limited to test code or device evidence.
 
+After the team explicitly decides to start development for a version, and Product confirms the paired
+design, test plan, and example direction, the roles may establish one explicit scope-freeze commit
+before implementation starts. The commit must be small, independently understandable, and limited to
+confirmed tracked planning or version metadata
+within the owner's write scope. Ignored drafts, implementation code, test code, fixtures, artifacts,
+and unresolved scope changes remain excluded. This freeze commit is separate from subsequent feature
+packages and does not authorize Release mutation; if Product governance keeps `PLAN.MD` unstaged,
+the freeze remains a handoff state until the user authorizes that Product commit.
+
 Full GUI validation must not take control of the user's active desktop. Run it in an isolated
 macOS VM, a dedicated Mac runner, or an explicit host-idle validation window provided by the user.
 Docker and non-macOS CI may execute headless tests and static gates but cannot produce release
@@ -70,6 +79,18 @@ shortens the critical path, but define one owner, a disjoint write scope, accept
 an integration point for every package. Do not parallelize a tightly coupled chain when concurrent
 changes could conflict or invalidate shared evidence; release-candidate assembly, signing,
 packaging, and artifact freezing should normally retain one owner.
+
+Each parallel Engineering or Testing package should run in a temporary, feature-scoped session or
+subagent with only the minimum context required for that package. Do not reuse a completed package's
+session for unrelated work or carry unrelated history into a new package. Once the commit or evidence
+is delivered and consumed, close the temporary session or subagent so stale context and idle work do
+not remain active.
+
+Session closeout must include a concise lessons-learned pass. Preserve only lessons that are accurate,
+verified, broadly reusable, and significant enough to change future decisions or validation. Prefer
+the smallest appropriate role or workflow document; do not store routine status, duplicate handoffs,
+speculative ideas, or one-off debugging detail. If no durable lesson meets that bar, close the session
+without adding shared knowledge.
 
 The role identity of a session should remain stable throughout the work. Do not silently switch a
 session from one primary role to another.
@@ -240,6 +261,21 @@ feedback on:
 - extensibility
 - performance
 - compatibility
+
+The Architect must also review repository discoverability and structural maintainability, including
+whether related capability files are coherently grouped by responsibility. Filename prefixes and
+sibling clusters are review signals, not automatic refactor instructions. When related files appear
+scattered, Architect first inventories their responsibilities, dependencies, platform conditions,
+test ownership, and resource paths. A directory or module consolidation is recommended only when it
+improves cohesion and discoverability without broadening visibility, creating cycles, breaking
+ownership, or mixing unrelated behavior.
+
+Approved structural moves require a small blueprint, explicit owner/write set, validation plan, and
+separate integration boundary. A purely cosmetic rename or move should be rejected or deferred.
+
+Repeat this structural pass after each small implementation package. Review only the affected
+responsibility clusters, record either the current structure or a bounded follow-up refactor, and do
+not postpone all structure work until the end of a version.
 
 If the review input is already sufficient, the Architect should continue the review directly rather
 than pausing at an acknowledgment-only reply.
@@ -460,8 +496,12 @@ split when deciding who should drive each part of the process.
 
 ### Git submission flow
 
-- Product promptly commits confirmed product-planning packages; pure coordination with no tracked
-  change needs no commit
+- While product scope is still under discussion, revision, or user review, Product, Architect,
+  Engineering, and Testing must not stage, commit, or push changes for that scope. Commit work starts
+  only after the user confirms the scope and Product explicitly declares the planning boundary frozen
+- Product leaves reviewed `PLAN.MD` and product-planning changes unstaged and uncommitted by default;
+  Product commits them only after the user explicitly asks for the commit. Pure coordination with no
+  tracked change needs no commit
 - Engineering and Testing promptly commit each small, complete, validated package within their
   disjoint write scopes
 - Architect does the same for Architect-owned design, process, or integration packages
