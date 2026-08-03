@@ -6,7 +6,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.9.2`
+- `v0.9.3`
 
 ## Features
 
@@ -35,17 +35,24 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Use Green Subtle `#FAFEFD` instead of pale yellow for the Light theme background
 - Use a subtle Gray Tint title-bar material, Green Tint `#EAF9F5` for native tabs, and Green Subtle `#FAFEFD` for the document surface
 - Use a wider centered 960 px reading area across all themes
-- Render Markdown tables with straight corners
+- Render Markdown tables with straight corners, neutral zebra rows, pointer hover, and an accessible
+  table-only horizontal scroll region
+- Move a focused wide table with ArrowLeft and ArrowRight while keeping links and other interactive
+  descendants on their native keyboard behavior
+- Fit wide tables deterministically in PNG/PDF static exports at 75% or above, or fail without a
+  partial output when the complete table cannot fit
 - Reopen the app with the previously selected shell theme still active
 - Use shared Violet, Green, and Gray color scales across native tabs, document surfaces, the native footer, links, Outline, tables, and fenced code highlighting
-- Adjust document text from `View > Size > Zoom In / Zoom Out / Reset`
+- Adjust document text from `View > Size > Zoom In / Zoom Out / Reset` or `Command + + / -`
 - Reopen the app with the previously selected document size still active
+- Snapshot the current document size for `File > Print` without inheriting pinch zoom
 - Load the app shell themes from editable files under `themes/<theme>/layout.css`
 - Save the current document with `Command + S`
 - Save a new unsaved document by choosing a path on first save
 - Save the current document to another path with `File > Save As`
 - Open the bundled documentation from `Help > Documentation`
-- Render headings, links, images, tables, lists, blockquotes, and code blocks
+- Render headings, links, images, tables, lists, blockquotes, code blocks, and accessible Markdown
+  footnotes with stable numbering and backlinks
 - Render Markdown links without underlines while retaining themed hover and focus colors
 - Render angle-bracket shorthand links such as `<README.md>` as clickable links in readonly mode
 - Syntax-highlighted fenced code blocks in readonly mode
@@ -207,6 +214,7 @@ Release order for GitHub publishing:
 - `examples/`: sample Markdown files for manual verification
 - `examples/v0.9.1-png-export-and-save-as.md`: full PNG/PDF/HTML and Save As verification fixture
 - `examples/v0.9.2-offline-cli-export.md`: one-shot offline CLI export verification fixture
+- `examples/v0.9.3-reading-and-markdown.md`: document size, Print, wide-table, and footnote fixture
 - `scripts/`: packaging scripts
 - `scripts/release_publish_workflow.md`: pre-publish sandbox validation and GitHub release workflow
 - `themes/`: directly editable app theme files
