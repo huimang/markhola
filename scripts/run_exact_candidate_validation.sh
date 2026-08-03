@@ -24,6 +24,7 @@ INTEL_MOUNT=""
 LOG=""
 MANIFEST=""
 ROOT_DIR=""
+VERIFY_ARCH_SCRIPT=""
 
 hash_file() { shasum -a 256 "$1" | awk '{print $1}'; }
 
@@ -66,7 +67,7 @@ verify_app() {
   bundle="$(plutil -extract CFBundleIdentifier raw -o - "$plist")"
   [[ "$version" = 0.9.* ]] || die "$label unexpected bundle version: $version"
   [[ "$bundle" = com.markhola.app ]] || die "$label unexpected bundle identifier: $bundle"
-  "$ROOT_DIR/scripts/verify_macos_architectures.sh" --app "$app" --architecture "$expected_arch" || die "$label bundle architecture/signature gate failed"
+  "$VERIFY_ARCH_SCRIPT" --app "$app" --architecture "$expected_arch" || die "$label bundle architecture/signature gate failed"
   executable_sha="$(hash_file "$executable")"
   print -r -- "$label.architecture=$expected_arch" >> "$MANIFEST"
   print -r -- "$label.minos=$minos" >> "$MANIFEST"
@@ -83,6 +84,7 @@ write_resource_manifest() {
 }
 
 ROOT_DIR="$(cd "${0:A:h}/.." && pwd)"
+VERIFY_ARCH_SCRIPT="$ROOT_DIR/scripts/verify_macos_architectures.sh"
 main() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -118,7 +120,6 @@ main() {
   MANIFEST="$EVIDENCE_DIR/paired-manifest.txt"
   exec > >(tee "$LOG") 2>&1
 
-  ROOT_DIR="$(cd "${0:A:h}/.." && pwd)"
   record_dmg apple "$APPLE_DMG" "$APPLE_SHA"
   record_dmg intel "$INTEL_DMG" "$INTEL_SHA"
   mount_and_copy apple "$APPLE_DMG" "$APPLE_MOUNT" "$WORK_DIR/apple-copy/MarkHola.app"

@@ -55,4 +55,153 @@ path_collision_regression() {
 
 path_collision_regression || exit 1
 print -r -- "PASS: path collision regression"
+
+main_integration_uses_repo_local_verify_script() {
+  local tmpdir stub_bin evidence_root evidence apple_dmg intel_dmg apple_sha intel_sha verify_log
+  tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/markhola-runner-main.XXXXXX")"
+  stub_bin="$tmpdir/bin"
+  evidence_root="$tmpdir/evidence-root"
+  evidence="$evidence_root/session"
+  apple_dmg="$tmpdir/apple.dmg"
+  intel_dmg="$tmpdir/intel.dmg"
+  verify_log="$tmpdir/verify.log"
+  mkdir -p "$stub_bin" "$evidence_root"
+  printf 'apple\n' > "$apple_dmg"
+  printf 'intel\n' > "$intel_dmg"
+  apple_sha="$(/usr/bin/shasum -a 256 "$apple_dmg" | /usr/bin/awk '{print $1}')"
+  intel_sha="$(/usr/bin/shasum -a 256 "$intel_dmg" | /usr/bin/awk '{print $1}')"
+
+  cat > "$stub_bin/shasum" <<'EOF'
+#!/bin/zsh
+/usr/bin/shasum "$@"
+EOF
+  cat > "$stub_bin/awk" <<'EOF'
+#!/bin/zsh
+/usr/bin/awk "$@"
+EOF
+  cat > "$stub_bin/stat" <<'EOF'
+#!/bin/zsh
+/usr/bin/stat "$@"
+EOF
+  cat > "$stub_bin/mktemp" <<'EOF'
+#!/bin/zsh
+/usr/bin/mktemp "$@"
+EOF
+  cat > "$stub_bin/sort" <<'EOF'
+#!/bin/zsh
+/usr/bin/sort "$@"
+EOF
+  cat > "$stub_bin/cmp" <<'EOF'
+#!/bin/zsh
+/usr/bin/cmp "$@"
+EOF
+  cat > "$stub_bin/tee" <<'EOF'
+#!/bin/zsh
+/usr/bin/tee "$@"
+EOF
+  cat > "$stub_bin/lipo" <<'EOF'
+#!/bin/zsh
+if [[ "$2" = *"/intel-copy/"* ]]; then
+  print -r -- "x86_64"
+else
+  print -r -- "arm64"
+fi
+EOF
+  cat > "$stub_bin/xcrun" <<'EOF'
+#!/bin/zsh
+print -r -- "minos 14.0"
+EOF
+  cat > "$stub_bin/plutil" <<'EOF'
+#!/bin/zsh
+case "$2" in
+  LSMinimumSystemVersion) print -r -- "14.0" ;;
+  CFBundleShortVersionString) print -r -- "0.9.3" ;;
+  CFBundleIdentifier) print -r -- "com.markhola.app" ;;
+  *) print -u2 -- "unexpected plutil extract: $2"; exit 1 ;;
+esac
+EOF
+  cat > "$stub_bin/codesign" <<'EOF'
+#!/bin/zsh
+exit 0
+EOF
+  cat > "$stub_bin/hdiutil" <<'EOF'
+#!/bin/zsh
+case "$1" in
+  verify) exit 0 ;;
+  attach)
+    mountpoint=""
+    shift
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        -mountpoint) mountpoint="$2"; shift 2 ;;
+        -readonly|-nobrowse) shift ;;
+        *) shift ;;
+      esac
+    done
+    mkdir -p "$mountpoint/MarkHola.app/Contents/MacOS" "$mountpoint/MarkHola.app/Contents"
+    printf '#!/bin/zsh\nexit 0\n' > "$mountpoint/MarkHola.app/Contents/MacOS/MarkHola"
+    chmod +x "$mountpoint/MarkHola.app/Contents/MacOS/MarkHola"
+    printf 'plist\n' > "$mountpoint/MarkHola.app/Contents/Info.plist"
+    ;;
+  detach) exit 0 ;;
+  *) print -u2 -- "unexpected hdiutil call: $*"; exit 1 ;;
+esac
+EOF
+  cat > "$stub_bin/find" <<'EOF'
+#!/bin/zsh
+if [[ "$*" = *"-name *.app"* && "$*" = *"-print -quit"* ]]; then
+  print -r -- "$1/MarkHola.app"
+elif [[ "$*" = *"-name *.app"* ]]; then
+  print -r -- "$1/MarkHola.app"
+elif [[ "$1" = "." ]]; then
+  /usr/bin/find "$@"
+else
+  print -u2 -- "unexpected find call: $*"
+  exit 1
+fi
+EOF
+  cat > "$stub_bin/ditto" <<'EOF'
+#!/bin/zsh
+src="$1"
+dst="$2"
+mkdir -p "$dst"
+/bin/cp -R "$src"/. "$dst"/
+EOF
+  chmod +x "$stub_bin/"*
+
+  local repo_root expected_verify_script original_verify output_file
+  repo_root="$(cd "${RUNNER:A:h}/.." && pwd)"
+  expected_verify_script="$repo_root/scripts/verify_macos_architectures.sh"
+  original_verify="$tmpdir/original-verify.sh"
+  output_file="/tmp/markhola-exact-main.out"
+  /bin/cp "$expected_verify_script" "$original_verify"
+  cat > "$expected_verify_script" <<EOF
+#!/bin/zsh
+print -r -- "\$0 \$*" >> "$verify_log"
+exit 0
+EOF
+  chmod +x "$expected_verify_script"
+
+  if ! PATH="$stub_bin:/usr/bin:/bin" "$RUNNER" \
+    --apple-dmg "$apple_dmg" \
+    --intel-dmg "$intel_dmg" \
+    --apple-sha "$apple_sha" \
+    --intel-sha "$intel_sha" \
+    --evidence-dir "$evidence" >"$output_file" 2>&1; then
+    /bin/cp "$original_verify" "$expected_verify_script"
+    print -u2 -- "main() integration regression failed"
+    cat "$output_file" >&2
+    return 1
+  fi
+
+  /bin/cp "$original_verify" "$expected_verify_script"
+  grep -Fq -- "$expected_verify_script --app $evidence/.work." "$verify_log" || {
+    print -u2 -- "verify_macos_architectures.sh was not invoked through repo-local path"
+    cat "$verify_log" >&2
+    return 1
+  }
+}
+
+main_integration_uses_repo_local_verify_script || exit 1
+print -r -- "PASS: main integration keeps repo-local verify script path"
 print -r -- "PASS: static safety and fail-closed checks"
