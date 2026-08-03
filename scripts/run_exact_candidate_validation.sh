@@ -9,7 +9,7 @@ usage() {
 die() { print -u2 -- "ERROR: $*"; exit 1; }
 need_command() { command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"; }
 
-for command_name in shasum stat hdiutil ditto find file lipo xcrun plutil codesign awk sort cmp mktemp; do
+for command_name in shasum stat hdiutil ditto find file lipo xcrun plutil codesign awk sort cmp diff mktemp; do
   need_command "$command_name"
 done
 
@@ -78,9 +78,25 @@ verify_app() {
 
 write_resource_manifest() {
   local app="$1" output="$2"
-  (cd "$app" && find . -type f -print | sort | while IFS= read -r relative; do
-    print -r -- "$(hash_file "$app/$relative")  $relative"
-  done) > "$output"
+  local resources_dir="$app/Contents/Resources"
+
+  : > "$output"
+  [[ -d "$resources_dir" ]] || return 0
+
+  (
+    cd "$resources_dir" &&
+      find . -type f -print | sort | while IFS= read -r relative; do
+        print -r -- "$(hash_file "$resources_dir/$relative")  Contents/Resources/${relative#./}"
+      done
+  ) > "$output"
+}
+
+compare_resource_manifests() {
+  local apple_manifest="$1" intel_manifest="$2" diff_output="$3"
+  if diff -u "$apple_manifest" "$intel_manifest" > "$diff_output"; then
+    return 0
+  fi
+  return 1
 }
 
 ROOT_DIR="$(cd "${0:A:h}/.." && pwd)"
@@ -128,7 +144,14 @@ main() {
   verify_app intel "$WORK_DIR/intel-copy/MarkHola.app" x86_64
   write_resource_manifest "$WORK_DIR/apple-copy/MarkHola.app" "$WORK_DIR/apple.resources.sha256"
   write_resource_manifest "$WORK_DIR/intel-copy/MarkHola.app" "$WORK_DIR/intel.resources.sha256"
-  cmp -s "$WORK_DIR/apple.resources.sha256" "$WORK_DIR/intel.resources.sha256" || die "Paired resource manifests differ"
+  cp "$WORK_DIR/apple.resources.sha256" "$EVIDENCE_DIR/apple.resources.sha256"
+  cp "$WORK_DIR/intel.resources.sha256" "$EVIDENCE_DIR/intel.resources.sha256"
+  if ! compare_resource_manifests \
+    "$WORK_DIR/apple.resources.sha256" \
+    "$WORK_DIR/intel.resources.sha256" \
+    "$EVIDENCE_DIR/resource-parity.diff"; then
+    die "Paired resource manifests differ"
+  fi
   print -r -- "resource_parity=PASS" >> "$MANIFEST"
   print -r -- "manual.GUI_AX=UNSET" >> "$MANIFEST"
   print -r -- "manual.visual_rendering=UNSET" >> "$MANIFEST"
@@ -152,8 +175,6 @@ The objective candidate manifest is not a release decision. Product must bind an
 manual result to the copied App path, process identity, and exact candidate SHA.
 Release/tag/asset mutation: NONE.
 EOF
-  cp "$WORK_DIR/apple.resources.sha256" "$EVIDENCE_DIR/apple.resources.sha256"
-  cp "$WORK_DIR/intel.resources.sha256" "$EVIDENCE_DIR/intel.resources.sha256"
   print -r -- "Validation complete: objective candidate checks PASS; manual items remain UNSET."
 }
 
