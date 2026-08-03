@@ -201,7 +201,7 @@ fn write_export(
     Ok(())
 }
 
-fn choose_export_path(document: &ActiveDocument) -> Option<PathBuf> {
+pub(crate) fn choose_export_path(document: &ActiveDocument) -> Option<PathBuf> {
     let suggested_name = suggested_html_export_path(document.file_path())
         .file_name()?
         .to_string_lossy()
@@ -240,6 +240,18 @@ pub(crate) fn build_export_html(document: &ActiveDocument) -> String {
 }
 
 pub(crate) fn build_export_html_with_theme(document: &ActiveDocument, theme_name: &str) -> String {
+    build_export_html_with_theme_and_context(
+        document,
+        theme_name,
+        crate::pdf_export::RenderContext::default(),
+    )
+}
+
+pub(crate) fn build_export_html_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: crate::pdf_export::RenderContext,
+) -> String {
     HTML_EXPORT_TEMPLATE
         .replace("__TITLE__", document.file_name())
         .replace("__BASE_URL__", document.base_url())
@@ -256,7 +268,10 @@ pub(crate) fn build_export_html_with_theme(document: &ActiveDocument, theme_name
                 "default"
             },
         )
-        .replace("__EXPORT_CSS__", HTML_EXPORT_CSS)
+        .replace(
+            "__EXPORT_CSS__",
+            &format!("{HTML_EXPORT_CSS}\n{}", context.typography_css()),
+        )
         .replace(
             "__MERMAID_RUNTIME__",
             &render_assets::mermaid_runtime_for_inline_script(),

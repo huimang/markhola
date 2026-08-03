@@ -5,15 +5,20 @@ use rfd::FileDialog;
 use crate::app::{AppTheme, text};
 use crate::document::ActiveDocument;
 use crate::export_service::{self, ExportCancellation, ExportFormat};
-use crate::html_export::{self, HtmlExportOutcome};
-use crate::pdf_export::{self, PdfExportOutcome, RenderContext};
+use crate::html_export;
+use crate::pdf_export::{self, RenderContext};
 use crate::printing::{self, PrintOutcome};
 use crate::workspace::DocumentWorkspace;
 use wry::WebView;
 
 use super::workspace_view::{render_error_status, render_export_success};
 
-pub(super) fn export_png(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
+pub(super) fn export_png(
+    webview: &WebView,
+    workspace: &DocumentWorkspace,
+    theme: AppTheme,
+    context: RenderContext,
+) {
     let Some(document) = workspace.active_document() else {
         render_error_status(webview, text("status.no_document"));
         return;
@@ -21,9 +26,10 @@ pub(super) fn export_png(webview: &WebView, workspace: &DocumentWorkspace, theme
     let Some(path) = choose_png_export_path(document) else {
         return;
     };
-    match export_service::export_document_to_path_with_theme(
+    match export_service::export_document_to_path_with_theme_and_context(
         document,
         theme,
+        context,
         ExportFormat::Png,
         &path,
         true,
@@ -66,34 +72,70 @@ fn suggested_png_path(path: &Path) -> PathBuf {
     output
 }
 
-pub(super) fn export_pdf(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
+pub(super) fn export_pdf(
+    webview: &WebView,
+    workspace: &DocumentWorkspace,
+    theme: AppTheme,
+    context: RenderContext,
+) {
     match workspace.active_document() {
-        Some(document) => match pdf_export::export_document(document, theme.key()) {
-            Ok(PdfExportOutcome::Exported(path)) => render_export_success(
-                webview,
-                &text("status.exported_pdf").replace("{path}", &path.display().to_string()),
+        Some(document) => {
+            let Some(path) = pdf_export::choose_export_path(document) else {
+                return;
+            };
+            match export_service::export_document_to_path_with_theme_and_context(
+                document,
+                theme,
+                context,
+                ExportFormat::Pdf,
                 &path,
-                text("menu.open"),
-            ),
-            Ok(PdfExportOutcome::Cancelled) => {}
-            Err(message) => render_error_status(webview, &message),
-        },
+                true,
+                &ExportCancellation::default(),
+            ) {
+                Ok(result) => render_export_success(
+                    webview,
+                    &text("status.exported_pdf")
+                        .replace("{path}", &result.path.display().to_string()),
+                    &result.path,
+                    text("menu.open"),
+                ),
+                Err(failure) => render_error_status(webview, &failure.message),
+            }
+        }
         None => render_error_status(webview, text("status.no_document")),
     }
 }
 
-pub(super) fn export_html(webview: &WebView, workspace: &DocumentWorkspace, theme: AppTheme) {
+pub(super) fn export_html(
+    webview: &WebView,
+    workspace: &DocumentWorkspace,
+    theme: AppTheme,
+    context: RenderContext,
+) {
     match workspace.active_document() {
-        Some(document) => match html_export::export_document(document, theme.key()) {
-            Ok(HtmlExportOutcome::Exported(path)) => render_export_success(
-                webview,
-                &text("status.exported_html").replace("{path}", &path.display().to_string()),
+        Some(document) => {
+            let Some(path) = html_export::choose_export_path(document) else {
+                return;
+            };
+            match export_service::export_document_to_path_with_theme_and_context(
+                document,
+                theme,
+                context,
+                ExportFormat::Html,
                 &path,
-                text("menu.open"),
-            ),
-            Ok(HtmlExportOutcome::Cancelled) => {}
-            Err(message) => render_error_status(webview, &message),
-        },
+                true,
+                &ExportCancellation::default(),
+            ) {
+                Ok(result) => render_export_success(
+                    webview,
+                    &text("status.exported_html")
+                        .replace("{path}", &result.path.display().to_string()),
+                    &result.path,
+                    text("menu.open"),
+                ),
+                Err(failure) => render_error_status(webview, &failure.message),
+            }
+        }
         None => render_error_status(webview, text("status.no_document")),
     }
 }

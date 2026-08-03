@@ -6,6 +6,9 @@ use crate::file_io::load_markdown;
 use crate::html_export::export_markdown_file_to_path;
 
 use super::build_export_html;
+use super::build_export_html_with_theme_and_context;
+use crate::app::DocumentSize;
+use crate::pdf_export::RenderContext;
 
 fn temp_path(name: &str, extension: &str) -> PathBuf {
     let stamp = SystemTime::now()
@@ -120,4 +123,28 @@ fn export_verification_example_html_keeps_local_asset_and_full_render_features()
     assert!(html.contains("Light expectation"));
     assert!(html.contains("Dark expectation"));
     assert!(html.contains("full-document export"));
+}
+
+#[test]
+fn html_export_context_applies_fifty_one_hundred_and_two_hundred_percent_typography() {
+    let document = ActiveDocument::open_with_id(
+        10,
+        PathBuf::from("/tmp/context.md"),
+        "# Heading\n\nBody".to_string(),
+        "file:///tmp/".to_string(),
+    );
+    for (percent, body, heading, code) in [
+        (50, "8.5px", "18.4px", "7px"),
+        (100, "17px", "36.8px", "14px"),
+        (200, "34px", "73.6px", "28px"),
+    ] {
+        let html = build_export_html_with_theme_and_context(
+            &document,
+            "default",
+            RenderContext::new(DocumentSize::from_stored(percent)),
+        );
+        assert!(html.contains(&format!("--document-font-size: {body}")));
+        assert!(html.contains(&format!("--document-h1-font-size: {heading}")));
+        assert!(html.contains(&format!("--document-code-font-size: {code}")));
+    }
 }

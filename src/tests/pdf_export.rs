@@ -161,7 +161,7 @@ fn print_preparation_does_not_enable_static_table_fitting() {
         "prepare_webview_with_measurement_with_theme_and_context(document, theme_name, context, false)"
     ));
     assert!(source.contains(
-        "prepare_webview_with_measurement_with_theme_and_context(\n        document,\n        theme_name,\n        RenderContext::default(),\n        true,"
+        "prepare_webview_with_measurement_with_theme_and_context(document, theme_name, context, true)"
     ));
 }
 

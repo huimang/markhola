@@ -513,7 +513,7 @@ impl RenderContext {
         Self { document_size }
     }
 
-    fn typography_css(self) -> String {
+    pub(crate) fn typography_css(self) -> String {
         let scale = f64::from(self.document_size.percent()) / 100.0;
         format!(
             ":root {{ --document-font-size: {}px; --document-h1-font-size: {}px; --document-h2-font-size: {}px; --document-h3-font-size: {}px; --document-code-font-size: {}px; }}",
@@ -549,9 +549,22 @@ pub(crate) fn render_document_pdf_data_with_theme(
     document: &ActiveDocument,
     theme_name: &str,
 ) -> Result<Vec<u8>, String> {
+    render_document_pdf_data_with_theme_and_context(document, theme_name, RenderContext::default())
+}
+
+pub(crate) fn render_document_pdf_data_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: RenderContext,
+) -> Result<Vec<u8>, String> {
     export_assets::validate_local_images(document)?;
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
+    let html = build_export_html_with_theme_and_context(
+        document,
+        &rendered_document_html,
+        theme_name,
+        context,
+    );
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let pdf_data = render_pdf_data(document, &html, preparation_mode)?;
     apply_pdf_metadata(document, pdf_data)
@@ -571,11 +584,19 @@ pub(crate) fn render_document_png_data_with_theme(
     document: &ActiveDocument,
     theme_name: &str,
 ) -> Result<PngRender, String> {
+    render_document_png_data_with_theme_and_context(document, theme_name, RenderContext::default())
+}
+
+pub(crate) fn render_document_png_data_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: RenderContext,
+) -> Result<PngRender, String> {
     export_assets::validate_local_images(document)?;
-    let (webview, measurement) = prepare_static_export_webview_with_measurement_with_theme(
-        document,
-        theme_name,
-    )?;
+    let (webview, measurement) =
+        prepare_static_export_webview_with_measurement_with_theme_and_context(
+            document, theme_name, context,
+        )?;
     let width = measurement.width.ceil().max(1.0) as u64;
     let height = measurement.height.ceil().max(1.0) as u64;
     if width > 65_535 || height > 65_535 || width.saturating_mul(height) > 100_000_000 {
@@ -699,12 +720,19 @@ fn prepare_static_export_webview_with_measurement_with_theme(
     document: &ActiveDocument,
     theme_name: &str,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
-    prepare_webview_with_measurement_with_theme_and_context(
+    prepare_static_export_webview_with_measurement_with_theme_and_context(
         document,
         theme_name,
         RenderContext::default(),
-        true,
     )
+}
+
+fn prepare_static_export_webview_with_measurement_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: RenderContext,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_webview_with_measurement_with_theme_and_context(document, theme_name, context, true)
 }
 
 fn prepare_webview_with_measurement_with_theme_and_context(
@@ -775,7 +803,7 @@ pub fn export_document(
     Ok(PdfExportOutcome::Exported(export_path))
 }
 
-fn choose_export_path(document: &ActiveDocument) -> Option<PathBuf> {
+pub(crate) fn choose_export_path(document: &ActiveDocument) -> Option<PathBuf> {
     let suggested_name = document
         .suggested_pdf_export_path()
         .file_name()?

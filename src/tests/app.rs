@@ -240,7 +240,10 @@ fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service
     assert!(user_events_source.contains("UserEvent::ExportPng => {"));
     assert!(user_events_source.contains("export_actions::export_png("));
     assert!(user_events_source.contains("runtime.selected_theme"));
-    assert!(export_actions_source.contains("export_service::export_document_to_path_with_theme("));
+    assert!(
+        export_actions_source
+            .contains("export_service::export_document_to_path_with_theme_and_context(")
+    );
     assert!(export_actions_source.contains("ExportFormat::Png"));
     assert!(en_strings.contains("export_png: \"Export PNG\""));
     assert!(en_strings.contains("dialog:\n  export_png: \"Export PNG\""));
@@ -758,15 +761,15 @@ fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silen
     assert!(interface_source.contains("struct ExportSuccessPayload"));
     assert!(!interface_source.contains("struct StatusPayload"));
     assert!(!interface_source.contains("pub(crate) level:"));
-    assert!(
-        export_source.contains("Ok(PdfExportOutcome::Exported(path)) => render_export_success(")
+    assert_eq!(
+        export_source
+            .matches("export_document_to_path_with_theme_and_context(")
+            .count(),
+        3
     );
-    assert!(export_source.contains("Ok(PdfExportOutcome::Cancelled) => {}"));
-    assert!(
-        export_source.contains("Ok(HtmlExportOutcome::Exported(path)) => render_export_success(")
-    );
-    assert!(export_source.contains("Ok(HtmlExportOutcome::Cancelled) => {}"));
-    assert!(export_source.contains("Err(message) => render_error_status(webview, &message)"));
+    assert!(export_source.contains("let Some(path) = pdf_export::choose_export_path(document)"));
+    assert!(export_source.contains("let Some(path) = html_export::choose_export_path(document)"));
+    assert!(export_source.contains("Err(failure) => render_error_status(webview, &failure.message)"));
 }
 
 #[test]

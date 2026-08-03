@@ -94,16 +94,32 @@ pub(super) fn handle_user_event(
             );
         }
         UserEvent::ExportPng => {
-            export_actions::export_png(&runtime.webview, &runtime.workspace, runtime.selected_theme)
+            let context = crate::pdf_export::RenderContext::new(runtime.document_size);
+            export_actions::export_png(
+                &runtime.webview,
+                &runtime.workspace,
+                runtime.selected_theme,
+                context,
+            )
         }
         UserEvent::ExportPdf => {
-            export_actions::export_pdf(&runtime.webview, &runtime.workspace, runtime.selected_theme)
+            let context = crate::pdf_export::RenderContext::new(runtime.document_size);
+            export_actions::export_pdf(
+                &runtime.webview,
+                &runtime.workspace,
+                runtime.selected_theme,
+                context,
+            )
         }
-        UserEvent::ExportHtml => export_actions::export_html(
-            &runtime.webview,
-            &runtime.workspace,
-            runtime.selected_theme,
-        ),
+        UserEvent::ExportHtml => {
+            let context = crate::pdf_export::RenderContext::new(runtime.document_size);
+            export_actions::export_html(
+                &runtime.webview,
+                &runtime.workspace,
+                runtime.selected_theme,
+                context,
+            )
+        }
         UserEvent::PrintDocument => {
             let context = crate::pdf_export::RenderContext::new(runtime.document_size);
             export_actions::print_document(&runtime.webview, &runtime.workspace, context)

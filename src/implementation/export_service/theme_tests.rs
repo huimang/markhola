@@ -59,7 +59,7 @@ fn ui_and_protocol_delegate_theme_to_the_same_export_service() {
     let protocol = include_str!("../app/protocol_commands/mod.rs");
     let events = include_str!("../app/user_events.rs");
 
-    assert!(ui.contains("export_service::export_document_to_path_with_theme("));
+    assert!(ui.contains("export_service::export_document_to_path_with_theme_and_context("));
     assert!(protocol.contains("export_service::export_document_to_path_with_theme("));
     assert!(events.contains("runtime.selected_theme"));
     assert!(events.contains("handle_app_mut_with_theme("));
