@@ -2,10 +2,10 @@
 /dist
 /vendor
 .DS_Store
-Cargo.lock
 tech-notes/
 .DS_Store
 *.lock
+!Cargo.lock
 tmp/
 .idea/
 /drafts/
