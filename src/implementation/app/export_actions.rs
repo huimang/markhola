@@ -6,7 +6,7 @@ use crate::app::{AppTheme, text};
 use crate::document::ActiveDocument;
 use crate::export_service::{self, ExportCancellation, ExportFormat};
 use crate::html_export::{self, HtmlExportOutcome};
-use crate::pdf_export::{self, PdfExportOutcome};
+use crate::pdf_export::{self, PdfExportOutcome, RenderContext};
 use crate::printing::{self, PrintOutcome};
 use crate::workspace::DocumentWorkspace;
 use wry::WebView;
@@ -98,9 +98,13 @@ pub(super) fn export_html(webview: &WebView, workspace: &DocumentWorkspace, them
     }
 }
 
-pub(super) fn print_document(webview: &WebView, workspace: &DocumentWorkspace) {
+pub(super) fn print_document(
+    webview: &WebView,
+    workspace: &DocumentWorkspace,
+    context: RenderContext,
+) {
     match workspace.active_document() {
-        Some(document) => match printing::print_document(document) {
+        Some(document) => match printing::print_document(document, context) {
             Ok(PrintOutcome::Started) => {}
             Err(message) => render_error_status(webview, &message),
         },

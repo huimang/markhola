@@ -105,7 +105,8 @@ pub(super) fn handle_user_event(
             runtime.selected_theme,
         ),
         UserEvent::PrintDocument => {
-            export_actions::print_document(&runtime.webview, &runtime.workspace)
+            let context = crate::pdf_export::RenderContext::new(runtime.document_size);
+            export_actions::print_document(&runtime.webview, &runtime.workspace, context)
         }
         UserEvent::OpenFind => {
             export_actions::open_find_panel(&runtime.webview, &runtime.workspace)

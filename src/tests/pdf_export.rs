@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::app::DocumentSize;
 use crate::document::{ActiveDocument, suggested_pdf_export_path};
 use crate::markdown;
 use lopdf::{Dictionary, Document as LoDocument, Object, Stream};
@@ -9,7 +10,8 @@ use lopdf::{Dictionary, Document as LoDocument, Object, Stream};
 use super::implementation::{
     APP_NAME, APP_VERSION, EXPORT_WEBVIEW_HEIGHT, EXPORT_WEBVIEW_WIDTH, ExportMeasurement,
     ExportPreparationMode, PDF_CANVAS_WIDTH, PDF_READING_SURFACE_WIDTH, apply_pdf_metadata,
-    build_export_html, export_capture_rect, export_footer_text, export_preparation_mode,
+    build_export_html, build_export_html_with_theme_and_context, export_capture_rect,
+    export_footer_text, export_preparation_mode, RenderContext,
     printable_page_count_for_height,
 };
 
@@ -223,6 +225,28 @@ fn pdf_canvas_has_symmetric_thirty_two_pixel_gutters() {
     assert_eq!(PDF_CANVAS_WIDTH, 1024.0);
     assert_eq!(PDF_READING_SURFACE_WIDTH, 960.0);
     assert_eq!((PDF_CANVAS_WIDTH - PDF_READING_SURFACE_WIDTH) / 2.0, 32.0);
+}
+
+#[test]
+fn print_render_context_snapshots_document_size_without_changing_pdf_geometry() {
+    let document = ActiveDocument::new_blank_with_id(1, 1);
+    for (percent, body, heading, code) in [
+        (50, "8.5px", "18.4px", "7px"),
+        (100, "17px", "36.8px", "14px"),
+        (200, "34px", "73.6px", "28px"),
+    ] {
+        let context = RenderContext::new(DocumentSize::from_stored(percent));
+        let html = build_export_html_with_theme_and_context(
+            &document,
+            "<p>Body</p>",
+            "default",
+            context,
+        );
+        assert!(html.contains(&format!("--document-font-size: {body}")));
+        assert!(html.contains(&format!("--document-h1-font-size: {heading}")));
+        assert!(html.contains(&format!("--document-code-font-size: {code}")));
+        assert!(html.contains("grid-template-columns: minmax(0, 960px)"));
+    }
 }
 
 #[test]

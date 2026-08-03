@@ -5,11 +5,14 @@ use crate::app::log_event;
 use crate::document::ActiveDocument;
 use crate::file_io;
 use crate::pdf_export::{
-    prepare_printable_webview, prepare_printable_webview_with_measurement,
-    printable_page_count_for_height,
+    RenderContext, prepare_printable_webview, prepare_printable_webview_with_context,
+    prepare_printable_webview_with_measurement, printable_page_count_for_height,
 };
 
-pub fn print_document(document: &ActiveDocument) -> Result<PrintOutcome, String> {
+pub fn print_document(
+    document: &ActiveDocument,
+    context: RenderContext,
+) -> Result<PrintOutcome, String> {
     log_event(
         "printing.begin",
         None,
@@ -29,7 +32,7 @@ pub fn print_document(document: &ActiveDocument) -> Result<PrintOutcome, String>
         .keyWindow()
         .or_else(|| app.mainWindow())
         .ok_or("No active macOS window available for the print panel.")?;
-    let webview = prepare_printable_webview(document)?;
+    let webview = prepare_printable_webview_with_context(document, context)?;
     let print_operation = unsafe { webview.printOperationWithPrintInfo(&print_info) };
 
     log_event(

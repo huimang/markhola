@@ -23,7 +23,7 @@ use rfd::FileDialog;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::app::log_event;
+use crate::app::{DocumentSize, log_event};
 use crate::document::ActiveDocument;
 use crate::file_io;
 use crate::markdown;
@@ -101,6 +101,7 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <base href="__BASE_URL__" />
     <title>__TITLE__</title>
     <style>__APP_THEME__</style>
+    <style>__RENDER_CONTEXT_CSS__</style>
     <style>__EXPORT_PRINT_CSS__</style>
   </head>
   <body>
@@ -464,6 +465,35 @@ pub(crate) enum ExportPreparationMode {
     Full,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RenderContext {
+    document_size: DocumentSize,
+}
+
+impl RenderContext {
+    pub(crate) const fn new(document_size: DocumentSize) -> Self {
+        Self { document_size }
+    }
+
+    fn typography_css(self) -> String {
+        let scale = f64::from(self.document_size.percent()) / 100.0;
+        format!(
+            ":root {{ --document-font-size: {}px; --document-h1-font-size: {}px; --document-h2-font-size: {}px; --document-h3-font-size: {}px; --document-code-font-size: {}px; }}",
+            17.0 * scale,
+            36.8 * scale,
+            27.52 * scale,
+            21.6 * scale,
+            14.0 * scale,
+        )
+    }
+}
+
+impl Default for RenderContext {
+    fn default() -> Self {
+        Self::new(DocumentSize::default())
+    }
+}
+
 #[derive(Deserialize)]
 pub(crate) struct ExportMeasurement {
     pub(crate) width: f64,
@@ -583,19 +613,51 @@ pub(crate) fn prepare_printable_webview(
     Ok(webview)
 }
 
+pub(crate) fn prepare_printable_webview_with_context(
+    document: &ActiveDocument,
+    context: RenderContext,
+) -> Result<Retained<WKWebView>, String> {
+    let (webview, _) = prepare_printable_webview_with_measurement_and_context(document, context)?;
+    Ok(webview)
+}
+
 pub(crate) fn prepare_printable_webview_with_measurement(
     document: &ActiveDocument,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
-    prepare_printable_webview_with_measurement_with_theme(document, "default")
+    prepare_printable_webview_with_measurement_and_context(document, RenderContext::default())
+}
+
+pub(crate) fn prepare_printable_webview_with_measurement_and_context(
+    document: &ActiveDocument,
+    context: RenderContext,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_printable_webview_with_measurement_with_theme_and_context(document, "default", context)
 }
 
 pub(crate) fn prepare_printable_webview_with_measurement_with_theme(
     document: &ActiveDocument,
     theme_name: &str,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_printable_webview_with_measurement_with_theme_and_context(
+        document,
+        theme_name,
+        RenderContext::default(),
+    )
+}
+
+fn prepare_printable_webview_with_measurement_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: RenderContext,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
     let started_at = Instant::now();
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
+    let html = build_export_html_with_theme_and_context(
+        document,
+        &rendered_document_html,
+        theme_name,
+        context,
+    );
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let webview = prepare_webview(document, &html, preparation_mode, EXPORT_WEBVIEW_WIDTH)?;
     let measurement = measure_prepared_webview(&webview, preparation_mode, started_at)?;
@@ -1357,6 +1419,20 @@ pub(crate) fn build_export_html_with_theme(
     rendered_html: &str,
     theme_name: &str,
 ) -> String {
+    build_export_html_with_theme_and_context(
+        document,
+        rendered_html,
+        theme_name,
+        RenderContext::default(),
+    )
+}
+
+pub(crate) fn build_export_html_with_theme_and_context(
+    document: &ActiveDocument,
+    rendered_html: &str,
+    theme_name: &str,
+    context: RenderContext,
+) -> String {
     EXPORT_HTML_TEMPLATE
         .replace("__TITLE__", document.file_name())
         .replace("__BASE_URL__", document.base_url())
@@ -1365,6 +1441,7 @@ pub(crate) fn build_export_html_with_theme(
             "__APP_THEME__",
             &render_assets::load_app_theme_css_for_inline_style(theme_name),
         )
+        .replace("__RENDER_CONTEXT_CSS__", &context.typography_css())
         .replace(
             "__MERMAID_THEME__",
             if theme_name == "dark" {
