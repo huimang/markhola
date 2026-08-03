@@ -335,7 +335,8 @@ fn app_themes_share_the_markhola_brand_palette() {
         }
 
         assert!(html.contains(".markdown-body thead"));
-        assert!(html.contains("background: var(--markhola-green-tint)"));
+        assert!(html.contains("--table-header: var(--markhola-green-tint)"));
+        assert!(html.contains("background: var(--table-header)"));
         assert!(html.contains("--code-surface: #"));
         assert!(html.contains("background: var(--code-gutter)"));
         assert!(html.contains("color: var(--code-line-number)"));
@@ -353,10 +354,10 @@ fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
     );
 
     assert!(html.contains(
-        ".markdown-body table {\n  width: max-content;\n  min-width: 100%;\n  border-collapse: collapse;\n  background: var(--panel-strong);"
+        ".markdown-body table {\n  width: max-content;\n  min-width: 100%;\n  border-collapse: collapse;\n  background: var(--table-row-odd);\n  color: var(--table-text);"
     ));
     assert!(html.contains(
-        ".markdown-body thead {\n  background: var(--markhola-green-tint);\n  color: var(--table-header-text);"
+        ".markdown-body thead {\n  background: var(--table-header);\n  color: var(--table-header-text);"
     ));
 }
 
@@ -381,6 +382,42 @@ fn app_themes_keep_wide_tables_inside_an_accessible_scroll_region() {
         assert!(html.contains(".markdown-table-region:focus-visible {"));
         assert!(html.contains("width: max-content;"));
         assert!(html.contains("min-width: 100%;"));
+    }
+}
+
+#[test]
+fn focused_table_region_owns_only_horizontal_arrow_navigation() {
+    let script = include_str!("../implementation/app/shell_script.js");
+
+    assert!(script.contains("const step = Math.max(40, Math.round(region.clientWidth * 0.8));"));
+    assert!(script.contains("region.scrollWidth - region.clientWidth"));
+    assert!(script.contains("Math.min(maximum, Math.max(0,"));
+    assert!(script.contains("document.activeElement !== region"));
+    assert!(script.contains("region.classList.contains(\"markdown-table-region\")"));
+    assert!(script.contains("event.key !== \"ArrowLeft\" && event.key !== \"ArrowRight\""));
+    assert!(script.contains("if (handleTableRegionArrowKey(event)) return;"));
+    assert!(!script.contains("event.key === \"Home\""));
+    assert!(!script.contains("event.key === \"End\""));
+}
+
+#[test]
+fn table_rows_use_theme_tokens_for_zebra_hover_and_static_output() {
+    for theme in AppTheme::ALL {
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
+        for token in [
+            "--table-header:",
+            "--table-row-odd:",
+            "--table-row-even:",
+            "--table-row-hover:",
+            "--table-border:",
+            "--table-text:",
+        ] {
+            assert!(html.contains(token));
+        }
+        assert!(html.contains("tbody tr:nth-child(odd)"));
+        assert!(html.contains("tbody tr:nth-child(even)"));
+        assert!(html.contains("body:not(.static-table-export) .markdown-body tbody tr:hover"));
+        assert!(html.contains("@media print"));
     }
 }
 

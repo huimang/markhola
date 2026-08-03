@@ -54,7 +54,10 @@ fn standalone_html_preserves_the_accessible_scrollable_table_region() {
     assert!(html.contains("role=\"region\""));
     assert!(html.contains("tabindex=\"0\""));
     assert!(html.contains("overflow-x: auto;"));
-    assert!(!html.contains("static-table-export"));
+    assert!(html.contains("body:not(.static-table-export) .markdown-body tbody tr:hover"));
+    assert!(html.contains("--table-row-odd:"));
+    assert!(html.contains("--table-row-even:"));
+    assert!(!html.contains("<body class=\"static-table-export\">"));
 }
 
 #[test]

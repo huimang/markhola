@@ -22,6 +22,12 @@
   --accent: var(--markhola-violet);
   --accent-strong: var(--markhola-green);
   --table-header-text: var(--text);
+  --table-header: var(--markhola-green-tint);
+  --table-row-odd: #F8FAFC;
+  --table-row-even: #F1F5F9;
+  --table-row-hover: #D7DEE8;
+  --table-border: #7C8CA3;
+  --table-text: #334155;
   --code-surface: #F1F0F7;
   --code-gutter: #E8E6F0;
   --code-text: #514B64;
@@ -583,7 +589,8 @@ body.workspace-empty #modeState {
   width: max-content;
   min-width: 100%;
   border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.66);
+  background: var(--table-row-odd);
+  color: var(--table-text);
   overflow: hidden;
   border-radius: 0;
 }
@@ -591,15 +598,39 @@ body.workspace-empty #modeState {
 .markdown-body th,
 .markdown-body td {
   padding: 10px 12px;
-  border: 1px solid rgba(92, 74, 52, 0.14);
+  border: 1px solid var(--table-border);
   text-align: left;
   vertical-align: top;
 }
 
 .markdown-body thead {
-  background: var(--markhola-green-tint);
+  background: var(--table-header);
   color: var(--table-header-text);
   font-family: var(--font-ui);
+}
+
+.markdown-body tbody tr:nth-child(odd) {
+  background: var(--table-row-odd);
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background: var(--table-row-even);
+}
+
+body:not(.static-table-export) .markdown-body tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+@media print {
+  .markdown-body tbody tr:nth-child(odd),
+  .markdown-body tbody tr:nth-child(odd):hover {
+    background: var(--table-row-odd);
+  }
+
+  .markdown-body tbody tr:nth-child(even),
+  .markdown-body tbody tr:nth-child(even):hover {
+    background: var(--table-row-even);
+  }
 }
 
 .markdown-body code {

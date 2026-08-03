@@ -109,6 +109,8 @@ fn static_exports_fit_only_tables_to_the_frozen_content_width() {
     assert!(html.contains("table.style.zoom = String(scale);"));
     assert!(html.contains("table_too_wide:"));
     assert!(html.contains(".static-table-export .markdown-table-region::-webkit-scrollbar"));
+    assert!(html.contains("body:not(.static-table-export) .markdown-body tbody tr:hover"));
+    assert!(html.contains("@media print"));
     assert!(!html.contains("__STATIC_TABLE_CONTENT_WIDTH__"));
     assert!(!html.contains("__MIN_STATIC_TABLE_SCALE__"));
 }

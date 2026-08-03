@@ -889,7 +889,34 @@
       replaceOne.addEventListener("click", replaceCurrentWritableMatch);
       replaceAll.addEventListener("click", replaceAllWritableMatches);
 
+      // MARKHOLA_TABLE_KEYBOARD_START
+      const tableRegionScrollTarget = (region, direction) => {
+        const maximum = Math.max(0, region.scrollWidth - region.clientWidth);
+        const step = Math.max(40, Math.round(region.clientWidth * 0.8));
+        return Math.min(maximum, Math.max(0, region.scrollLeft + direction * step));
+      };
+
+      const handleTableRegionArrowKey = (event) => {
+        const region = event.target;
+        if (!(region instanceof HTMLElement)
+          || !region.classList.contains("markdown-table-region")
+          || document.activeElement !== region
+          || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) {
+          return false;
+        }
+
+        event.preventDefault();
+        region.scrollLeft = tableRegionScrollTarget(
+          region,
+          event.key === "ArrowRight" ? 1 : -1
+        );
+        return true;
+      };
+      // MARKHOLA_TABLE_KEYBOARD_END
+
       document.addEventListener("keydown", (event) => {
+        if (handleTableRegionArrowKey(event)) return;
+
         if (event.key === "Escape" && !aboutOverlay.classList.contains("hidden")) {
           hideAbout();
           return;

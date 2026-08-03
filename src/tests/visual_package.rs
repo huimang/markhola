@@ -25,6 +25,22 @@ fn light_is_only_the_user_visible_name_for_the_default_theme_key() {
     assert!(APP_THEME.contains("\"default\" | \"light\" => Some(Self::Default)"));
 }
 
+#[test]
+fn table_text_and_borders_meet_light_and_dark_contrast_floors() {
+    for (text, border, rows) in [
+        ("#334155", "#7C8CA3", ["#F8FAFC", "#F1F5F9", "#D7DEE8"]),
+        ("#AEB8C5", "#64748B", ["#161B22", "#1E2632", "#293445"]),
+    ] {
+        for row in rows {
+            assert!(contrast(text, row) >= 4.5, "{text} on {row}");
+        }
+        assert!(contrast(border, rows[0]) >= 3.0);
+        assert!(contrast(border, rows[1]) >= 3.0);
+    }
+    assert!(contrast("#475569", "#EAF9F5") >= 4.5);
+    assert!(contrast("#0D1117", "#EAF9F5") >= 4.5);
+}
+
 fn contrast(foreground: &str, background: &str) -> f64 {
     let foreground = luminance(foreground);
     let background = luminance(background);
