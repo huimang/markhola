@@ -101,6 +101,16 @@ pub(crate) fn render_html_with_image_resolver(
                     &normalize_code_block_source(&source),
                 ));
             }
+            Event::Start(Tag::Table(_)) => {
+                regular_events.push(Event::Html(CowStr::Borrowed(
+                    "<div class=\"markdown-table-region\" role=\"region\" aria-label=\"Scrollable table\" tabindex=\"0\">",
+                )));
+                regular_events.push(event);
+            }
+            Event::End(TagEnd::Table) => {
+                regular_events.push(event);
+                regular_events.push(Event::Html(CowStr::Borrowed("</div>")));
+            }
             other => regular_events.push(other),
         }
     }

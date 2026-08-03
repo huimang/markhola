@@ -41,6 +41,23 @@ fn exported_html_contains_rendered_content_and_runtime_assets() {
 }
 
 #[test]
+fn standalone_html_preserves_the_accessible_scrollable_table_region() {
+    let document = ActiveDocument::open_with_id(
+        2,
+        PathBuf::from("/tmp/table.md"),
+        "| A | B |\n| - | - |\n| long | content |".to_string(),
+        "file:///tmp/".to_string(),
+    );
+
+    let html = build_export_html(&document);
+    assert!(html.contains("class=\"markdown-table-region\""));
+    assert!(html.contains("role=\"region\""));
+    assert!(html.contains("tabindex=\"0\""));
+    assert!(html.contains("overflow-x: auto;"));
+    assert!(!html.contains("static-table-export"));
+}
+
+#[test]
 fn export_markdown_file_to_path_preserves_source_and_writes_html_document() {
     let input = temp_path("source", "md");
     let output = temp_path("export", "html");

@@ -9,9 +9,10 @@ use lopdf::{Dictionary, Document as LoDocument, Object, Stream};
 
 use super::implementation::{
     APP_NAME, APP_VERSION, EXPORT_WEBVIEW_HEIGHT, EXPORT_WEBVIEW_WIDTH, ExportMeasurement,
-    ExportPreparationMode, PDF_CANVAS_WIDTH, PDF_READING_SURFACE_WIDTH, apply_pdf_metadata,
-    build_export_html, build_export_html_with_theme_and_context, export_capture_rect,
-    export_footer_text, export_preparation_mode, RenderContext,
+    ExportPreparationMode, MIN_STATIC_TABLE_SCALE, PDF_CANVAS_WIDTH, PDF_READING_SURFACE_WIDTH,
+    STATIC_TABLE_CONTENT_WIDTH, apply_pdf_metadata, build_export_html,
+    build_export_html_with_theme_and_context, export_capture_rect, export_footer_text,
+    export_preparation_mode, RenderContext,
     printable_page_count_for_height,
 };
 
@@ -89,6 +90,38 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(!html.contains("<div class=\"tabs-bar\""));
     assert!(!html.contains("<div class=\"editor-pane\""));
     assert!(!html.contains("<div class=\"about-overlay\""));
+}
+
+#[test]
+fn static_exports_fit_only_tables_to_the_frozen_content_width() {
+    let document = document(
+        "/tmp/wide.md",
+        "| A | B |\n| - | - |\n| long | content |",
+    );
+    let html = build_export_html(&document, &markdown::render_html(document.markdown()));
+
+    assert_eq!(STATIC_TABLE_CONTENT_WIDTH, 848.0);
+    assert_eq!(MIN_STATIC_TABLE_SCALE, 0.75);
+    assert!(html.contains("<body class=\"static-table-export\">"));
+    assert!(html.contains("const contentWidth = 848;"));
+    assert!(html.contains("const minimumScale = 0.75;"));
+    assert!(html.contains("region.scrollLeft = 0;"));
+    assert!(html.contains("table.style.zoom = String(scale);"));
+    assert!(html.contains("table_too_wide:"));
+    assert!(html.contains(".static-table-export .markdown-table-region::-webkit-scrollbar"));
+    assert!(!html.contains("__STATIC_TABLE_CONTENT_WIDTH__"));
+    assert!(!html.contains("__MIN_STATIC_TABLE_SCALE__"));
+}
+
+#[test]
+fn print_preparation_does_not_enable_static_table_fitting() {
+    let source = include_str!("../implementation/pdf_export.rs");
+    assert!(source.contains(
+        "prepare_webview_with_measurement_with_theme_and_context(document, theme_name, context, false)"
+    ));
+    assert!(source.contains(
+        "prepare_webview_with_measurement_with_theme_and_context(\n        document,\n        theme_name,\n        RenderContext::default(),\n        true,"
+    ));
 }
 
 #[test]
@@ -192,6 +225,7 @@ fn export_capture_rect_uses_full_measured_height() {
     let rect = export_capture_rect(&ExportMeasurement {
         width: EXPORT_WEBVIEW_WIDTH,
         height: 4820.0,
+        error: None,
     });
 
     assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);
@@ -203,6 +237,7 @@ fn export_capture_rect_keeps_fixed_canvas_width_for_wide_content() {
     let rect = export_capture_rect(&ExportMeasurement {
         width: 2048.0,
         height: 4820.0,
+        error: None,
     });
 
     assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);
@@ -214,6 +249,7 @@ fn export_capture_rect_respects_minimum_viewport_size() {
     let rect = export_capture_rect(&ExportMeasurement {
         width: 100.0,
         height: 200.0,
+        error: None,
     });
 
     assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);

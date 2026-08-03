@@ -37,6 +37,8 @@ pub(crate) const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const EXPORT_WEBVIEW_WIDTH: f64 = 816.0;
 pub(crate) const PDF_CANVAS_WIDTH: f64 = 1024.0;
 pub(crate) const PDF_READING_SURFACE_WIDTH: f64 = 960.0;
+pub(crate) const STATIC_TABLE_CONTENT_WIDTH: f64 = 848.0;
+pub(crate) const MIN_STATIC_TABLE_SCALE: f64 = 0.75;
 pub(crate) const EXPORT_WEBVIEW_HEIGHT: f64 = 1120.0;
 pub(crate) const EXPORT_TIMEOUT: Duration = Duration::from_secs(60);
 pub(crate) const FAST_EXPORT_BUDGET: Duration = Duration::from_secs(3);
@@ -82,6 +84,14 @@ body {
   user-select: none;
 }
 
+.static-table-export .markdown-table-region {
+  overflow: visible;
+}
+
+.static-table-export .markdown-table-region::-webkit-scrollbar {
+  display: none;
+}
+
 .app,
 .tabs-bar,
 .preview-header,
@@ -104,7 +114,7 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <style>__RENDER_CONTEXT_CSS__</style>
     <style>__EXPORT_PRINT_CSS__</style>
   </head>
-  <body>
+  <body class="__EXPORT_BODY_CLASS__">
     <main class="export-reading-surface">
       <article class="markdown-body export-page" id="content">__DOCUMENT_HTML__</article>
       <footer class="export-footer">__EXPORT_FOOTER__</footer>
@@ -343,6 +353,30 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         await new Promise((resolve) => setTimeout(resolve, 0));
       };
 
+      const fitStaticTables = () => {
+        if (!document.body.classList.contains("static-table-export")) return;
+
+        const contentWidth = __STATIC_TABLE_CONTENT_WIDTH__;
+        const minimumScale = __MIN_STATIC_TABLE_SCALE__;
+        for (const region of content.querySelectorAll(".markdown-table-region")) {
+          const table = region.querySelector(":scope > table");
+          if (!table) continue;
+
+          region.scrollLeft = 0;
+          table.style.removeProperty("zoom");
+          const naturalWidth = Math.ceil(
+            Math.max(table.scrollWidth, table.getBoundingClientRect().width)
+          );
+          const scale = Math.min(1, contentWidth / naturalWidth);
+          if (scale < minimumScale) {
+            return `table_too_wide: table requires scale ${scale.toFixed(4)}, below minimum ${minimumScale.toFixed(2)}`;
+          }
+          if (scale < 1) table.style.zoom = String(scale);
+          region.dataset.staticScale = scale.toFixed(4);
+        }
+        return null;
+      };
+
       window.markholaMeasureExportPage = () => {
         const root = document.documentElement;
         const body = document.body;
@@ -411,6 +445,8 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         markStage("render-math");
         await withTiming("render-math", renderMathExpressions);
         await withTiming("wait-post-render-images", () => waitForImages("wait-post-render-images"));
+        const tableError = fitStaticTables();
+        if (tableError) return { width: 0, height: 0, error: tableError };
         markStage("wait-next-paint");
         await withTiming("wait-next-paint", waitForNextPaint);
         const measurement = window.markholaMeasureExportPage();
@@ -420,6 +456,8 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 
       window.markholaPreparePdfFast = async () => {
         markStage("fast-prepare-start");
+        const tableError = fitStaticTables();
+        if (tableError) return { width: 0, height: 0, error: tableError };
         const measurement = window.markholaMeasureExportPage();
         markStage("fast-prepare-complete", measurement);
         return measurement;
@@ -498,6 +536,8 @@ impl Default for RenderContext {
 pub(crate) struct ExportMeasurement {
     pub(crate) width: f64,
     pub(crate) height: f64,
+    #[serde(default)]
+    pub(crate) error: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -532,8 +572,10 @@ pub(crate) fn render_document_png_data_with_theme(
     theme_name: &str,
 ) -> Result<PngRender, String> {
     export_assets::validate_local_images(document)?;
-    let (webview, measurement) =
-        prepare_printable_webview_with_measurement_with_theme(document, theme_name)?;
+    let (webview, measurement) = prepare_static_export_webview_with_measurement_with_theme(
+        document,
+        theme_name,
+    )?;
     let width = measurement.width.ceil().max(1.0) as u64;
     let height = measurement.height.ceil().max(1.0) as u64;
     if width > 65_535 || height > 65_535 || width.saturating_mul(height) > 100_000_000 {
@@ -650,13 +692,35 @@ fn prepare_printable_webview_with_measurement_with_theme_and_context(
     theme_name: &str,
     context: RenderContext,
 ) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_webview_with_measurement_with_theme_and_context(document, theme_name, context, false)
+}
+
+fn prepare_static_export_webview_with_measurement_with_theme(
+    document: &ActiveDocument,
+    theme_name: &str,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
+    prepare_webview_with_measurement_with_theme_and_context(
+        document,
+        theme_name,
+        RenderContext::default(),
+        true,
+    )
+}
+
+fn prepare_webview_with_measurement_with_theme_and_context(
+    document: &ActiveDocument,
+    theme_name: &str,
+    context: RenderContext,
+    fit_static_tables: bool,
+) -> Result<(Retained<WKWebView>, ExportMeasurement), String> {
     let started_at = Instant::now();
     let rendered_document_html = render_export_document_html(document);
-    let html = build_export_html_with_theme_and_context(
+    let html = build_export_html_with_theme_context_and_mode(
         document,
         &rendered_document_html,
         theme_name,
         context,
+        fit_static_tables,
     );
     let preparation_mode = export_preparation_mode(&rendered_document_html);
     let webview = prepare_webview(document, &html, preparation_mode, EXPORT_WEBVIEW_WIDTH)?;
@@ -1063,9 +1127,19 @@ fn run_prepare_script(
     let measurement: ExportMeasurement = serde_json::from_str(&raw)
         .map_err(|error| format!("Failed to decode export page size: {error}"))?;
 
+    normalize_export_measurement(measurement)
+}
+
+fn normalize_export_measurement(
+    measurement: ExportMeasurement,
+) -> Result<ExportMeasurement, String> {
+    if let Some(error) = measurement.error {
+        return Err(error);
+    }
     Ok(ExportMeasurement {
         width: measurement.width.ceil().max(EXPORT_WEBVIEW_WIDTH),
         height: measurement.height.ceil().max(EXPORT_WEBVIEW_HEIGHT),
+        error: None,
     })
 }
 
@@ -1140,10 +1214,7 @@ fn run_prepare_script_fallback(
         )? {
             let measurement: ExportMeasurement = serde_json::from_str(&raw)
                 .map_err(|error| format!("Failed to decode export page size: {error}"))?;
-            return Ok(ExportMeasurement {
-                width: measurement.width.ceil().max(EXPORT_WEBVIEW_WIDTH),
-                height: measurement.height.ceil().max(EXPORT_WEBVIEW_HEIGHT),
-            });
+            return normalize_export_measurement(measurement);
         }
 
         let next_slice = NSDate::dateWithTimeIntervalSinceNow(0.05);
@@ -1433,6 +1504,22 @@ pub(crate) fn build_export_html_with_theme_and_context(
     theme_name: &str,
     context: RenderContext,
 ) -> String {
+    build_export_html_with_theme_context_and_mode(
+        document,
+        rendered_html,
+        theme_name,
+        context,
+        true,
+    )
+}
+
+fn build_export_html_with_theme_context_and_mode(
+    document: &ActiveDocument,
+    rendered_html: &str,
+    theme_name: &str,
+    context: RenderContext,
+    fit_static_tables: bool,
+) -> String {
     EXPORT_HTML_TEMPLATE
         .replace("__TITLE__", document.file_name())
         .replace("__BASE_URL__", document.base_url())
@@ -1443,6 +1530,14 @@ pub(crate) fn build_export_html_with_theme_and_context(
         )
         .replace("__RENDER_CONTEXT_CSS__", &context.typography_css())
         .replace(
+            "__EXPORT_BODY_CLASS__",
+            if fit_static_tables {
+                "static-table-export"
+            } else {
+                ""
+            },
+        )
+        .replace(
             "__MERMAID_THEME__",
             if theme_name == "dark" {
                 "dark"
@@ -1451,6 +1546,14 @@ pub(crate) fn build_export_html_with_theme_and_context(
             },
         )
         .replace("__EXPORT_PRINT_CSS__", EXPORT_PRINT_CSS)
+        .replace(
+            "__STATIC_TABLE_CONTENT_WIDTH__",
+            &STATIC_TABLE_CONTENT_WIDTH.to_string(),
+        )
+        .replace(
+            "__MIN_STATIC_TABLE_SCALE__",
+            &MIN_STATIC_TABLE_SCALE.to_string(),
+        )
         .replace(
             "__PDF_READING_SURFACE_WIDTH__",
             &PDF_READING_SURFACE_WIDTH.to_string(),

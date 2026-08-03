@@ -12,6 +12,11 @@ fn renders_tables() {
     let html = render_html(markdown);
     assert!(html.contains("<table>"));
     assert!(html.contains("<td>1</td>"));
+    assert!(html.contains("class=\"markdown-table-region\""));
+    assert!(html.contains("role=\"region\""));
+    assert!(html.contains("aria-label=\"Scrollable table\""));
+    assert!(html.contains("tabindex=\"0\""));
+    assert!(html.contains("</table>\n</div>"));
 }
 
 #[test]

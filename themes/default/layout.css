@@ -514,8 +514,24 @@ body.workspace-empty #modeState {
   box-shadow: 0 12px 34px rgba(56, 41, 28, 0.14);
 }
 
-.markdown-body table {
+.markdown-table-region {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-table-region:focus-visible {
+  outline: 2px solid var(--markhola-violet);
+  outline-offset: 2px;
+}
+
+.markdown-body table {
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   background: rgba(255, 255, 255, 0.66);
   overflow: hidden;

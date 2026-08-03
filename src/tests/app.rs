@@ -353,7 +353,7 @@ fn dark_theme_keeps_table_rows_readable_below_the_green_header() {
     );
 
     assert!(html.contains(
-        ".markdown-body table {\n  width: 100%;\n  border-collapse: collapse;\n  background: var(--panel-strong);"
+        ".markdown-body table {\n  width: max-content;\n  min-width: 100%;\n  border-collapse: collapse;\n  background: var(--panel-strong);"
     ));
     assert!(html.contains(
         ".markdown-body thead {\n  background: var(--markhola-green-tint);\n  color: var(--table-header-text);"
@@ -367,6 +367,20 @@ fn app_themes_render_tables_without_rounded_corners() {
 
         assert!(html.contains("overflow: hidden;\n  border-radius: 0;"));
         assert!(!html.contains("overflow: hidden;\n  border-radius: 14px;"));
+    }
+}
+
+#[test]
+fn app_themes_keep_wide_tables_inside_an_accessible_scroll_region() {
+    for theme in AppTheme::ALL {
+        let html = app_shell_html(theme, AppLanguage::English, DocumentSize::default());
+        assert!(html.contains(".markdown-table-region {"));
+        assert!(html.contains("max-width: 100%;"));
+        assert!(html.contains("overflow-x: auto;"));
+        assert!(html.contains("overscroll-behavior-inline: contain;"));
+        assert!(html.contains(".markdown-table-region:focus-visible {"));
+        assert!(html.contains("width: max-content;"));
+        assert!(html.contains("min-width: 100%;"));
     }
 }
 
