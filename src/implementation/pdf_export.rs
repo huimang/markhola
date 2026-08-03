@@ -35,6 +35,8 @@ mod export_assets;
 pub(crate) const APP_NAME: &str = "MarkHola";
 pub(crate) const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const EXPORT_WEBVIEW_WIDTH: f64 = 816.0;
+pub(crate) const PDF_CANVAS_WIDTH: f64 = 1024.0;
+pub(crate) const PDF_READING_SURFACE_WIDTH: f64 = 960.0;
 pub(crate) const EXPORT_WEBVIEW_HEIGHT: f64 = 1120.0;
 pub(crate) const EXPORT_TIMEOUT: Duration = Duration::from_secs(60);
 pub(crate) const FAST_EXPORT_BUDGET: Duration = Duration::from_secs(3);
@@ -53,7 +55,7 @@ body {
 .export-reading-surface {
   box-sizing: border-box;
   width: 100%;
-  max-width: 816px;
+  max-width: __PDF_READING_SURFACE_WIDTH__px;
   margin-inline: auto;
 }
 
@@ -541,7 +543,7 @@ pub(crate) fn prepare_printable_webview_with_measurement_with_theme(
     let rendered_document_html = render_export_document_html(document);
     let html = build_export_html_with_theme(document, &rendered_document_html, theme_name);
     let preparation_mode = export_preparation_mode(&rendered_document_html);
-    let webview = prepare_webview(document, &html, preparation_mode)?;
+    let webview = prepare_webview(document, &html, preparation_mode, EXPORT_WEBVIEW_WIDTH)?;
     let measurement = measure_prepared_webview(&webview, preparation_mode, started_at)?;
     log_event(
         "pdf_export.prepare.printable",
@@ -690,7 +692,7 @@ fn render_pdf_data(
     preparation_mode: ExportPreparationMode,
 ) -> Result<Vec<u8>, String> {
     let started_at = Instant::now();
-    let webview = prepare_webview(document, html, preparation_mode)?;
+    let webview = prepare_webview(document, html, preparation_mode, PDF_CANVAS_WIDTH)?;
     let measurement = measure_prepared_webview(&webview, preparation_mode, started_at)?;
     log_event(
         "pdf_export.prepare.measurement",
@@ -723,6 +725,7 @@ fn prepare_webview(
     document: &ActiveDocument,
     html: &str,
     preparation_mode: ExportPreparationMode,
+    viewport_width: f64,
 ) -> Result<Retained<WKWebView>, String> {
     let started_at = Instant::now();
     let mtm = MainThreadMarker::new().ok_or("PDF export must run on the main thread.")?;
@@ -737,7 +740,7 @@ fn prepare_webview(
             WKWebView::alloc(mtm),
             CGRect::new(
                 CGPoint::ZERO,
-                CGSize::new(EXPORT_WEBVIEW_WIDTH, EXPORT_WEBVIEW_HEIGHT),
+                CGSize::new(viewport_width, EXPORT_WEBVIEW_HEIGHT),
             ),
             &configuration,
         )
@@ -1150,7 +1153,7 @@ pub(crate) fn export_capture_rect(measurement: &ExportMeasurement) -> CGRect {
     CGRect::new(
         CGPoint::ZERO,
         CGSize::new(
-            EXPORT_WEBVIEW_WIDTH,
+            PDF_CANVAS_WIDTH,
             measurement.height.max(EXPORT_WEBVIEW_HEIGHT),
         ),
     )
@@ -1278,6 +1281,10 @@ pub(crate) fn build_export_html_with_theme(
         .replace(
             "__APP_THEME__",
             &render_assets::load_app_theme_css_for_inline_style(theme_name),
+        )
+        .replace(
+            "__PDF_READING_SURFACE_WIDTH__",
+            &PDF_READING_SURFACE_WIDTH.to_string(),
         )
         .replace(
             "__MERMAID_THEME__",

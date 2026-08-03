@@ -8,8 +8,9 @@ use lopdf::{Dictionary, Document as LoDocument, Object, Stream};
 
 use super::implementation::{
     APP_NAME, APP_VERSION, EXPORT_WEBVIEW_HEIGHT, EXPORT_WEBVIEW_WIDTH, ExportMeasurement,
-    ExportPreparationMode, apply_pdf_metadata, build_export_html, export_capture_rect,
-    export_footer_text, export_preparation_mode, printable_page_count_for_height,
+    ExportPreparationMode, PDF_CANVAS_WIDTH, PDF_READING_SURFACE_WIDTH, apply_pdf_metadata,
+    build_export_html, export_capture_rect, export_footer_text, export_preparation_mode,
+    printable_page_count_for_height,
 };
 
 fn document(path: &str, markdown: &str) -> ActiveDocument {
@@ -66,7 +67,7 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(html.contains("<main class=\"export-reading-surface\">"));
     assert!(html.contains("markdown-body export-page"));
     assert!(html.contains(".export-reading-surface {"));
-    assert!(html.contains("max-width: 816px;"));
+    assert!(html.contains("max-width: 960px;"));
     assert!(html.contains("margin-inline: auto;"));
     assert!(html.contains("window.markholaPreparePdf"));
     assert!(html.contains("mermaid-block"));
@@ -186,7 +187,7 @@ fn export_capture_rect_uses_full_measured_height() {
         height: 4820.0,
     });
 
-    assert_eq!(rect.size.width, EXPORT_WEBVIEW_WIDTH);
+    assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);
     assert_eq!(rect.size.height, 4820.0);
 }
 
@@ -197,7 +198,7 @@ fn export_capture_rect_keeps_fixed_canvas_width_for_wide_content() {
         height: 4820.0,
     });
 
-    assert_eq!(rect.size.width, EXPORT_WEBVIEW_WIDTH);
+    assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);
     assert_eq!(rect.size.height, 4820.0);
 }
 
@@ -208,8 +209,15 @@ fn export_capture_rect_respects_minimum_viewport_size() {
         height: 200.0,
     });
 
-    assert_eq!(rect.size.width, EXPORT_WEBVIEW_WIDTH);
+    assert_eq!(rect.size.width, PDF_CANVAS_WIDTH);
     assert_eq!(rect.size.height, EXPORT_WEBVIEW_HEIGHT);
+}
+
+#[test]
+fn pdf_canvas_has_symmetric_thirty_two_pixel_gutters() {
+    assert_eq!(PDF_CANVAS_WIDTH, 1024.0);
+    assert_eq!(PDF_READING_SURFACE_WIDTH, 960.0);
+    assert_eq!((PDF_CANVAS_WIDTH - PDF_READING_SURFACE_WIDTH) / 2.0, 32.0);
 }
 
 #[test]
