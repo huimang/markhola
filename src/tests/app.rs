@@ -516,6 +516,19 @@ fn document_size_menu_uses_command_plus_and_minus_without_pinch_coupling() {
 }
 
 #[test]
+fn print_event_snapshots_runtime_document_size_into_render_context() {
+    let events = include_str!("../implementation/app/user_events.rs");
+    let actions = include_str!("../implementation/app/export_actions.rs");
+    let printing = include_str!("../implementation/printing.rs");
+
+    assert!(events.contains("RenderContext::new(runtime.document_size)"));
+    assert!(actions.contains("printing::print_document(document, context)"));
+    assert!(printing.contains("prepare_printable_webview_with_context(document, context)"));
+    assert!(!printing.contains("pageZoom"));
+    assert!(!printing.contains("pinch"));
+}
+
+#[test]
 fn app_shell_includes_restored_document_size() {
     let html = app_shell_html(
         AppTheme::Default,
