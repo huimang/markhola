@@ -50,11 +50,17 @@ body {
   color: var(--text);
 }
 
-.export-page {
+.export-reading-surface {
   box-sizing: border-box;
   width: 100%;
   max-width: 816px;
-  margin: 0 auto;
+  margin-inline: auto;
+}
+
+.export-page {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
   padding: 48px 56px 40px;
   background: var(--bg);
 }
@@ -62,8 +68,7 @@ body {
 .export-footer {
   box-sizing: border-box;
   width: 100%;
-  max-width: 816px;
-  margin: 0 auto;
+  margin: 0;
   padding: 0 56px 72px;
   text-align: right;
   font-size: 10px;
@@ -94,8 +99,10 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <style>__EXPORT_PRINT_CSS__</style>
   </head>
   <body>
-    <article class="markdown-body export-page" id="content">__DOCUMENT_HTML__</article>
-    <footer class="export-footer">__EXPORT_FOOTER__</footer>
+    <main class="export-reading-surface">
+      <article class="markdown-body export-page" id="content">__DOCUMENT_HTML__</article>
+      <footer class="export-footer">__EXPORT_FOOTER__</footer>
+    </main>
 
     <script>
       window.MathJax = {
@@ -1143,7 +1150,7 @@ pub(crate) fn export_capture_rect(measurement: &ExportMeasurement) -> CGRect {
     CGRect::new(
         CGPoint::ZERO,
         CGSize::new(
-            measurement.width.max(EXPORT_WEBVIEW_WIDTH),
+            EXPORT_WEBVIEW_WIDTH,
             measurement.height.max(EXPORT_WEBVIEW_HEIGHT),
         ),
     )

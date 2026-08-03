@@ -63,7 +63,11 @@ fn export_html_contains_document_content_without_app_shell() {
     );
     let html = build_export_html(&document, &markdown::render_html(document.markdown()));
 
+    assert!(html.contains("<main class=\"export-reading-surface\">"));
     assert!(html.contains("markdown-body export-page"));
+    assert!(html.contains(".export-reading-surface {"));
+    assert!(html.contains("max-width: 816px;"));
+    assert!(html.contains("margin-inline: auto;"));
     assert!(html.contains("window.markholaPreparePdf"));
     assert!(html.contains("mermaid-block"));
     assert!(html.contains("math math-display"));
@@ -179,6 +183,17 @@ fn injects_pdf_metadata_with_markhola_version() {
 fn export_capture_rect_uses_full_measured_height() {
     let rect = export_capture_rect(&ExportMeasurement {
         width: EXPORT_WEBVIEW_WIDTH,
+        height: 4820.0,
+    });
+
+    assert_eq!(rect.size.width, EXPORT_WEBVIEW_WIDTH);
+    assert_eq!(rect.size.height, 4820.0);
+}
+
+#[test]
+fn export_capture_rect_keeps_fixed_canvas_width_for_wide_content() {
+    let rect = export_capture_rect(&ExportMeasurement {
+        width: 2048.0,
         height: 4820.0,
     });
 
