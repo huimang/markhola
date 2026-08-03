@@ -61,6 +61,7 @@ pub(crate) enum PendingChangesAction {
 #[derive(Clone, Debug, Serialize)]
 pub(crate) struct ErrorStatusPayload<'a> {
     pub(crate) message: &'a str,
+    pub(crate) persistent: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]

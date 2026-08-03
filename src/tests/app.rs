@@ -754,10 +754,13 @@ fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silen
     assert!(!view_source.contains("render_status_with_action"));
     assert!(!view_source.contains("render_status("));
     assert!(view_source.contains("render_error_status"));
+    assert!(view_source.contains("render_export_error_status"));
+    assert!(view_source.contains("persistent: bool"));
     assert!(view_source.contains("render_export_success"));
     assert!(view_source.contains("window.showErrorStatus"));
     assert!(view_source.contains("window.showExportSuccess"));
     assert!(interface_source.contains("struct ErrorStatusPayload"));
+    assert!(interface_source.contains("pub(crate) persistent: bool"));
     assert!(interface_source.contains("struct ExportSuccessPayload"));
     assert!(!interface_source.contains("struct StatusPayload"));
     assert!(!interface_source.contains("pub(crate) level:"));
@@ -769,7 +772,7 @@ fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silen
     );
     assert!(export_source.contains("let Some(path) = pdf_export::choose_export_path(document)"));
     assert!(export_source.contains("let Some(path) = html_export::choose_export_path(document)"));
-    assert!(export_source.contains("Err(failure) => render_error_status(webview, &failure.message)"));
+    assert!(export_source.contains("render_export_error_status(webview, &failure.message)"));
 }
 
 #[test]

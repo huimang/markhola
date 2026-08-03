@@ -1068,7 +1068,16 @@ fn prepare_export_page(
         EXPORT_TIMEOUT,
         "Timed out while preparing the export page.",
         "pdf_export.prepare.timeout",
-    )?;
+    )
+    .map_err(|error| {
+        log_event(
+            "pdf_export.prepare.failed",
+            None,
+            "failed to prepare export page",
+            error.as_str(),
+        );
+        error
+    })?;
     log_event(
         "pdf_export.prepare.end",
         None,

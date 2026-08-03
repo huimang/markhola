@@ -25,6 +25,8 @@ fn png_ui_uses_format_specific_path_and_shared_export_service() {
         source
             .contains("text(\"status.export_png_failed\").replace(\"{error}\", &failure.message)")
     );
+    assert!(source.contains("render_export_error_status(webview, &message)"));
+    assert!(source.contains("log_export_failure(ExportFormat::Png"));
     assert!(!source.contains("render_document_png_data"));
     assert!(!source.contains("File::create("));
     assert!(!source.contains("std::fs::write("));

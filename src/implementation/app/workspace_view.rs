@@ -66,7 +66,18 @@ pub(super) fn sync_workspace_state(
 }
 
 pub(super) fn render_error_status(webview: &WebView, message: &str) {
-    let payload = ErrorStatusPayload { message };
+    render_error_status_with_persistence(webview, message, false);
+}
+
+pub(super) fn render_export_error_status(webview: &WebView, message: &str) {
+    render_error_status_with_persistence(webview, message, true);
+}
+
+fn render_error_status_with_persistence(webview: &WebView, message: &str, persistent: bool) {
+    let payload = ErrorStatusPayload {
+        message,
+        persistent,
+    };
     if let Ok(serialized) = serde_json::to_string(&payload) {
         let _ = webview.evaluate_script(&format!("window.showErrorStatus({serialized});"));
     }

@@ -1072,9 +1072,18 @@
       };
 
       window.showErrorStatus = (payload) => {
+        if (statusDismissTimer) {
+          clearTimeout(statusDismissTimer);
+          statusDismissTimer = null;
+        }
         status.textContent = payload.message;
         status.dataset.level = "error";
-        showTransientStatus("error");
+        if (payload.persistent) {
+          status.dataset.kind = "error";
+          status.dataset.visible = "true";
+        } else {
+          showTransientStatus("error");
+        }
       };
 
       window.showExportSuccess = (payload) => {

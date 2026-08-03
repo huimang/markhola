@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use rfd::FileDialog;
 
-use crate::app::{AppTheme, text};
+use crate::app::{AppTheme, log_event, text};
 use crate::document::ActiveDocument;
 use crate::export_service::{self, ExportCancellation, ExportFormat};
 use crate::html_export;
@@ -11,7 +11,9 @@ use crate::printing::{self, PrintOutcome};
 use crate::workspace::DocumentWorkspace;
 use wry::WebView;
 
-use super::workspace_view::{render_error_status, render_export_success};
+use super::workspace_view::{
+    render_error_status, render_export_error_status, render_export_success,
+};
 
 pub(super) fn export_png(
     webview: &WebView,
@@ -42,8 +44,9 @@ pub(super) fn export_png(
             text("menu.open"),
         ),
         Err(failure) => {
+            log_export_failure(ExportFormat::Png, &path, failure.code, &failure.message);
             let message = text("status.export_png_failed").replace("{error}", &failure.message);
-            render_error_status(webview, &message);
+            render_export_error_status(webview, &message);
         }
     }
 }
@@ -99,7 +102,10 @@ pub(super) fn export_pdf(
                     &result.path,
                     text("menu.open"),
                 ),
-                Err(failure) => render_error_status(webview, &failure.message),
+                Err(failure) => {
+                    log_export_failure(ExportFormat::Pdf, &path, failure.code, &failure.message);
+                    render_export_error_status(webview, &failure.message);
+                }
             }
         }
         None => render_error_status(webview, text("status.no_document")),
@@ -133,11 +139,26 @@ pub(super) fn export_html(
                     &result.path,
                     text("menu.open"),
                 ),
-                Err(failure) => render_error_status(webview, &failure.message),
+                Err(failure) => {
+                    log_export_failure(ExportFormat::Html, &path, failure.code, &failure.message);
+                    render_export_error_status(webview, &failure.message);
+                }
             }
         }
         None => render_error_status(webview, text("status.no_document")),
     }
+}
+
+fn log_export_failure(format: ExportFormat, path: &Path, code: &str, message: &str) {
+    log_event(
+        "export.ui.failed",
+        None,
+        "UI export failed",
+        format!(
+            "format={format:?} code={code} target={} message={message}",
+            path.display()
+        ),
+    );
 }
 
 pub(super) fn print_document(

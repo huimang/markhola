@@ -116,6 +116,13 @@ fn static_exports_fit_only_tables_to_the_frozen_content_width() {
 }
 
 #[test]
+fn preparation_failures_have_an_explicit_terminal_log_stage() {
+    let source = include_str!("../implementation/pdf_export.rs");
+    assert!(source.contains("pdf_export.prepare.failed"));
+    assert!(source.contains("failed to prepare export page"));
+}
+
+#[test]
 fn png_pdf_and_print_share_complete_accessible_footnote_html() {
     let document = document(
         "/tmp/footnotes.md",
