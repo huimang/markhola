@@ -86,19 +86,27 @@ pub(super) fn add_view_menu(mtm: MainThreadMarker, main_menu: &NSMenu, target: &
 fn build_size_menu(mtm: MainThreadMarker, target: &AnyObject) -> Retained<NSMenu> {
     let title = NSString::from_str(text("menu.size"));
     let size_menu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
-    for (label, selector) in [
-        (text("menu.zoom_in"), sel!(increaseDocumentSize:)),
-        (text("menu.zoom_out"), sel!(decreaseDocumentSize:)),
-        (text("menu.reset"), sel!(resetDocumentSize:)),
-    ] {
-        size_menu.addItem(&action(
-            mtm,
-            label,
-            Some(selector),
+    for (label, selector, key, modifiers) in [
+        (
+            text("menu.zoom_in"),
+            sel!(increaseDocumentSize:),
+            "+",
+            NSEventModifierFlags::Command,
+        ),
+        (
+            text("menu.zoom_out"),
+            sel!(decreaseDocumentSize:),
+            "-",
+            NSEventModifierFlags::Command,
+        ),
+        (
+            text("menu.reset"),
+            sel!(resetDocumentSize:),
             "",
             NSEventModifierFlags::empty(),
-            target,
-        ));
+        ),
+    ] {
+        size_menu.addItem(&action(mtm, label, Some(selector), key, modifiers, target));
     }
     size_menu
 }

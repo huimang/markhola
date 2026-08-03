@@ -501,6 +501,21 @@ fn document_size_restores_only_supported_values() {
 }
 
 #[test]
+fn document_size_menu_uses_command_plus_and_minus_without_pinch_coupling() {
+    let menu_source = include_str!("../implementation/app/menu_view.rs");
+    let event_source = include_str!("../implementation/app/user_events.rs");
+    let tab_source = include_str!("../implementation/app/native_tabs.rs");
+
+    assert!(menu_source.contains("sel!(increaseDocumentSize:),\n            \"+\",\n            NSEventModifierFlags::Command"));
+    assert!(menu_source.contains("sel!(decreaseDocumentSize:),\n            \"-\",\n            NSEventModifierFlags::Command"));
+    assert!(event_source.contains("theme_preferences::save_document_size(size);"));
+    assert!(event_source.contains("for surface in runtime.inactive_surfaces.values()"));
+    assert!(!event_source.contains("setZoom"));
+    assert!(!event_source.contains("setPageZoom"));
+    assert!(!tab_source.contains("DocumentSize"));
+}
+
+#[test]
 fn app_shell_includes_restored_document_size() {
     let html = app_shell_html(
         AppTheme::Default,
