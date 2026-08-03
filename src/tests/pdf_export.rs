@@ -68,7 +68,9 @@ fn export_html_contains_document_content_without_app_shell() {
     assert!(html.contains("markdown-body export-page"));
     assert!(html.contains(".export-reading-surface {"));
     assert!(html.contains("max-width: 960px;"));
-    assert!(html.contains("margin-inline: auto;"));
+    assert!(html.contains("grid-template-columns: minmax(0, 960px);"));
+    assert!(html.contains("justify-content: center;"));
+    assert!(!html.contains("__PDF_READING_SURFACE_WIDTH__"));
     assert!(html.contains("window.markholaPreparePdf"));
     assert!(html.contains("mermaid-block"));
     assert!(html.contains("math math-display"));

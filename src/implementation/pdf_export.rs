@@ -50,13 +50,16 @@ html, body {
 
 body {
   color: var(--text);
+  display: grid;
+  grid-template-columns: minmax(0, __PDF_READING_SURFACE_WIDTH__px);
+  justify-content: center;
 }
 
 .export-reading-surface {
   box-sizing: border-box;
   width: 100%;
   max-width: __PDF_READING_SURFACE_WIDTH__px;
-  margin-inline: auto;
+  margin: 0;
 }
 
 .export-page {
@@ -345,6 +348,57 @@ const EXPORT_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         return {
           width: Math.max(root.scrollWidth, root.clientWidth, body.scrollWidth, body.clientWidth),
           height: Math.max(root.scrollHeight, root.clientHeight, body.scrollHeight, body.clientHeight)
+        };
+      };
+
+      window.markholaExportGeometry = () => {
+        const root = document.documentElement;
+        const body = document.body;
+        const surface = document.querySelector(".export-reading-surface");
+        const article = document.getElementById("content");
+        const footer = document.querySelector(".export-footer");
+        const describe = (node) => {
+          if (!node) return null;
+          const rect = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          return {
+            rect: {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              bottom: rect.bottom
+            },
+            computed: {
+              width: style.width,
+              maxWidth: style.maxWidth,
+              marginLeft: style.marginLeft,
+              marginRight: style.marginRight,
+              paddingLeft: style.paddingLeft,
+              paddingRight: style.paddingRight,
+              boxSizing: style.boxSizing,
+              display: style.display,
+              justifyContent: style.justifyContent
+            }
+          };
+        };
+        return {
+          devicePixelRatio: window.devicePixelRatio,
+          viewport: { innerWidth: window.innerWidth, innerHeight: window.innerHeight },
+          documentElement: {
+            clientWidth: root.clientWidth,
+            clientHeight: root.clientHeight,
+            scrollWidth: root.scrollWidth,
+            scrollHeight: root.scrollHeight,
+            ...describe(root)
+          },
+          body: describe(body),
+          surface: describe(surface),
+          article: describe(article),
+          footer: describe(footer)
         };
       };
 
@@ -694,6 +748,7 @@ fn render_pdf_data(
     let started_at = Instant::now();
     let webview = prepare_webview(document, html, preparation_mode, PDF_CANVAS_WIDTH)?;
     let measurement = measure_prepared_webview(&webview, preparation_mode, started_at)?;
+    log_export_geometry(&webview)?;
     log_event(
         "pdf_export.prepare.measurement",
         None,
@@ -702,10 +757,23 @@ fn render_pdf_data(
     );
     let mtm = MainThreadMarker::new().ok_or("PDF export must run on the main thread.")?;
     let pdf_configuration = unsafe { WKPDFConfiguration::new(mtm) };
+    let capture_rect = export_capture_rect(&measurement);
     unsafe {
         pdf_configuration.setAllowTransparentBackground(false);
-        pdf_configuration.setRect(export_capture_rect(&measurement));
+        pdf_configuration.setRect(capture_rect);
     }
+    log_event(
+        "pdf_export.capture.geometry",
+        None,
+        "configured WKPDF capture rectangle",
+        format!(
+            "x={} y={} width={} height={}",
+            capture_rect.origin.x,
+            capture_rect.origin.y,
+            capture_rect.size.width,
+            capture_rect.size.height
+        ),
+    );
 
     let pdf_data = create_pdf(
         &webview,
@@ -1100,6 +1168,21 @@ fn evaluate_javascript_allowing_unsupported_type(
     }
 }
 
+fn log_export_geometry(webview: &WKWebView) -> Result<(), String> {
+    let geometry = evaluate_javascript(
+        webview,
+        "Failed to inspect export geometry",
+        "JSON.stringify(window.markholaExportGeometry())",
+    )?;
+    log_event(
+        "pdf_export.dom.geometry",
+        None,
+        "measured WKWebView export geometry",
+        geometry,
+    );
+    Ok(())
+}
+
 fn create_pdf(
     webview: &WKWebView,
     configuration: &WKPDFConfiguration,
@@ -1283,10 +1366,6 @@ pub(crate) fn build_export_html_with_theme(
             &render_assets::load_app_theme_css_for_inline_style(theme_name),
         )
         .replace(
-            "__PDF_READING_SURFACE_WIDTH__",
-            &PDF_READING_SURFACE_WIDTH.to_string(),
-        )
-        .replace(
             "__MERMAID_THEME__",
             if theme_name == "dark" {
                 "dark"
@@ -1295,6 +1374,10 @@ pub(crate) fn build_export_html_with_theme(
             },
         )
         .replace("__EXPORT_PRINT_CSS__", EXPORT_PRINT_CSS)
+        .replace(
+            "__PDF_READING_SURFACE_WIDTH__",
+            &PDF_READING_SURFACE_WIDTH.to_string(),
+        )
         .replace(
             "__MERMAID_RUNTIME__",
             &render_assets::mermaid_runtime_for_inline_script(),
