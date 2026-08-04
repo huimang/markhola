@@ -94,4 +94,57 @@ child_pid="$(cat "$run_dir/cases/slow/child.pid")"
 if ps -p "$child_pid" > /dev/null 2>&1; then fail "timed out child process should be terminated"; fi
 grep -Fq 'SUMMARY status=FAIL' "$TMP/registry.out" || fail "timeout run should summarize as FAIL"
 
+success_cases="$TMP/success-cases"; mkdir -p "$success_cases"
+cat > "$success_cases/one.sh" <<'EOF'
+#!/bin/zsh
+CASE_ID="one"
+CASE_TITLE="First success"
+CASE_TAGS="smoke"
+case_run() {
+  print -r -- "CASE_RESULT status=PASS note=one"
+}
+EOF
+cat > "$success_cases/two.sh" <<'EOF'
+#!/bin/zsh
+CASE_ID="two"
+CASE_TITLE="Second success"
+CASE_TAGS="smoke"
+case_run() {
+  print -r -- "CASE_RESULT status=PASS note=two"
+}
+EOF
+chmod +x "$success_cases/one.sh" "$success_cases/two.sh"
+
+PATH="/usr/bin:/bin" DEVICE_VALIDATION_CASES_DIR="$success_cases" DEVICE_VALIDATION_EXACT_RUNNER="$exact_stub" \
+  "$RUNNER" --apple-dmg /tmp/a --intel-dmg /tmp/i --apple-sha "$(printf 'a%.0s' {1..64})" --intel-sha "$(printf 'b%.0s' {1..64})" --timeout 2 --evidence-dir "$TMP/success" > "$TMP/success.out" 2>&1 || fail "successful run should exit 0"
+success_run_dir="$(sed -n 's/^RUN end=.*summary_json=\(.*\) summary_md=.*/\1/p' "$TMP/success.out" | head -1 | xargs dirname)"
+[[ -n "$success_run_dir" && -d "$success_run_dir" ]] || fail "successful run directory missing"
+grep -Fq 'RUN end=' "$TMP/success.out" || fail "successful run must print RUN end"
+grep -Fq 'CASE id=one status=PASS' "$TMP/success.out" || fail "first success case missing"
+grep -Fq 'CASE id=two status=PASS' "$TMP/success.out" || fail "second success case missing"
+python3 - <<'PY' "$success_run_dir/summary.json" || exit 1
+import json, sys
+data = json.load(open(sys.argv[1], 'r', encoding='utf-8'))
+assert data["status"] == "PASS"
+assert len(data["cases"]) == 2
+assert data["cases"][0]["id"] == "one"
+assert data["cases"][1]["id"] == "two"
+PY
+grep -Fq '# Device Validation Run ' "$success_run_dir/summary.md" || fail "summary.md header missing"
+grep -Fq '`one`: **PASS**' "$success_run_dir/summary.md" || fail "summary.md first case missing"
+grep -Fq '`two`: **PASS**' "$success_run_dir/summary.md" || fail "summary.md second case missing"
+
+empty_cases="$TMP/empty-cases"; mkdir -p "$empty_cases"
+PATH="/usr/bin:/bin" DEVICE_VALIDATION_CASES_DIR="$empty_cases" DEVICE_VALIDATION_EXACT_RUNNER="$exact_stub" \
+  "$RUNNER" --apple-dmg /tmp/a --intel-dmg /tmp/i --apple-sha "$(printf 'a%.0s' {1..64})" --intel-sha "$(printf 'b%.0s' {1..64})" --timeout 2 --evidence-dir "$TMP/empty" > "$TMP/empty.out" 2>&1 || fail "empty run should exit 0"
+empty_run_dir="$(sed -n 's/^RUN end=.*summary_json=\(.*\) summary_md=.*/\1/p' "$TMP/empty.out" | head -1 | xargs dirname)"
+[[ -n "$empty_run_dir" && -d "$empty_run_dir" ]] || fail "empty run directory missing"
+python3 - <<'PY' "$empty_run_dir/summary.json" || exit 1
+import json, sys
+data = json.load(open(sys.argv[1], 'r', encoding='utf-8'))
+assert data["status"] == "PASS"
+assert data["cases"] == []
+PY
+grep -Fq 'SUMMARY status=PASS cases=0' "$TMP/empty.out" || fail "empty run summary missing"
+
 print -r -- "PASS: structured parser, priority, duplicate-id, evidence and release guards"

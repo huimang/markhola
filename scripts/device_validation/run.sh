@@ -131,8 +131,20 @@ for result in $results; do case_status="${result#*|}"; case_status="${case_statu
 print -r -- "SUMMARY status=$overall cases=${#results[@]} release_mutation=NONE"
 SUMMARY_JSON="$RUN_DIR/summary.json"; SUMMARY_MD="$RUN_DIR/summary.md"
 { print '{'; print "  \"schema_version\": 1,"; print "  \"run_id\": \"$RUN_ID\","; print "  \"status\": \"$overall\","; print '  \"release_mutation\": \"NONE\",'; print '  \"cases\": ['; integer i=0
-  for result in $results; do IFS='|' read id case_status dir <<< "$result"; ((i++)); [[ $i -gt 1 ]] && print ','; print "    {\"id\":\"$id\",\"status\":\"$case_status\",\"evidence\":\"$dir\"}"; done
+  for result in $results; do IFS='|' read id case_status dir <<< "$result"; ((++i)); [[ $i -gt 1 ]] && print ','; print "    {\"id\":\"$id\",\"status\":\"$case_status\",\"evidence\":\"$dir\"}"; done
   print '  ]'; print '}'
 } > "$SUMMARY_JSON"
-{ print "# Device Validation Run $RUN_ID"; print; print "- Status: **$overall**"; print "- Release mutation: **NONE**"; print "- Candidate SHA: Apple $APPLE_SHA; Intel $INTEL_SHA"; print; print "## Cases"; for result in $results; do IFS='|' read id case_status dir <<< "$result"; print -- "- \`$id\`: **$case_status** ($dir)"; done; } > "$SUMMARY_MD"
+{
+  print -r -- "# Device Validation Run $RUN_ID"
+  print
+  print -r -- "- Status: **$overall**"
+  print -r -- "- Release mutation: **NONE**"
+  print -r -- "- Candidate SHA: Apple $APPLE_SHA; Intel $INTEL_SHA"
+  print
+  print -r -- "## Cases"
+  for result in $results; do
+    IFS='|' read id case_status dir <<< "$result"
+    printf '%s\n' "- \`$id\`: **$case_status** ($dir)"
+  done
+} > "$SUMMARY_MD"
 print -r -- "RUN end=$RUN_ID status=$overall summary_json=$SUMMARY_JSON summary_md=$SUMMARY_MD"; [[ "$overall" = PASS ]] || exit 1
