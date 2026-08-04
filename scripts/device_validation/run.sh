@@ -7,6 +7,53 @@ APPLE_DMG=""; INTEL_DMG=""; APPLE_SHA=""; INTEL_SHA=""; EVIDENCE_DIR=""
 CASE_FILTER=""; TAG_FILTER=""; TIMEOUT=300
 usage() { print -u2 -- "Usage: $0 --apple-dmg PATH --intel-dmg PATH --apple-sha SHA --intel-sha SHA [--evidence-dir DIR] [--case-id ID] [--tag TAG] [--timeout SECONDS]"; }
 die() { print -u2 -- "ERROR: $*"; exit 2; }
+
+run_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$timeout_seconds" "$@"
+    return $?
+  fi
+
+  if ! command -v perl >/dev/null 2>&1; then
+    return 125
+  fi
+
+  perl -MPOSIX=setsid -e '
+    use strict;
+    use warnings;
+
+    my $timeout = shift @ARGV;
+    my $pid = fork();
+    defined $pid or exit 125;
+
+    if ($pid == 0) {
+      setsid() or exit 125;
+      exec @ARGV or exit 125;
+    }
+
+    local $SIG{ALRM} = sub {
+      kill "TERM", -$pid;
+      select undef, undef, undef, 0.2;
+      kill "KILL", -$pid;
+      waitpid($pid, 0);
+      exit 124;
+    };
+
+    alarm $timeout;
+    waitpid($pid, 0);
+    my $status = $?;
+    alarm 0;
+
+    if (($status & 127) != 0) {
+      exit 128 + ($status & 127);
+    }
+
+    exit($status >> 8);
+  ' "$timeout_seconds" "$@"
+}
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --apple-dmg|--intel-dmg|--apple-sha|--intel-sha|--evidence-dir|--case-id|--tag|--timeout)
@@ -33,7 +80,7 @@ fi
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"; RUN_DIR="$EVIDENCE_DIR/$RUN_ID"; mkdir -p "$RUN_DIR/cases"
 LOG="$RUN_DIR/validation.log"; exec > >(tee "$LOG") 2>&1
 print -r -- "RUN start=$RUN_ID candidate_apple_sha=$APPLE_SHA candidate_intel_sha=$INTEL_SHA release_mutation=NONE"
-EXACT_RUNNER="$ROOT_DIR/scripts/run_exact_candidate_validation.sh"; IDENTITY_DIR="$RUN_DIR/candidate-identity"
+EXACT_RUNNER="${DEVICE_VALIDATION_EXACT_RUNNER:-$ROOT_DIR/scripts/run_exact_candidate_validation.sh}"; IDENTITY_DIR="$RUN_DIR/candidate-identity"
 [[ -x "$EXACT_RUNNER" ]] || { print -r -- "IDENTITY status=FAIL reason=missing_exact_runner"; exit 1; }
 if "$EXACT_RUNNER" --apple-dmg "$APPLE_DMG" --intel-dmg "$INTEL_DMG" --apple-sha "$APPLE_SHA" --intel-sha "$INTEL_SHA" --evidence-dir "$IDENTITY_DIR"; then
   print -r -- "IDENTITY status=PASS evidence=$IDENTITY_DIR"
@@ -53,12 +100,28 @@ for case_file in $case_files; do
   print -r -- "CASE id=$CASE_ID status=RUNNING evidence=$case_dir"; case_status="PASS"
   if [[ "${CASE_MANUAL:-0}" = 1 ]]; then
     case_status="UNSET"; print -r -- "CASE id=$CASE_ID status=UNSET reason=manual_only evidence=$case_dir"; print -r -- "EXPECT id=$CASE_ID key=manual actual=UNSET evidence=$case_dir/product-checklist.md"; print -r -- "manual_only=true" > "$case_dir/product-checklist.md"
-  elif ! timeout "${CASE_TIMEOUT:-$TIMEOUT}" zsh -c 'source "$1"; case_run "$2"' zsh "$case_file" "$case_dir" > >(tee "$case_log") 2>&1; then
-    case_status="FAIL"; print -r -- "CASE id=$CASE_ID status=FAIL reason=command_or_timeout evidence=$case_log"
-  elif ! grep -Eq '^CASE_RESULT status=(PASS|FAIL|BLOCKED|UNSET)( |$)' "$case_log"; then
-    case_status="FAIL"; print -r -- "CASE id=$CASE_ID status=FAIL reason=missing_structured_result evidence=$case_log"
   else
-    case_status="$(grep -E '^CASE_RESULT status=' "$case_log" | tail -1 | sed 's/^CASE_RESULT status=//' | awk '{print $1}')"; print -r -- "CASE id=$CASE_ID status=$case_status evidence=$case_log"
+    if run_with_timeout "${CASE_TIMEOUT:-$TIMEOUT}" zsh -c 'source "$1"; case_run "$2"' zsh "$case_file" "$case_dir" > >(tee "$case_log") 2>&1; then
+      case_exit=0
+    else
+      case_exit=$?
+    fi
+    if [[ $case_exit -eq 124 ]]; then
+      case_status="FAIL"
+      print -r -- "CASE_RESULT status=FAIL reason=timeout" >> "$case_log"
+      print -r -- "CASE id=$CASE_ID status=FAIL reason=timeout evidence=$case_log"
+    elif [[ $case_exit -eq 125 ]]; then
+      case_status="BLOCKED"
+      print -r -- "CASE_RESULT status=BLOCKED reason=timeout_infrastructure" >> "$case_log"
+      print -r -- "CASE id=$CASE_ID status=BLOCKED reason=timeout_infrastructure evidence=$case_log"
+    elif [[ $case_exit -ne 0 ]]; then
+      case_status="FAIL"
+      print -r -- "CASE id=$CASE_ID status=FAIL reason=command_failure evidence=$case_log"
+    elif ! grep -Eq '^CASE_RESULT status=(PASS|FAIL|BLOCKED|UNSET)( |$)' "$case_log"; then
+      case_status="FAIL"; print -r -- "CASE id=$CASE_ID status=FAIL reason=missing_structured_result evidence=$case_log"
+    else
+      case_status="$(grep -E '^CASE_RESULT status=' "$case_log" | tail -1 | sed 's/^CASE_RESULT status=//' | awk '{print $1}')"; print -r -- "CASE id=$CASE_ID status=$case_status evidence=$case_log"
+    fi
   fi
   results+=("$CASE_ID|$case_status|$case_dir")
 done
