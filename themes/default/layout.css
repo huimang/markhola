@@ -52,6 +52,16 @@
   --document-h3-font-size: 21.6px;
   --document-code-font-size: 14px;
   --editor-font-size: 15px;
+  --alert-note-ink: #475569;
+  --alert-tip-ink: #287B68;
+  --alert-important-ink: #6657E8;
+  --alert-warning-ink: var(--warn);
+  --alert-caution-ink: var(--danger);
+  --alert-note-key: #64748B;
+  --alert-tip-key: var(--markhola-green);
+  --alert-important-key: var(--markhola-violet);
+  --alert-warning-key: #d97706;
+  --alert-caution-key: #dc2626;
 }
 
 * {
@@ -847,6 +857,70 @@ body:not(.static-table-export) .markdown-body tbody tr:hover {
 .markdown-body blockquote {
   padding: 2px 0 2px 18px;
   border-left: 4px solid var(--markhola-green-mid);
+  color: var(--muted);
+}
+
+.markdown-body .mh-alert {
+  --alert-key: var(--alert-note-key);
+  --alert-ink: var(--alert-note-ink);
+  margin: 1.2em 0;
+  padding: 2px 0 2px 18px;
+  border-left: 4px solid var(--alert-key);
+  background: transparent;
+  color: var(--text);
+}
+
+.markdown-body .mh-alert[data-alert="tip"] {
+  --alert-key: var(--alert-tip-key);
+  --alert-ink: var(--alert-tip-ink);
+}
+
+.markdown-body .mh-alert[data-alert="important"] {
+  --alert-key: var(--alert-important-key);
+  --alert-ink: var(--alert-important-ink);
+}
+
+.markdown-body .mh-alert[data-alert="warning"] {
+  --alert-key: var(--alert-warning-key);
+  --alert-ink: var(--alert-warning-ink);
+}
+
+.markdown-body .mh-alert[data-alert="caution"] {
+  --alert-key: var(--alert-caution-key);
+  --alert-ink: var(--alert-caution-ink);
+}
+
+.markdown-body .mh-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--alert-ink);
+  font-family: var(--font-ui);
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  break-after: avoid;
+  break-inside: avoid;
+}
+
+.markdown-body .mh-alert-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+}
+
+.markdown-body .mh-alert-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body .mh-alert-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* An Alert nested inside another blockquote is outside the accepted scope and renders as an
+   ordinary quote, so the inherited muted color must not leak into Alert content. */
+.markdown-body .mh-alert blockquote {
   color: var(--muted);
 }
 
