@@ -75,7 +75,7 @@ fn suppresses_the_expected_blank_finish_once_before_recovering_again() {
 #[test]
 fn runtime_bootstrap_starts_protocol_transport_with_exact_token_framing() {
     let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
-    let runtime_source = include_str!("../implementation/app/runtime.rs");
+    let runtime_source = include_str!("../implementation/app/window_runtime/runtime.rs");
     let transport_source = include_str!("../implementation/app/protocol_transport/mod.rs");
     let discovery_source = include_str!("../implementation/app/protocol_transport/discovery.rs");
 
@@ -104,7 +104,7 @@ fn runtime_bootstrap_starts_protocol_transport_with_exact_token_framing() {
 #[test]
 fn runtime_bootstrap_wires_protocol_command_runtime_through_transport_identity() {
     let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
-    let runtime_source = include_str!("../implementation/app/runtime.rs");
+    let runtime_source = include_str!("../implementation/app/window_runtime/runtime.rs");
     let user_events_source = include_str!("../implementation/app/user_events.rs");
     let command_source = include_str!("../implementation/app/protocol_commands/mod.rs");
 
@@ -442,7 +442,7 @@ fn default_theme_uses_green_subtle_for_its_background_surfaces() {
 
 #[test]
 fn default_theme_separates_titlebar_tabs_and_document_surface() {
-    let native_tabs = include_str!("../implementation/app/native_tabs.rs");
+    let native_tabs = include_str!("../implementation/app/window_runtime/native_tabs.rs");
     let html = app_shell_html(
         AppTheme::Default,
         AppLanguage::English,
@@ -558,7 +558,7 @@ fn document_size_restores_only_supported_values() {
 fn document_size_menu_uses_command_plus_and_minus_without_pinch_coupling() {
     let menu_source = include_str!("../implementation/app/native_menu/menu_view.rs");
     let event_source = include_str!("../implementation/app/user_events.rs");
-    let tab_source = include_str!("../implementation/app/native_tabs.rs");
+    let tab_source = include_str!("../implementation/app/window_runtime/native_tabs.rs");
 
     assert!(menu_source.contains("sel!(increaseDocumentSize:),\n            \"+\",\n            NSEventModifierFlags::Command"));
     assert!(menu_source.contains("sel!(decreaseDocumentSize:),\n            \"-\",\n            NSEventModifierFlags::Command"));
@@ -778,7 +778,7 @@ fn export_success_and_error_use_separate_contracts_while_empty_state_stays_silen
 #[test]
 fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     let bootstrap_source = include_str!("../implementation/app/bootstrap.rs");
-    let tabs_source = include_str!("../implementation/app/native_tabs.rs");
+    let tabs_source = include_str!("../implementation/app/window_runtime/native_tabs.rs");
     let window_events_source = include_str!("../implementation/app/window_events.rs");
     let shortcuts_source = include_str!("../implementation/app/shortcuts.rs");
     let navigation_source = include_str!("../implementation/app/navigation_actions.rs");
@@ -903,8 +903,8 @@ fn active_native_tab_relayouts_its_footer_before_presenting_content() {
 
 #[test]
 fn native_tab_activation_synchronizes_window_zoom_state_before_swapping_surfaces() {
-    let tabs = include_str!("../implementation/app/native_tabs.rs");
-    let runtime = include_str!("../implementation/app/runtime.rs");
+    let tabs = include_str!("../implementation/app/window_runtime/native_tabs.rs");
+    let runtime = include_str!("../implementation/app/window_runtime/runtime.rs");
     let window_events = include_str!("../implementation/app/window_events.rs");
 
     assert!(tabs.contains("pub(super) fn sync_zoom_state(source: &Window, target: &Window)"));
@@ -1036,7 +1036,7 @@ fn native_tabs_keep_appkit_tab_controls_and_numeric_shortcuts() {
     let menu_install = include_str!("../implementation/app/native_menu/menu_install.rs");
     let menu_tab = include_str!("../implementation/app/native_menu/menu_tab.rs");
     let menu_target = include_str!("../implementation/app/native_menu/menu_target.rs");
-    let native_tabs = include_str!("../implementation/app/native_tabs.rs");
+    let native_tabs = include_str!("../implementation/app/window_runtime/native_tabs.rs");
 
     assert!(!menu_install.contains("toggleTabBar:"));
     assert!(!menu_install.contains("toggleTabOverview:"));

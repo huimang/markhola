@@ -2,16 +2,19 @@ mod asset_access;
 mod bootstrap;
 mod close_actions;
 mod document_actions;
+#[path = "window_runtime/document_surface.rs"]
 mod document_surface;
 mod documentation;
 mod event_loop;
 mod export_actions;
 mod ipc;
 mod native_footer;
+#[path = "window_runtime/native_tabs.rs"]
 mod native_tabs;
 mod navigation_actions;
 mod protocol_commands;
 mod protocol_transport;
+#[path = "window_runtime/runtime.rs"]
 mod runtime;
 mod save_actions;
 mod shell_events;
