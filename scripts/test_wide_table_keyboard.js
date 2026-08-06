@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 
-const source = fs.readFileSync("src/implementation/app/shell_script.js", "utf8");
+const source = fs.readFileSync("src/implementation/app/web_surface/shell_script.js", "utf8");
 const start = source.indexOf("// MARKHOLA_TABLE_KEYBOARD_START");
 const end = source.indexOf("// MARKHOLA_TABLE_KEYBOARD_END");
 assert.notEqual(start, -1, "keyboard helper start marker must exist");

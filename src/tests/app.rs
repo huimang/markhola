@@ -11,7 +11,7 @@ use super::implementation::{
     file_paths_from_urls, load_document, markdown_path_from_href,
     reload_workspace_documents_from_disk,
 };
-use super::shell::{
+use super::web_surface::{
     app_shell_html, should_dispatch_shell_recovery, should_recover_shell_on_page_load,
 };
 
@@ -390,7 +390,7 @@ fn app_themes_keep_wide_tables_inside_an_accessible_scroll_region() {
 
 #[test]
 fn focused_table_region_owns_only_horizontal_arrow_navigation() {
-    let script = include_str!("../implementation/app/shell_script.js");
+    let script = include_str!("../implementation/app/web_surface/shell_script.js");
 
     assert!(script.contains("const step = Math.max(40, Math.round(region.clientWidth * 0.8));"));
     assert!(script.contains("region.scrollWidth - region.clientWidth"));
@@ -1079,7 +1079,7 @@ fn markdown_path_from_href_accepts_file_markdown_urls_and_ignores_others() {
 
 #[test]
 fn app_shell_routes_local_markdown_links_through_ipc() {
-    let script = include_str!("../implementation/app/shell_script.js");
+    let script = include_str!("../implementation/app/web_surface/shell_script.js");
 
     assert!(script.contains("const resolveLocalMarkdownLink = (href) =>"));
     assert!(script.contains("decodeURIComponent(fileUrl.pathname || \"\").toLowerCase()"));

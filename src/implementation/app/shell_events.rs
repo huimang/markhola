@@ -55,11 +55,14 @@ pub(super) fn recover_shell(url: String, runtime: &mut AppRuntime) {
         .suppress_blank_recovery
         .store(true, Ordering::SeqCst);
 
-    if let Err(error) = runtime.webview.load_html(&super::shell::app_shell_html(
-        runtime.selected_theme,
-        runtime.language,
-        runtime.document_size,
-    )) {
+    if let Err(error) = runtime
+        .webview
+        .load_html(&super::web_surface::app_shell_html(
+            runtime.selected_theme,
+            runtime.language,
+            runtime.document_size,
+        ))
+    {
         runtime.shell.recovery_pending = false;
         runtime
             .shell

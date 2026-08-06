@@ -18,8 +18,8 @@ use super::native_tabs;
 use super::protocol_commands::ProtocolCommandRuntime;
 use super::protocol_transport::ProtocolTransport;
 use super::runtime::AppRuntime;
-use super::shell::{app_shell_html, should_dispatch_shell_recovery};
 use super::theme_preferences;
+use super::web_surface::{app_shell_html, should_dispatch_shell_recovery};
 use super::{UserEvent, WINDOW_TITLE, dispatch_user_event, log_event, macos_menu};
 
 fn is_markdown_path(value: &str) -> bool {

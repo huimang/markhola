@@ -7,8 +7,6 @@ mod interface;
 #[cfg(target_os = "macos")]
 #[path = "../implementation/app/macos_menu.rs"]
 mod macos_menu;
-#[path = "../implementation/app/shell.rs"]
-mod shell;
 #[cfg(test)]
 #[path = "../tests/app.rs"]
 mod tests;
@@ -17,6 +15,8 @@ mod tests;
 mod visual_package_tests;
 #[path = "../implementation/app/web_localization.rs"]
 mod web_localization;
+#[path = "../implementation/app/web_surface/shell.rs"]
+mod web_surface;
 
 pub(crate) use self::app_theme::{AppTheme, ThemePreference};
 pub use self::implementation::run;
