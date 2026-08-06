@@ -1,3 +1,5 @@
+#[path = "markdown/alerts.rs"]
+mod alerts;
 #[path = "markdown/footnotes.rs"]
 mod footnotes;
 #[path = "markdown/syntax_theme.rs"]
@@ -15,6 +17,8 @@ use syntect::util::LinesWithEndings;
 
 const TOC_PLACEHOLDER: &str = "<markhola-toc></markhola-toc>";
 
+pub use alerts::AlertLabels;
+
 pub fn render_html(markdown: &str) -> String {
     render_html_with_image_resolver(markdown, |_| None)
 }
@@ -22,6 +26,19 @@ pub fn render_html(markdown: &str) -> String {
 pub(crate) fn render_html_with_image_resolver(
     markdown: &str,
     resolve_image: impl Fn(&str) -> Option<String>,
+) -> String {
+    render_html_with_image_resolver_and_alert_labels(markdown, resolve_image, AlertLabels::english())
+}
+
+/// Renders with explicit Alert labels.
+///
+/// The app keeps the English defaults and localizes Alert titles in the WebView so the language can
+/// change while a document stays open. Export paths pass the current language instead, so static
+/// output is already correct without running any script.
+pub(crate) fn render_html_with_image_resolver_and_alert_labels(
+    markdown: &str,
+    resolve_image: impl Fn(&str) -> Option<String>,
+    alert_labels: AlertLabels,
 ) -> String {
     let markdown = preprocess_angle_bracket_links(markdown);
     let (markdown, has_toc_placeholder) = preprocess_toc(&markdown);
@@ -32,6 +49,7 @@ pub(crate) fn render_html_with_image_resolver(
     options.insert(Options::ENABLE_TASKLISTS);
     options.insert(Options::ENABLE_MATH);
     options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_GFM);
 
     let parser = Parser::new_ext(&markdown, options).map(|event| match event {
         Event::Start(Tag::Image {
@@ -55,9 +73,13 @@ pub(crate) fn render_html_with_image_resolver(
     let (parser, footnotes) = footnotes::rewrite(parser);
     let mut html_output = String::new();
     let mut regular_events = Vec::new();
-    let mut events = parser.into_iter();
+    let mut events = parser.into_iter().peekable();
     let mut headings = Vec::new();
     let mut used_heading_ids = std::collections::HashMap::<String, usize>::new();
+    // Tracks, for every open blockquote, whether it renders as an Alert. Nested Alerts are outside
+    // the accepted scope, so an inner marker degrades to an ordinary blockquote.
+    let mut blockquote_stack: Vec<bool> = Vec::new();
+    let mut alert_count = 0usize;
 
     while let Some(event) = events.next() {
         match event {
@@ -114,6 +136,38 @@ pub(crate) fn render_html_with_image_resolver(
             Event::End(TagEnd::Table) => {
                 regular_events.push(event);
                 regular_events.push(Event::Html(CowStr::Borrowed("</div>")));
+            }
+            Event::Start(Tag::BlockQuote(kind)) => {
+                let already_in_alert = blockquote_stack.iter().any(|is_alert| *is_alert);
+                // A marker with no content carries no information. Degrade it instead of emitting
+                // an empty Alert region.
+                let is_empty = matches!(events.peek(), Some(Event::End(TagEnd::BlockQuote(_))));
+                let render_as_alert = kind.is_some() && !already_in_alert && !is_empty;
+                blockquote_stack.push(render_as_alert);
+
+                match (render_as_alert, kind) {
+                    (true, Some(kind)) => {
+                        alert_count += 1;
+                        regular_events.push(Event::Html(CowStr::Boxed(
+                            alerts::open_html(
+                                alerts::AlertKind::from_block_quote_kind(kind),
+                                alert_count,
+                                alert_labels,
+                            )
+                            .into_boxed_str(),
+                        )));
+                    }
+                    // Dropping the parsed kind keeps every fallback byte-identical to the ordinary
+                    // blockquote output produced before Alerts existed.
+                    _ => regular_events.push(Event::Start(Tag::BlockQuote(None))),
+                }
+            }
+            Event::End(TagEnd::BlockQuote(_)) => {
+                if blockquote_stack.pop().unwrap_or(false) {
+                    regular_events.push(Event::Html(CowStr::Borrowed(alerts::close_html())));
+                } else {
+                    regular_events.push(Event::End(TagEnd::BlockQuote(None)));
+                }
             }
             other => regular_events.push(other),
         }
@@ -472,7 +526,7 @@ fn slugify_heading(value: &str) -> String {
 }
 
 fn unique_heading_id(used: &mut std::collections::HashMap<String, usize>, base: &str) -> String {
-    let base = if base.starts_with("markhola-footnote-") {
+    let base = if base.starts_with("markhola-footnote-") || base.starts_with("markhola-alert-") {
         format!("heading-{base}")
     } else {
         base.to_string()

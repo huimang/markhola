@@ -1,4 +1,7 @@
-use super::implementation::{extract_title, highlight_assets, render_html, resolve_syntax};
+use super::implementation::{
+    AlertLabels, extract_title, highlight_assets, render_html,
+    render_html_with_image_resolver_and_alert_labels, resolve_syntax,
+};
 
 #[test]
 fn extracts_first_heading_as_title() {
@@ -331,4 +334,159 @@ fn footnotes_escape_raw_html_and_do_not_activate_custom_nested_content() {
     assert!(!html.contains("<span>plain</span>"));
     assert!(html.contains("&lt;script&gt;"));
     assert!(html.contains("&lt;span&gt;plain&lt;/span&gt;"));
+}
+
+#[test]
+fn renders_every_alert_type_with_accessible_region_and_localizable_label() {
+    for (marker, token, label) in [
+        ("NOTE", "note", "Note"),
+        ("TIP", "tip", "Tip"),
+        ("IMPORTANT", "important", "Important"),
+        ("WARNING", "warning", "Warning"),
+        ("CAUTION", "caution", "Caution"),
+    ] {
+        let html = render_html(&format!("> [!{marker}]\n> Body."));
+
+        assert!(html.contains(&format!("data-alert=\"{token}\"")), "{marker}");
+        assert!(html.contains("class=\"mh-alert\""), "{marker}");
+        assert!(html.contains("role=\"note\""), "{marker}");
+        assert!(
+            html.contains("aria-labelledby=\"markhola-alert-1\""),
+            "{marker}"
+        );
+        assert!(
+            html.contains(&format!("class=\"mh-alert-label\">{label}</span>")),
+            "{marker}"
+        );
+        assert!(html.contains("aria-hidden=\"true\""), "{marker}");
+        assert!(html.contains("<p>Body.</p>"), "{marker}");
+    }
+}
+
+#[test]
+fn alert_markers_accept_case_and_trailing_whitespace() {
+    for source in [
+        "> [!tip]\n> Body.",
+        "> [!TiP]\n> Body.",
+        "> [!TIP]  \n> Body.",
+        "> [!TIP]\t\n> Body.",
+        ">[!TIP]\n> Body.",
+        "   > [!TIP]\n   > Body.",
+        "> [!TIP]\n>\n> Body.",
+    ] {
+        assert!(
+            render_html(source).contains("data-alert=\"tip\""),
+            "{source:?}"
+        );
+    }
+}
+
+#[test]
+fn ordinary_blockquotes_stay_unchanged_for_every_rejected_marker() {
+    let plain = render_html("> Body.");
+    assert_eq!(plain, "<blockquote>\n<p>Body.</p>\n</blockquote>\n");
+
+    for source in [
+        ">  [!NOTE]\n> Body.",
+        "> [!TIP] inline\n> Body.",
+        "> [!HINT]\n> Body.",
+        "> First.\n> [!WARNING]\n> Body.",
+        "> `[!NOTE]`\n> Body.",
+        "> ［!NOTE］\n> Body.",
+    ] {
+        let html = render_html(source);
+        assert!(html.starts_with("<blockquote>"), "{source:?}");
+        assert!(!html.contains("mh-alert"), "{source:?}");
+    }
+
+    assert!(!render_html("```\n> [!CAUTION]\n> Body.\n```").contains("mh-alert"));
+    assert!(!render_html("    > [!CAUTION]\n    > Body.").contains("mh-alert"));
+}
+
+#[test]
+fn alert_without_content_degrades_to_an_ordinary_blockquote() {
+    assert_eq!(render_html("> [!NOTE]"), render_html(">"));
+    assert!(!render_html("> [!NOTE]").contains("mh-alert"));
+}
+
+#[test]
+fn nested_alert_markers_degrade_to_ordinary_blockquotes() {
+    let html = render_html("> [!NOTE]\n> Outer.\n>\n> > [!TIP]\n> > Inner.");
+
+    assert_eq!(html.matches("class=\"mh-alert\"").count(), 1);
+    assert!(html.contains("data-alert=\"note\""));
+    assert!(!html.contains("data-alert=\"tip\""));
+    assert!(html.contains("<blockquote>\n<p>Inner.</p>\n</blockquote>"));
+}
+
+#[test]
+fn alert_identifiers_increment_and_stay_separate_from_heading_ids() {
+    let html = render_html("> [!NOTE]\n> One.\n\n> [!TIP]\n> Two.");
+    assert!(html.contains("id=\"markhola-alert-1\""));
+    assert!(html.contains("id=\"markhola-alert-2\""));
+
+    let collision = render_html("# Markhola Alert 1\n\n> [!NOTE]\n> Body.");
+    assert!(collision.contains("id=\"heading-markhola-alert-1\""));
+    assert_eq!(collision.matches("id=\"markhola-alert-1\"").count(), 1);
+}
+
+#[test]
+fn alert_content_reuses_existing_safe_rendering() {
+    let html = render_html(
+        "> [!IMPORTANT]\n> **Strong** and $x^2$ with [link](README.md).\n>\n> - item\n>\n> ![local](asset.svg)\n>\n> ```rust\n> let x = 1;\n> ```",
+    );
+
+    assert!(html.contains("<strong>Strong</strong>"));
+    assert!(html.contains("class=\"math math-inline\""));
+    assert!(html.contains("href=\"README.md\""));
+    assert!(html.contains("<li>item</li>"));
+    assert!(html.contains("src=\"asset.svg\""));
+    assert!(html.contains("class=\"code-block\""));
+
+}
+
+#[test]
+fn alert_content_does_not_change_the_document_raw_html_policy() {
+    // Footnotes deliberately narrow their content model and downgrade raw HTML to text. Alerts are
+    // an ordinary blockquote surface, so they must neither widen nor narrow the document policy.
+    for fragment in ["<b>bold</b>", "<div>block</div>", "<script>alert('no')</script>"] {
+        let inside = render_html(&format!("> [!NOTE]\n> {fragment}"));
+        let outside = render_html(fragment);
+        let escaped = fragment.replace('<', "&lt;").replace('>', "&gt;");
+
+        assert_eq!(
+            inside.contains(fragment),
+            outside.contains(fragment),
+            "{fragment:?}"
+        );
+        assert_eq!(
+            inside.contains(&escaped),
+            outside.contains(&escaped),
+            "{fragment:?}"
+        );
+    }
+}
+
+#[test]
+fn export_paths_inject_localized_alert_labels_without_scripting() {
+    let labels = AlertLabels {
+        note: "备注",
+        tip: "提示",
+        important: "重要",
+        warning: "警告",
+        caution: "注意",
+    };
+    let html = render_html_with_image_resolver_and_alert_labels(
+        "> [!WARNING]\n> Body.\n\n> [!TIP]\n> Body.",
+        |_| None,
+        labels,
+    );
+
+    assert!(html.contains("class=\"mh-alert-label\">警告</span>"));
+    assert!(html.contains("class=\"mh-alert-label\">提示</span>"));
+    assert!(html.contains("data-alert=\"warning\""));
+    assert!(!html.contains(">Warning<"));
+
+    // The default entry point stays English so offline CLI and socket output remain deterministic.
+    assert!(render_html("> [!WARNING]\n> Body.").contains("class=\"mh-alert-label\">Warning</span>"));
 }
