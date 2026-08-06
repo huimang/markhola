@@ -209,9 +209,9 @@ fn protocol_surface_syncs_only_after_successful_control_plane_mutation() {
 #[test]
 fn ui_png_export_wires_menu_events_and_accessible_strings_through_shared_service() {
     let user_events_source = include_str!("../implementation/app/user_events.rs");
-    let menu_source = include_str!("../implementation/app/menu_file_export.rs");
-    let menu_target_source = include_str!("../implementation/app/menu_target.rs");
-    let menu_state_source = include_str!("../implementation/app/menu_state.rs");
+    let menu_source = include_str!("../implementation/app/native_menu/menu_file_export.rs");
+    let menu_target_source = include_str!("../implementation/app/native_menu/menu_target.rs");
+    let menu_state_source = include_str!("../implementation/app/native_menu/menu_state.rs");
     let dispatch_source = include_str!("../implementation/app/interface_dispatch.rs");
     let interface_types_source = include_str!("../implementation/app/interface_types.rs");
     let export_actions_source = include_str!("../implementation/app/export_actions.rs");
@@ -556,7 +556,7 @@ fn document_size_restores_only_supported_values() {
 
 #[test]
 fn document_size_menu_uses_command_plus_and_minus_without_pinch_coupling() {
-    let menu_source = include_str!("../implementation/app/menu_view.rs");
+    let menu_source = include_str!("../implementation/app/native_menu/menu_view.rs");
     let event_source = include_str!("../implementation/app/user_events.rs");
     let tab_source = include_str!("../implementation/app/native_tabs.rs");
 
@@ -659,8 +659,8 @@ fn native_footer_contains_document_controls_in_the_confirmed_order() {
 
 #[test]
 fn view_menu_owns_the_checked_outline_toggle() {
-    let menu = include_str!("../implementation/app/menu_view.rs");
-    let state = include_str!("../implementation/app/menu_state.rs");
+    let menu = include_str!("../implementation/app/native_menu/menu_view.rs");
+    let state = include_str!("../implementation/app/native_menu/menu_state.rs");
 
     assert!(menu.contains("text(\"menu.outline\")"));
     assert!(menu.contains("sel!(toggleOutlinePanel:)"));
@@ -784,8 +784,8 @@ fn main_window_close_quits_while_tab_close_remains_document_scoped() {
     let navigation_source = include_str!("../implementation/app/navigation_actions.rs");
     let close_actions_source = include_str!("../implementation/app/close_actions.rs");
     let user_events_source = include_str!("../implementation/app/user_events.rs");
-    let file_menu_source = include_str!("../implementation/app/menu_file.rs");
-    let app_menu_source = include_str!("../implementation/app/menu_app.rs");
+    let file_menu_source = include_str!("../implementation/app/native_menu/menu_file.rs");
+    let app_menu_source = include_str!("../implementation/app/native_menu/menu_app.rs");
     let application_close_button_configuration = tabs_source
         .split("fn configure_application_close_button")
         .nth(1)
@@ -985,7 +985,7 @@ fn theme_preferences_follow_system_and_migrate_legacy_light() {
     );
     assert_eq!(ThemePreference::from_stored_key("unknown"), None);
 
-    let menu = include_str!("../implementation/app/menu_view.rs");
+    let menu = include_str!("../implementation/app/native_menu/menu_view.rs");
     let events = include_str!("../implementation/app/window_events.rs");
     let actions = include_str!("../implementation/app/theme_actions.rs");
     assert!(menu.contains("ThemePreference::System => text(\"menu.theme_system\")"));
@@ -1024,8 +1024,8 @@ fn file_paths_from_urls_ignores_non_file_urls() {
 
 #[test]
 fn toggle_mode_lives_only_in_edit_menu_source() {
-    let file_menu = include_str!("../implementation/app/menu_file.rs");
-    let edit_menu = include_str!("../implementation/app/menu_edit.rs");
+    let file_menu = include_str!("../implementation/app/native_menu/menu_file.rs");
+    let edit_menu = include_str!("../implementation/app/native_menu/menu_edit.rs");
 
     assert!(!file_menu.contains("toggleDocumentMode:"));
     assert!(edit_menu.contains("toggleDocumentMode:"));
@@ -1033,9 +1033,9 @@ fn toggle_mode_lives_only_in_edit_menu_source() {
 
 #[test]
 fn native_tabs_keep_appkit_tab_controls_and_numeric_shortcuts() {
-    let menu_install = include_str!("../implementation/app/menu_install.rs");
-    let menu_tab = include_str!("../implementation/app/menu_tab.rs");
-    let menu_target = include_str!("../implementation/app/menu_target.rs");
+    let menu_install = include_str!("../implementation/app/native_menu/menu_install.rs");
+    let menu_tab = include_str!("../implementation/app/native_menu/menu_tab.rs");
+    let menu_target = include_str!("../implementation/app/native_menu/menu_target.rs");
     let native_tabs = include_str!("../implementation/app/native_tabs.rs");
 
     assert!(!menu_install.contains("toggleTabBar:"));

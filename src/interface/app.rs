@@ -5,7 +5,7 @@ mod implementation;
 #[path = "../implementation/app/interface.rs"]
 mod interface;
 #[cfg(target_os = "macos")]
-#[path = "../implementation/app/macos_menu.rs"]
+#[path = "../implementation/app/native_menu/mod.rs"]
 mod macos_menu;
 #[cfg(test)]
 #[path = "../tests/app.rs"]
