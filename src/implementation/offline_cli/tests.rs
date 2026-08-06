@@ -218,7 +218,7 @@ fn info_commands_emit_schema_v1_json_and_private_help() {
     assert_eq!(version_json["schema_version"], 1);
     assert_eq!(version_json["command"], "version");
     assert_eq!(version_json["success"], true);
-    assert!(version_json["version"].as_str().unwrap().starts_with("0.9.3"));
+    assert!(version_json["version"].as_str().unwrap().starts_with("0.9.4"));
 
     let help = run_markhola(&["help", "--json"]);
     assert!(help.status.success(), "help stderr:\n{}", String::from_utf8_lossy(&help.stderr));

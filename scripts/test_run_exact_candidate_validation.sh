@@ -89,7 +89,7 @@ EOF
 #!/bin/zsh
 case "$2" in
   LSMinimumSystemVersion) print -r -- "14.0" ;;
-  CFBundleShortVersionString) print -r -- "0.9.3" ;;
+  CFBundleShortVersionString) print -r -- "0.9.4" ;;
   CFBundleIdentifier) print -r -- "com.markhola.app" ;;
   *) print -u2 -- "unexpected plutil extract: $2"; exit 1 ;;
 esac

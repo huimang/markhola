@@ -6,7 +6,7 @@ MarkHola is a free Markdown reader and editor built with AI.
 
 ## Current Version
 
-- `v0.9.3`
+- `v0.9.4`
 
 ## Features
 
@@ -217,6 +217,7 @@ Release order for GitHub publishing:
 - `examples/v0.9.1-png-export-and-save-as.md`: full PNG/PDF/HTML and Save As verification fixture
 - `examples/v0.9.2-offline-cli-export.md`: one-shot offline CLI export verification fixture
 - `examples/v0.9.3-reading-and-markdown.md`: document size, Print, wide-table, and footnote fixture
+- `examples/alerts.md`: GitHub-compatible Markdown Alerts fixture
 - `scripts/`: packaging scripts
 - `scripts/release_publish_workflow.md`: pre-publish sandbox validation and GitHub release workflow
 - `themes/`: directly editable app theme files
