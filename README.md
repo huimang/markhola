@@ -53,6 +53,8 @@ MarkHola is a free Markdown reader and editor built with AI.
 - Open the bundled documentation from `Help > Documentation`
 - Render headings, links, images, tables, lists, blockquotes, code blocks, and accessible Markdown
   footnotes with stable numbering and backlinks
+- Render GitHub-compatible Markdown Alerts for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`,
+  and `[!CAUTION]`, with localized titles in the app and in PNG, PDF, HTML, and Print output
 - Render Markdown links without underlines while retaining themed hover and focus colors
 - Render angle-bracket shorthand links such as `<README.md>` as clickable links in readonly mode
 - Syntax-highlighted fenced code blocks in readonly mode
