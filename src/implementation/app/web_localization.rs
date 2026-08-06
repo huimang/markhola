@@ -47,6 +47,11 @@ pub(crate) struct WebStrings {
     rendering_formula: &'static str,
     formula_failed: &'static str,
     image_failed: &'static str,
+    alert_note: &'static str,
+    alert_tip: &'static str,
+    alert_important: &'static str,
+    alert_warning: &'static str,
+    alert_caution: &'static str,
 }
 
 impl WebStrings {
@@ -95,6 +100,11 @@ impl WebStrings {
             rendering_formula: t("web.rendering_formula"),
             formula_failed: t("web.formula_failed"),
             image_failed: t("web.image_failed"),
+            alert_note: t("web.alert_note"),
+            alert_tip: t("web.alert_tip"),
+            alert_important: t("web.alert_important"),
+            alert_warning: t("web.alert_warning"),
+            alert_caution: t("web.alert_caution"),
         }
     }
 }

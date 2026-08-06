@@ -70,6 +70,24 @@
       let writableActiveIndex = -1;
       let statusDismissTimer = null;
 
+      // Markdown rendering stays language-independent, so Alert titles arrive with an English
+      // fallback and are localized here. This also keeps titles correct when the interface language
+      // changes while a document is already open, without re-rendering the document.
+      const applyAlertLabels = () => {
+        const labels = {
+          note: appStrings.alertNote,
+          tip: appStrings.alertTip,
+          important: appStrings.alertImportant,
+          warning: appStrings.alertWarning,
+          caution: appStrings.alertCaution
+        };
+        content.querySelectorAll(".mh-alert").forEach((alert) => {
+          const label = labels[alert.dataset.alert];
+          const node = alert.querySelector(".mh-alert-label");
+          if (label && node) node.textContent = label;
+        });
+      };
+
       const applyAppLanguage = (strings) => {
         appStrings = strings;
         document.documentElement.lang = strings.language;
@@ -101,6 +119,7 @@
           currentDocumentMode === "writable" ? writableActiveIndex : readonlyActiveIndex
         );
         refreshOutline();
+        applyAlertLabels();
       };
 
       const hideAbout = () => {
@@ -437,6 +456,7 @@
       };
 
       const renderReadonlyEnhancements = async () => {
+        applyAlertLabels();
         await renderMermaidDiagrams();
         await renderMathExpressions();
       };
@@ -480,6 +500,7 @@
       const restoreReadonlyBaseHtml = () => {
         if (readonlyBaseHtml) {
           content.innerHTML = readonlyBaseHtml;
+          applyAlertLabels();
         }
       };
 

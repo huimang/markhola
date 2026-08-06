@@ -1607,9 +1607,27 @@ fn build_export_html_with_theme_context_and_mode(
 }
 
 pub(crate) fn render_export_document_html(document: &ActiveDocument) -> String {
-    markdown::render_html_with_image_resolver(document.markdown(), |destination| {
-        export_assets::local_image_data_url(document, destination)
-    })
+    markdown::render_html_with_image_resolver_and_alert_labels(
+        document.markdown(),
+        |destination| export_assets::local_image_data_url(document, destination),
+        current_alert_labels(),
+    )
+}
+
+/// Alert labels for every static export path.
+///
+/// Baking the current interface language into the rendered HTML keeps PNG, PDF, standalone HTML,
+/// and Print correct without running a localization script, so a standalone file stays correct even
+/// with scripting disabled. Offline CLI and socket runs never set an interface language, so they
+/// keep the English defaults and stay deterministic.
+fn current_alert_labels() -> markdown::AlertLabels {
+    markdown::AlertLabels {
+        note: crate::app::text("web.alert_note"),
+        tip: crate::app::text("web.alert_tip"),
+        important: crate::app::text("web.alert_important"),
+        warning: crate::app::text("web.alert_warning"),
+        caution: crate::app::text("web.alert_caution"),
+    }
 }
 
 pub(crate) fn validate_export_local_images(document: &ActiveDocument) -> Result<(), String> {

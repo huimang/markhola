@@ -150,3 +150,8 @@ web:
   rendering_formula: "正在渲染公式…"
   formula_failed: "公式渲染失败。"
   image_failed: "图片加载失败："
+  alert_note: "备注"
+  alert_tip: "提示"
+  alert_important: "重要"
+  alert_warning: "警告"
+  alert_caution: "注意"
