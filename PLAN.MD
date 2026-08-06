@@ -380,11 +380,11 @@ Start this milestone after v0.9.3 is successfully published.
 
 1. Add GitHub-compatible Markdown Alerts
    - Support blockquote Alerts for `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!CAUTION]`, and `[!WARNING]`
-   - Recognize an Alert only when its marker is the first non-empty content in a blockquote, accepting ASCII case-insensitive markers and surrounding whitespace
+   - Recognize an Alert only when its marker is the first non-empty content in a blockquote, accepting ASCII case-insensitive markers and trailing whitespace after the marker
    - Preserve ordinary blockquote rendering when the marker is missing, unknown, misplaced, or appears inside a code block
    - Preserve safe paragraphs, line breaks, lists, emphasis, links, code, math, and local images inside Alert content
    - Render a stable accessible region, localized visible type label, and decorative icon for each Alert type
-   - Use dedicated Light and Dark theme tokens with accessible text, border, icon, and background contrast
+   - Use dedicated Light and Dark theme tokens with accessible text, border, and icon contrast
    - Preserve the original Markdown through editing, saving, and Save As
    - Use the same Alert structure in the app, PNG, PDF, standalone HTML, and native Print, including long content and page breaks without clipping
    - Exclude nested Alerts, custom Alert types, interactive collapsing, Alert-specific Mermaid behavior, remote resources, and source rewriting from v0.9.4
