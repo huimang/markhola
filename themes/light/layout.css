@@ -782,3 +782,28 @@ body {
   font-size: 12px;
   text-align: center;
 }
+
+body.workspace-empty .empty-state {
+  min-height: 100%;
+  padding: 28px 20px;
+}
+
+body.workspace-empty .empty-card {
+  max-width: 520px;
+  padding: 24px 28px;
+  border-radius: 18px;
+}
+
+body.workspace-empty .bottom-bar {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+body.workspace-empty #wordCount,
+body.workspace-empty #lineCount,
+body.workspace-empty #modeState {
+  display: none;
+}
