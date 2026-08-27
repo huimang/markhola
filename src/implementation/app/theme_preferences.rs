@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::app::AppTheme;
+use crate::app::implementation::app_theme::AppTheme;
 
 const SELECTED_THEME_KEY: &str = "selectedTheme";
 

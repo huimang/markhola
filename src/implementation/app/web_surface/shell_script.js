@@ -1,4 +1,4 @@
-    <script>
+﻿    <script>
       window.MathJax = {
         startup: { typeset: false },
         svg: { fontCache: "none" }
@@ -260,6 +260,7 @@
       };
 
       const resetWorkspaceChrome = (statusMessage) => {
+        document.body.classList.add("workspace-empty");
         document.title = "MarkHola";
         documentTitle.textContent = "Preview";
         documentSubtitle.textContent = "__DOCUMENT_SUBTITLE__";
@@ -282,6 +283,7 @@
           return;
         }
 
+        document.body.classList.remove("workspace-empty");
         document.title = `${active.file_name}${active.dirty ? " *" : ""} - MarkHola`;
         documentTitle.textContent = active.title;
         documentSubtitle.textContent = active.file_name;

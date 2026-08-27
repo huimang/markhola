@@ -1,5 +1,7 @@
-use tao::event_loop::ControlFlow;
+﻿use tao::event_loop::ControlFlow;
 
+use crate::app::implementation::app_theme::AppTheme;
+use crate::app::implementation::theme_preferences;
 use crate::document::DocumentMode;
 
 use super::close_actions::close_document_tab;
@@ -62,6 +64,8 @@ pub(super) fn handle_user_event(
         }
         UserEvent::EditCommand(command) => perform_edit_command(command, runtime),
         UserEvent::ToggleMode => toggle_mode(runtime),
+        UserEvent::SelectTheme(theme) => select_theme(theme, runtime),
+        UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
         UserEvent::EditorChanged(markdown) => editor_changed(markdown, runtime),
         UserEvent::ShowAbout => render_about(&runtime.webview),
         UserEvent::OpenDocumentation => open_documentation(runtime),
@@ -137,6 +141,27 @@ fn toggle_mode(runtime: &mut AppRuntime) {
             true,
         ),
         None => render_status(&runtime.webview, "No document opened.", "error"),
+    }
+}
+
+fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
+    runtime.selected_theme = theme;
+    theme_preferences::save_selected_theme(theme);
+    render_status(
+        &runtime.webview,
+        &format!("Theme changed to {}.", theme.label()),
+        "info",
+    );
+}
+
+fn toggle_fullscreen(runtime: &mut AppRuntime) {
+    let is_fullscreen = runtime.window.fullscreen().is_some();
+    if is_fullscreen {
+        runtime.window.set_fullscreen(None);
+        render_status(&runtime.webview, "Exited fullscreen.", "info");
+    } else {
+        runtime.window.set_fullscreen(Some(tao::window::Fullscreen::Borderless(None)));
+        render_status(&runtime.webview, "Entered fullscreen.", "info");
     }
 }
 

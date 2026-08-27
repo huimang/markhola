@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use tao::event_loop::EventLoopProxy;
@@ -9,6 +9,7 @@ use wry::WebView;
 use crate::workspace::DocumentWorkspace;
 
 use super::{OpenPathRequest, UserEvent};
+use super::app_theme::AppTheme;
 
 pub(super) struct ShellRuntime {
     pub(super) ready: bool,
@@ -35,6 +36,7 @@ pub(super) struct AppRuntime {
     pub(super) workspace: DocumentWorkspace,
     pub(super) modifiers: ModifiersState,
     pub(super) shell: ShellRuntime,
+    pub(super) selected_theme: AppTheme,
 }
 
 impl AppRuntime {
@@ -51,6 +53,7 @@ impl AppRuntime {
             workspace: DocumentWorkspace::new(),
             modifiers: ModifiersState::default(),
             shell: ShellRuntime::new(suppress_blank_recovery),
+            selected_theme: AppTheme::Default,
         }
     }
 }

@@ -4,6 +4,8 @@ use serde::Serialize;
 
 use crate::document::{DocumentSnapshot, DocumentTabSnapshot};
 
+use crate::app::implementation::app_theme::AppTheme;
+
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum EditCommand {
     Undo,
@@ -37,6 +39,8 @@ pub(crate) enum UserEvent {
     OpenFind,
     EditCommand(EditCommand),
     ToggleMode,
+    SelectTheme(AppTheme),
+    ToggleFullscreen,
     EditorChanged(String),
     ShowAbout,
     OpenDocumentation,

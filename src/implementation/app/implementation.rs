@@ -1,4 +1,4 @@
-mod bootstrap;
+﻿mod bootstrap;
 mod close_actions;
 mod document_actions;
 mod documentation;
@@ -14,6 +14,8 @@ mod shortcuts;
 mod user_events;
 mod window_events;
 mod workspace_view;
+pub(crate) mod app_theme;
+mod theme_preferences;
 
 // New module boundaries for architecture alignment
 pub(crate) mod web_surface;

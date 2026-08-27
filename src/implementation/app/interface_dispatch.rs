@@ -1,4 +1,4 @@
-use std::sync::atomic::Ordering;
+﻿use std::sync::atomic::Ordering;
 
 use tao::event_loop::EventLoopProxy;
 
@@ -139,7 +139,12 @@ fn describe_user_event(
             "EditCommand",
             format!("source={} command={}", stage_source, edit_command_name(*command)),
         ),
-        UserEvent::ToggleMode => (None, "ToggleMode", format!("source={stage_source}")),
+        UserEvent::ToggleMode => (None, "ToggleMode", format!("source={stage_source}")),        UserEvent::SelectTheme(theme) => (
+            None,
+            "SelectTheme",
+            format!("source={} theme={}", stage_source, theme.key()),
+        ),
+        UserEvent::ToggleFullscreen => (None, "ToggleFullscreen", format!("source={stage_source}")),
         UserEvent::EditorChanged(markdown) => (
             None,
             "EditorChanged",
