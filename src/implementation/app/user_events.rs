@@ -65,6 +65,16 @@ pub(super) fn handle_user_event(
         UserEvent::EditCommand(command) => perform_edit_command(command, runtime),
         UserEvent::ToggleMode => toggle_mode(runtime),
         UserEvent::SelectTheme(theme) => select_theme(theme, runtime),
+        UserEvent::IncreaseDocumentSize => {
+            update_document_size(runtime.document_size.increase(), "increased", runtime)
+        }
+        UserEvent::DecreaseDocumentSize => {
+            update_document_size(runtime.document_size.decrease(), "decreased", runtime)
+        }
+        UserEvent::ResetDocumentSize => {
+            update_document_size(crate::app::implementation::interface_document_size::DocumentSize::default(), "reset", runtime)
+        }
+        UserEvent::ToggleOutline => toggle_outline(runtime),
         UserEvent::ToggleFullscreen => toggle_fullscreen(runtime),
         UserEvent::EditorChanged(markdown) => editor_changed(markdown, runtime),
         UserEvent::ShowAbout => render_about(&runtime.webview),
@@ -152,6 +162,46 @@ fn select_theme(theme: AppTheme, runtime: &mut AppRuntime) {
         &format!("Theme changed to {}.", theme.label()),
         "info",
     );
+}
+
+fn update_document_size(
+    size: crate::app::implementation::interface_document_size::DocumentSize,
+    action: &str,
+    runtime: &mut AppRuntime,
+) {
+    runtime.document_size = size;
+    theme_preferences::save_document_size(size);
+    let script = format!("window.applyDocumentSize({});", size.percent());
+    if let Err(error) = runtime.webview.evaluate_script(&script) {
+        render_status(
+            &runtime.webview,
+            &format!("Failed to apply document size: {error}"),
+            "error",
+        );
+        return;
+    }
+    render_status(
+        &runtime.webview,
+        &format!("Document size {action} to {}%.", size.percent()),
+        "info",
+    );
+}
+
+fn toggle_outline(runtime: &mut AppRuntime) {
+    if runtime
+        .workspace
+        .active_document()
+        .is_some_and(|document| document.mode() == crate::document::DocumentMode::Readonly)
+    {
+        let script = "window.setOutlinePanelOpen(true);";
+        if let Err(error) = runtime.webview.evaluate_script(script) {
+            render_status(
+                &runtime.webview,
+                &format!("Failed to toggle Outline: {error}"),
+                "error",
+            );
+        }
+    }
 }
 
 fn toggle_fullscreen(runtime: &mut AppRuntime) {

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+﻿use std::path::PathBuf;
 
 use serde::Serialize;
 
@@ -40,6 +40,10 @@ pub(crate) enum UserEvent {
     EditCommand(EditCommand),
     ToggleMode,
     SelectTheme(AppTheme),
+    IncreaseDocumentSize,
+    DecreaseDocumentSize,
+    ResetDocumentSize,
+    ToggleOutline,
     ToggleFullscreen,
     EditorChanged(String),
     ShowAbout,

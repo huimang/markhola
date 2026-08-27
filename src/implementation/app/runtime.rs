@@ -10,6 +10,7 @@ use crate::workspace::DocumentWorkspace;
 
 use super::{OpenPathRequest, UserEvent};
 use super::app_theme::AppTheme;
+use super::interface_document_size::DocumentSize;
 
 pub(super) struct ShellRuntime {
     pub(super) ready: bool,
@@ -37,6 +38,7 @@ pub(super) struct AppRuntime {
     pub(super) modifiers: ModifiersState,
     pub(super) shell: ShellRuntime,
     pub(super) selected_theme: AppTheme,
+    pub(super) document_size: DocumentSize,
 }
 
 impl AppRuntime {
@@ -54,6 +56,7 @@ impl AppRuntime {
             modifiers: ModifiersState::default(),
             shell: ShellRuntime::new(suppress_blank_recovery),
             selected_theme: AppTheme::Default,
+            document_size: DocumentSize::default(),
         }
     }
 }

@@ -16,6 +16,7 @@ mod window_events;
 mod workspace_view;
 pub(crate) mod app_theme;
 mod theme_preferences;
+pub(crate) mod interface_document_size;
 
 // New module boundaries for architecture alignment
 pub(crate) mod web_surface;

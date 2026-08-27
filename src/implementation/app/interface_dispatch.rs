@@ -144,6 +144,10 @@ fn describe_user_event(
             "SelectTheme",
             format!("source={} theme={}", stage_source, theme.key()),
         ),
+        UserEvent::IncreaseDocumentSize => (None, "IncreaseDocumentSize", format!("source={stage_source}")),
+        UserEvent::DecreaseDocumentSize => (None, "DecreaseDocumentSize", format!("source={stage_source}")),
+        UserEvent::ResetDocumentSize => (None, "ResetDocumentSize", format!("source={stage_source}")),
+        UserEvent::ToggleOutline => (None, "ToggleOutline", format!("source={stage_source}")),
         UserEvent::ToggleFullscreen => (None, "ToggleFullscreen", format!("source={stage_source}")),
         UserEvent::EditorChanged(markdown) => (
             None,
