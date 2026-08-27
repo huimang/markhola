@@ -12,7 +12,7 @@ use crate::workspace::{DocumentWorkspace, WorkspaceOpenResult};
 use super::log_event;
 use super::workspace_view::{present_workspace, render_status, sync_workspace_state};
 
-pub(super) fn open_document_dialog(event_id: u64) -> Option<PathBuf> {
+pub(super) fn open_documents_dialog(event_id: u64) -> Option<Vec<PathBuf>> {
     let started_at = SystemTime::now();
     log_event(
         "file_dialog.begin",
@@ -22,8 +22,8 @@ pub(super) fn open_document_dialog(event_id: u64) -> Option<PathBuf> {
     );
     let result = FileDialog::new()
         .add_filter("Markdown", &["md", "markdown"])
-        .set_title("Open Markdown File")
-        .pick_file();
+        .set_title("Open Markdown Files")
+        .pick_files();
     let elapsed_ms = started_at
         .elapsed()
         .map(|duration| duration.as_millis())
@@ -32,7 +32,7 @@ pub(super) fn open_document_dialog(event_id: u64) -> Option<PathBuf> {
         "file_dialog.end",
         Some(event_id),
         "file dialog finished",
-        format!("selected={} elapsed_ms={elapsed_ms}", result.is_some()),
+        format!("selected_count={} elapsed_ms={elapsed_ms}", result.as_ref().map_or(0, |v| v.len())),
     );
     result
 }

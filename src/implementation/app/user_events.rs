@@ -3,7 +3,7 @@ use tao::event_loop::ControlFlow;
 use crate::document::DocumentMode;
 
 use super::close_actions::close_document_tab;
-use super::document_actions::{create_blank_document, open_document, open_document_dialog};
+use super::document_actions::{create_blank_document, open_document, open_documents_dialog};
 use super::export_actions;
 use super::navigation_actions::{
     activate_document, close_all_documents, close_current_document, close_other_documents,
@@ -76,14 +76,22 @@ fn handle_open_file(ctx: super::ActionContext, runtime: &mut AppRuntime) {
         "handling UserEvent::OpenFile",
         format!("source={}", ctx.source),
     );
-    match open_document_dialog(ctx.event_id) {
-        Some(path) => open_document(
-            &runtime.window,
-            &runtime.webview,
-            &mut runtime.workspace,
-            &path,
-            Some(ctx.event_id),
-        ),
+    match open_documents_dialog(ctx.event_id) {
+        Some(paths) => {
+            if paths.is_empty() {
+                render_status(&runtime.webview, "No files selected.", "info");
+            } else {
+                for (index, path) in paths.iter().enumerate() {
+                    open_document(
+                        &runtime.window,
+                        &runtime.webview,
+                        &mut runtime.workspace,
+                        path,
+                        Some(ctx.event_id + index as u64),
+                    );
+                }
+            }
+        }
         None => render_status(&runtime.webview, "Open cancelled.", "info"),
     }
 }
