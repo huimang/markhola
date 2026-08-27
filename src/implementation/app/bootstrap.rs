@@ -16,7 +16,7 @@ use super::{APP_AUTHOR, UserEvent, WINDOW_TITLE, dispatch_user_event, log_event}
 #[cfg(target_os = "macos")]
 use super::macos_menu;
 #[cfg(target_os = "windows")]
-use super::windows_menu;
+use super::native_menu::windows_menu;
 
 pub(super) fn build_runtime() -> Result<(EventLoop<UserEvent>, AppRuntime), Box<dyn Error>> {
     let mut event_loop_builder = EventLoopBuilder::<UserEvent>::with_user_event();

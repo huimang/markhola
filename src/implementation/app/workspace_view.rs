@@ -10,7 +10,7 @@ use super::{
 #[cfg(target_os = "macos")]
 use super::macos_menu;
 #[cfg(target_os = "windows")]
-use super::windows_menu;
+use super::native_menu::windows_menu;
 
 pub(super) fn present_workspace(
     window: &Window,

@@ -13,7 +13,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::workspace::DocumentWorkspace;
 
-use super::{EditCommand, UserEvent, dispatch_user_event, log_event, new_action_context};
+use super::super::{EditCommand, UserEvent, dispatch_user_event, log_event, new_action_context};
 
 const ID_OPEN: u16 = 1001;
 const ID_SAVE: u16 = 1002;

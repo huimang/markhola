@@ -1,13 +1,11 @@
-mod shell_markup;
-mod shell_script;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::render_assets;
 
-use self::shell_markup::APP_SHELL_MARKUP;
-use self::shell_script::APP_SHELL_SCRIPT;
-use super::platform;
+use crate::app::implementation::web_surface::shell_markup::APP_SHELL_MARKUP;
+use crate::app::implementation::web_surface::shell_script::APP_SHELL_SCRIPT;
+use crate::app::platform;
 
 pub(crate) const APP_SHELL_URL: &str = "markhola://shell/index.html";
 

@@ -89,6 +89,37 @@ This is another markdown reader and exporter software.Written by AI, free are th
 ### v0.8.0
 1. support windows 11
 
+### v1.5.x (Windows Port)
+Target: Align Windows version with macOS v0.9.5 feature parity.
+
+**Phase 1: Architecture Alignment**
+- Port main's module refactor (web_surface / native_menu / window_runtime) to 1.5.x
+- Ensure Windows-specific code (windows_menu, platform.rs) integrates cleanly with new boundaries
+- Preserve existing Windows capabilities (native menu, Ctrl shortcuts, WebView2 PDF/print, CLI open)
+
+**Phase 2: Feature Port (v0.7.5 → v0.9.5)**
+- v0.7.5: [toc], multi-file open, drag-and-drop fix, theme persistence
+- v0.7.6: light/dark themes, View menu, fullscreen
+- v0.7.7: multi-file drag fix, empty workspace refinement, native footer
+- v0.7.8: font-size controls, brand palette, Outline panel, tab strip redesign
+- v0.7.9: i18n (EN/ZH-CN), local link tab reuse, angle-bracket links
+- v0.8.0: Windows-native tab solution (skip macOS native tabs)
+- v0.8.1: Tab menu cleanup, link underline removal, follow system theme, code block comfort
+- v0.8.2: close behavior, Mermaid \n, export success feedback
+- v0.9.1: PNG export, local process-command protocol, Default→Light rename
+- v0.9.2: CLI export
+- v0.9.3: Cmd+/- font size, wide table scroll, print follows font size, footnotes
+- v0.9.4: GitHub Alerts, architecture consolidation (already in Phase 1)
+- v0.9.5: GeoJSON offline map rendering
+
+**Skipped (macOS-exclusive)**
+- v0.9.0: Apple Intel support
+
+**Platform Adaptation Notes**
+- macOS native tabs (v0.8.0) → Windows needs alternative tab UI (WebView-based or custom native)
+- Follow system theme (v0.8.1) → Map Windows light/dark mode to MarkHola themes
+- Trackpad pinch zoom (v1.0.0) → Windows touchpad/trackpad gesture support (deferred to v1.0.0+)
+
 ### v1.0.0
 1. Two models: Readonly、writeonly.
 2. Readonly:Default mode, you can open any markdown file.

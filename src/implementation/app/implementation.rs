@@ -15,6 +15,11 @@ mod user_events;
 mod window_events;
 mod workspace_view;
 
+// New module boundaries for architecture alignment
+pub(crate) mod web_surface;
+pub(crate) mod native_menu;
+mod window_runtime;
+
 #[allow(unused_imports)]
 pub(crate) use self::document_actions::{load_document, reload_workspace_documents_from_disk};
 
