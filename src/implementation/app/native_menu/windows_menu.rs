@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+﻿use std::cell::RefCell;
 use std::error::Error;
 
 use tao::event_loop::EventLoopProxy;
@@ -37,6 +37,14 @@ const ID_CLOSE_OTHER_TABS: u16 = 1203;
 const ID_CLOSE_ALL_TABS: u16 = 1204;
 const ID_DOCUMENTATION: u16 = 1301;
 const ID_ABOUT: u16 = 1302;
+const ID_THEME_DEFAULT: u16 = 1401;
+const ID_THEME_DARK: u16 = 1402;
+const ID_THEME_LIGHT: u16 = 1403;
+const ID_SIZE_INCREASE: u16 = 1410;
+const ID_SIZE_DECREASE: u16 = 1411;
+const ID_SIZE_RESET: u16 = 1412;
+const ID_TOGGLE_OUTLINE: u16 = 1420;
+const ID_TOGGLE_FULLSCREEN: u16 = 1430;
 
 thread_local! {
     static MENU_PROXY: RefCell<Option<EventLoopProxy<UserEvent>>> = const { RefCell::new(None) };
