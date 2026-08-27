@@ -1,6 +1,7 @@
-mod interface_clock;
+﻿mod interface_clock;
 mod interface_constants;
 mod interface_dispatch;
+mod interface_document_size;
 mod interface_logging;
 mod interface_types;
 
