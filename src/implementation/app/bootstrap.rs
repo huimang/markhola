@@ -1,4 +1,4 @@
-use std::error::Error;
+﻿use std::error::Error;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -8,7 +8,7 @@ use tao::platform::windows::EventLoopBuilderExtWindows;
 use tao::dpi::LogicalSize;
 use tao::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy};
 use tao::window::WindowBuilder;
-use wry::{PageLoadEvent, WebContext, WebView, WebViewBuilder};
+use wry::{DragDropEvent, PageLoadEvent, WebContext, WebView, WebViewBuilder};
 
 use super::runtime::AppRuntime;
 use super::shell::{APP_SHELL_URL, app_shell_html, should_dispatch_shell_recovery};
@@ -49,6 +49,7 @@ fn build_webview(
 ) -> Result<WebView, wry::Error> {
     let ipc_proxy = proxy.clone();
     let page_load_proxy = proxy.clone();
+    let drag_drop_proxy = proxy.clone();
     let mut web_context = WebContext::new(webview_data_directory().ok());
     let builder = WebViewBuilder::new_with_web_context(&mut web_context);
 
@@ -86,6 +87,22 @@ fn build_webview(
             {
                 dispatch_user_event(&page_load_proxy, "page-load", UserEvent::RecoverShell(url));
             }
+        })
+        .with_drag_drop_handler(move |event| {
+            match event {
+                DragDropEvent::Drop { paths, .. } => {
+                    for path in paths {
+                        let ctx = super::new_action_context("webview-drop");
+                        dispatch_user_event(
+                            &drag_drop_proxy,
+                            "webview-drop",
+                            UserEvent::OpenPath(super::OpenPathRequest { ctx, path }),
+                        );
+                    }
+                }
+                _ => {}
+            }
+            true
         })
         .build(window)
 }
