@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+﻿use std::path::{Path, PathBuf};
 
 use crate::markdown;
 
@@ -46,7 +46,7 @@ impl ActiveDocument {
         }
     }
 
-    pub fn new_blank_with_id(id: u64) -> Self {
+    pub fn new_blank_with_id(id: u64, blank_number: u64) -> Self {
         let draft_path = std::env::current_dir()
             .unwrap_or_else(|_| std::env::temp_dir())
             .join(format!(".markhola-draft-{id}.md"));
@@ -58,8 +58,8 @@ impl ActiveDocument {
             draft: true,
             file_path: draft_path.clone(),
             canonical_path: draft_path,
-            file_name: "Untitled".to_string(),
-            title: "Untitled".to_string(),
+            file_name: format!("Untitled-{blank_number}"),
+            title: format!("Untitled-{blank_number}"),
             saved_markdown: markdown.clone(),
             markdown,
             html: String::new(),
