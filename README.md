@@ -4,7 +4,7 @@
 
 MarkHola is a free Markdown reader and editor built with AI.
 
-Privacy Policy: [docs/privacy-policy.html](docs/privacy-policy.html)
+Privacy Policy: [docs/privacy-policy.md](docs/privacy-policy.md)
 
 ## Current Version
 
