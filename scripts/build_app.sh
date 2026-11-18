@@ -137,7 +137,7 @@ write_info_plist() {
     <key>CFBundleIconFile</key>
     <string>${APP_NAME}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.markhola.app</string>
+    <string>com.huimang.app.markhola</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

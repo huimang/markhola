@@ -182,7 +182,7 @@ write_asset_manifest() {
     print -r -- "release_profile=release"
     print -r -- "macosx_deployment_target=$MARKHOLA_MACOS_DEPLOYMENT_TARGET"
     print -r -- "bundle_version=$APP_VERSION"
-    print -r -- "bundle_identifier=com.markhola.app"
+    print -r -- "bundle_identifier=com.huimang.app.markhola"
     print -r -- "resource_manifest_sha256=$PAIR_RESOURCE_SHA"
     print -r -- "dmg_format=UDZO"
     print -r -- "dmg_size=$dmg_size"

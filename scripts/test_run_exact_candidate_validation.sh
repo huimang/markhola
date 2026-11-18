@@ -90,7 +90,7 @@ EOF
 case "$2" in
   LSMinimumSystemVersion) print -r -- "14.0" ;;
   CFBundleShortVersionString) print -r -- "0.9.4" ;;
-  CFBundleIdentifier) print -r -- "com.markhola.app" ;;
+  CFBundleIdentifier) print -r -- "com.huimang.app.markhola" ;;
   *) print -u2 -- "unexpected plutil extract: $2"; exit 1 ;;
 esac
 EOF

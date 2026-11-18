@@ -194,6 +194,16 @@ Create and verify an Intel app without packaging:
   --app dist/MarkHola-intel.app
 ```
 
+Create a Mac App Store package after installing the required Apple distribution
+certificate, installer certificate, and provisioning profile:
+
+```bash
+SIGNING_IDENTITY="Apple Distribution: Your Company" \
+INSTALLER_IDENTITY="3rd Party Mac Installer: Your Company" \
+PROVISIONING_PROFILE="/absolute/path/to/embedded.provisionprofile" \
+./scripts/package_app_store.sh
+```
+
 Run the standalone thin-architecture gate tests:
 
 ```bash

@@ -66,7 +66,7 @@ verify_app() {
   version="$(plutil -extract CFBundleShortVersionString raw -o - "$plist")"
   bundle="$(plutil -extract CFBundleIdentifier raw -o - "$plist")"
   [[ "$version" = 0.9.* ]] || die "$label unexpected bundle version: $version"
-  [[ "$bundle" = com.markhola.app ]] || die "$label unexpected bundle identifier: $bundle"
+  [[ "$bundle" = com.huimang.app.markhola ]] || die "$label unexpected bundle identifier: $bundle"
   "$VERIFY_ARCH_SCRIPT" --app "$app" --architecture "$expected_arch" || die "$label bundle architecture/signature gate failed"
   executable_sha="$(hash_file "$executable")"
   print -r -- "$label.architecture=$expected_arch" >> "$MANIFEST"
